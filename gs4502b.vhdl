@@ -5,6 +5,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
+use work.icachetypes.all;
 
 ENTITY gs4502b IS
   PORT (
@@ -16,7 +17,7 @@ END gs4502b;
 architecture behavioural of gs4502b is
 
   signal icache_lookup_line : std_logic_vector(9 downto 0);
-  signal icache_read_data : std_logic_vector(71 downto 0);
+  signal icache_read_data : icache_line;
 
   signal reg_pc : unsigned(15 downto 0);
   
@@ -25,11 +26,11 @@ architecture behavioural of gs4502b is
     PORT (
     clka : IN STD_LOGIC;
     addra : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-    douta : OUT STD_LOGIC_VECTOR(71 DOWNTO 0);
+    douta : OUT icache_line;
     clkb : IN STD_LOGIC;
     web : IN STD_LOGIC;
     addrb : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-    dinb : IN STD_LOGIC_VECTOR(71 DOWNTO 0)
+    dinb : IN icache_line
     );
     end component;
   
@@ -46,7 +47,7 @@ begin  -- behavioural
       clkb => cpuclock,
       web => '0',
       addrb => (others => '0'),
-      dinb => (others => '0')
+      dinb => icache_read_data
       );
   
   process(cpuclock)

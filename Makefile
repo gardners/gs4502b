@@ -2,6 +2,7 @@ all:	cpu_test
 
 SIMULATIONFILES=	cpu_test.vhdl \
 			debugtools.vhdl \
+			icachetypes.vhdl \
 			ghdl_ram72x1k.vhdl \
 			gs4502b.vhdl
 
