@@ -20,6 +20,8 @@ architecture behavioural of gs4502b is
   signal icache_read_data : icache_line;
 
   signal reg_pc : unsigned(15 downto 0);
+
+  signal expected_icache_address : unsigned(27 downto 10) := "111100001111000011";
   
   -- declare components here
   component ram72x1k is
@@ -57,7 +59,12 @@ begin  -- behavioural
     end if;
 
     if(rising_edge(cpuclock)) then
-      reg_pc <= reg_pc + 1;      
+      if expected_icache_address = icache_read_data.address then
+        reg_pc <= reg_pc + 1;
+      end if;
+
+
+      
     end if;
   end process;
 
