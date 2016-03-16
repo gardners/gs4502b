@@ -73,14 +73,20 @@ architecture Behavioral of container is
     PIX2CLOCK          : out    std_logic
       );
   end component;
-    
+
+  component gs4502b is
+    port (
+      cpuclock : in std_logic
+      );
+  end component;     
+  
   signal irq : std_logic := '1';
   signal nmi : std_logic := '1';
   
   signal pixelclock : std_logic;
   signal pixelclock2x : std_logic;
   signal cpuclock : std_logic;
---  signal ioclock : std_logic;
+  signal clock100mhz : std_logic;
   
   signal segled_counter : unsigned(31 downto 0) := (others => '0');
   
@@ -97,7 +103,7 @@ begin
   
   core0: gs4502b
     port map (
-      cpuclock      => pixelclock,
+      cpuclock      => pixelclock
       );
 
   
