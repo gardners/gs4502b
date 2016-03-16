@@ -17,9 +17,12 @@ architecture behavior of cpu_test is
   signal irq : std_logic := '1';
   signal nmi : std_logic := '1';
 
+  signal monitor_pc : unsigned(15 downto 0);
+  
   component gs4502b IS
   PORT (
-    cpuclock : IN STD_LOGIC
+    cpuclock : IN STD_LOGIC;
+    monitor_PC : out unsigned(15 downto 0)
     );
   END component;
 
@@ -29,7 +32,8 @@ begin
   -- instantiate components here
   core0:        gs4502b
     port map (
-      cpuclock => cpuclock
+      cpuclock => cpuclock,
+      monitor_pc => monitor_pc
       );
   
   process

@@ -8,7 +8,8 @@ use work.debugtools.all;
 
 ENTITY gs4502b IS
   PORT (
-    cpuclock : IN STD_LOGIC
+    cpuclock : IN STD_LOGIC;
+    monitor_PC : out unsigned(15 downto 0)
     );
 END gs4502b;
 
@@ -16,6 +17,8 @@ architecture behavioural of gs4502b is
 
   signal icache_lookup_line : std_logic_vector(9 downto 0);
   signal icache_read_data : std_logic_vector(71 downto 0);
+
+  signal reg_pc : unsigned(15 downto 0);
   
   -- declare components here
   component ram72x1k is
@@ -48,7 +51,12 @@ begin  -- behavioural
   
   process(cpuclock)
   begin
-    if(rising_edge(cpuclock)) then 
+    if(rising_edge(cpuclock)) then
+      monitor_pc <= reg_pc;
+    end if;
+
+    if(rising_edge(cpuclock)) then
+      reg_pc <= reg_pc + 1;      
     end if;
   end process;
 

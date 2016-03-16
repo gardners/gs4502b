@@ -76,7 +76,8 @@ architecture Behavioral of container is
 
   component gs4502b is
     port (
-      cpuclock : in std_logic
+      cpuclock : in std_logic;
+      monitor_pc : out unsigned(15 downto 0)
       );
   end component;     
   
@@ -87,6 +88,8 @@ architecture Behavioral of container is
   signal pixelclock2x : std_logic;
   signal cpuclock : std_logic;
   signal clock100mhz : std_logic;
+
+  signal monitor_pc : unsigned(15 downto 0);
   
   signal segled_counter : unsigned(31 downto 0) := (others => '0');
   
@@ -103,12 +106,67 @@ begin
   
   core0: gs4502b
     port map (
-      cpuclock      => pixelclock
+      cpuclock      => pixelclock,
+      monitor_pc    => monitor_pc
       );
 
   
   -- Hardware buttons for triggering IRQ & NMI
   irq <= not btn(0);
   nmi <= not btn(4);
+
+  process (pixelclock) is
+    variable digit : std_logic_vector(3 downto 0);
+  begin
+      
+      segled_counter <= segled_counter + 1;
+
+      sseg_an <= (others => '1');
+      sseg_an(to_integer(segled_counter(19 downto 17))) <= '0';
+
+      case segled_counter(19 downto 17) is
+        when "000" =>
+          digit := std_logic_vector(monitor_pc(3 downto 0));
+        when "001" =>
+          digit := std_logic_vector(monitor_pc(7 downto 4));
+        when "010" =>
+          digit := std_logic_vector(monitor_pc(11 downto 8));
+        when "011" =>
+          digit := std_logic_vector(monitor_pc(15 downto 12));
+        when others =>
+          digit := "0000";
+      end case;
+      
+      -- segments are:
+      -- 7 - decimal point
+      -- 6 - middle
+      -- 5 - upper left
+      -- 4 - lower left
+      -- 3 - bottom
+      -- 2 - lower right
+      -- 1 - upper right
+      -- 0 - top
+      case digit is
+        when x"0" => sseg_ca <= "11000000";
+        when x"1" => sseg_ca <= "11111001";
+        when x"2" => sseg_ca <= "10100100";
+        when x"3" => sseg_ca <= "10110000";
+        when x"4" => sseg_ca <= "10011001";
+        when x"5" => sseg_ca <= "10010010";
+        when x"6" => sseg_ca <= "10000010";
+        when x"7" => sseg_ca <= "11111000";
+        when x"8" => sseg_ca <= "10000000";
+        when x"9" => sseg_ca <= "10010000";
+        when x"A" => sseg_ca <= "10001000";
+        when x"B" => sseg_ca <= "10000011";
+        when x"C" => sseg_ca <= "11000110";
+        when x"D" => sseg_ca <= "10100001";
+        when x"E" => sseg_ca <= "10000110";
+        when x"F" => sseg_ca <= "10001110";
+        when others => sseg_ca <= "10100001";
+      end case; 
+
+  end process;
+
   
 end Behavioral;
