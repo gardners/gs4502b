@@ -16,7 +16,7 @@ END gs4502b;
 
 architecture behavioural of gs4502b is
 
-  signal icache_lookup_line : std_logic_vector(9 downto 0);
+  signal icache_lookup_line : unsigned(9 downto 0);
   signal icache_read_data : icache_line;
 
   signal reg_pc : unsigned(15 downto 0);
@@ -27,11 +27,11 @@ architecture behavioural of gs4502b is
   component ram72x1k is
     PORT (
     clka : IN STD_LOGIC;
-    addra : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+    addra : IN unsigned(9 DOWNTO 0);
     douta : OUT icache_line;
     clkb : IN STD_LOGIC;
     web : IN STD_LOGIC;
-    addrb : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+    addrb : IN unsigned(9 DOWNTO 0);
     dinb : IN icache_line
     );
     end component;
@@ -52,13 +52,14 @@ begin  -- behavioural
       dinb => icache_read_data
       );
   
-  process(cpuclock)
+  process(cpuclock, icache_read_data)
   begin
     if(rising_edge(cpuclock)) then
       monitor_pc <= reg_pc;
     end if;
 
     if(rising_edge(cpuclock)) then
+      icache_lookup_line(9 downto 0) <= reg_pc(9 downto 0);
       if expected_icache_address = icache_read_data.address then
         reg_pc <= reg_pc + 1;
       end if;

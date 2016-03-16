@@ -10,11 +10,11 @@ use work.icachetypes.all;
 ENTITY ram72x1k IS
   PORT (
     clka : IN STD_LOGIC;
-    addra : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+    addra : IN unsigned(9 DOWNTO 0);
     douta : OUT icache_line;
     clkb : IN STD_LOGIC;
     web : IN STD_LOGIC;
-    addrb : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
+    addrb : IN unsigned(9 DOWNTO 0);
     dinb : IN icache_line
     );
 END ram72x1k;
@@ -26,9 +26,9 @@ architecture behavioural of ram72x1k is
   
 begin  -- behavioural
 
-  process(clka)
+  process(clka,addra,ram)
   begin
-    douta <= ram(to_integer(unsigned(addra(9 downto 0))));
+    douta <= ram(to_integer(addra));
 
     report "I-CACHE: A Reading from $" & to_hstring(unsigned(addra));
 --      & " = $" & to_hstring(ram(to_integer(unsigned(addra))));
@@ -38,7 +38,7 @@ begin  -- behavioural
   begin
     if(rising_edge(Clkb)) then 
       if(web='1') then
-        ram(to_integer(unsigned(addrb))) <= dinb;
+        ram(to_integer(addrb)) <= dinb;
       end if;
     end if;
   end process;
