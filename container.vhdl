@@ -115,6 +115,15 @@ begin
   irq <= not btn(0);
   nmi <= not btn(4);
 
+  vsync <= '0';
+  hsync <= '0';
+  vgared <= (others => '0');
+  vgagreen <= (others => '0');
+  vgablue <= (others => '0');
+  
+  led <= (others => '0');
+
+  
   process (pixelclock) is
     variable digit : std_logic_vector(3 downto 0);
   begin
