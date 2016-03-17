@@ -10,7 +10,7 @@ use work.icachetypes.all;
 ENTITY icache_ram IS
   PORT (
     clka : IN STD_LOGIC;
-    wea : IN STD_LOGIC;
+    wea : IN STD_LOGIC_VECTOR(0 downto 0);
     addra : IN std_logic_vector(9 DOWNTO 0);
     dina : IN std_logic_vector(71 downto 0);
     clkb : IN STD_LOGIC;
@@ -36,7 +36,7 @@ begin  -- behavioural
 --      & " = $" & to_hstring(ram(to_integer(unsigned(addra))));
 
     if(rising_edge(Clka)) then 
-      if(wea='1') then
+      if(wea(0)='1') then
         ram(to_integer(unsigned(addra(9 downto 0)))) <= dina;
         report "COLOURRAM: A writing to $" & to_hstring(unsigned(addra))
           & " = $" & to_hstring(dina);

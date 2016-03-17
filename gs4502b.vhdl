@@ -26,7 +26,7 @@ architecture behavioural of gs4502b is
   component icache_ram IS
   PORT (
       clka : IN STD_LOGIC;
-      wea : IN STD_LOGIC;
+      wea : IN STD_LOGIC_vector(0 downto 0);
       addra : IN std_logic_vector(9 DOWNTO 0);
       dina : IN std_logic_vector(71 downto 0);
       clkb : IN STD_LOGIC;
@@ -47,7 +47,7 @@ begin  -- behavioural
 
       -- MMU write interface to I-CACHE
       clka => cpuclock,
-      wea => '0',
+      wea => "0",
       addra => (others => '0'),
       dina => icache_read_data
       );
