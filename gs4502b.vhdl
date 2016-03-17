@@ -18,10 +18,13 @@ architecture behavioural of gs4502b is
 
   signal icache_lookup_line : std_logic_vector(9 downto 0);
   signal icache_read_data : std_logic_vector(71 downto 0);
+  signal icache_read_data_drive : std_logic_vector(71 downto 0);
 
   signal reg_pc : unsigned(15 downto 0);
 
   signal expected_icache_address : unsigned(27 downto 10) := "111100001111000011";
+
+
   
   component icache_ram IS
   PORT (
@@ -43,7 +46,7 @@ begin  -- behavioural
       -- CPU READ interface to I-CACHE
       clkb => cpuclock,
       addrb => icache_lookup_line,
-      doutb => icache_read_data,
+      doutb => icache_read_data_drive,
 
       -- MMU write interface to I-CACHE
       clka => cpuclock,
@@ -51,6 +54,8 @@ begin  -- behavioural
       addra => (others => '0'),
       dina => icache_read_data
       );
+
+
   
   process(cpuclock, icache_read_data)
   begin
@@ -59,6 +64,9 @@ begin  -- behavioural
     end if;
 
     if(rising_edge(cpuclock)) then
+      -- Drive signals to help keep logic shallow to allow pipelining to work
+      icache_read_data <= icache_read_data_drive;
+      
       icache_lookup_line(9 downto 0) <= std_logic_vector(reg_pc(9 downto 0));
       if std_logic_vector(expected_icache_address)
         = icache_read_data(17 downto 0) then
