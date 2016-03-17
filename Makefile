@@ -4,6 +4,7 @@ SIMULATIONFILES=	cpu_test.vhdl \
 			debugtools.vhdl \
 			icachetypes.vhdl \
 			ghdl_ram72x1k.vhdl \
+			address_translator.vhdl \
 			gs4502b.vhdl
 
 cpu_test:	$(SIMULATIONFILES) Makefile
