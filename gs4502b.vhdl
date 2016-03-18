@@ -20,8 +20,9 @@ architecture behavioural of gs4502b is
   signal icache_lookup_line : std_logic_vector(9 downto 0);
   signal icache_read_data : std_logic_vector(71 downto 0);
   signal icache_read_data_drive : std_logic_vector(71 downto 0);
+  signal icache_read_data_drive2 : std_logic_vector(71 downto 0);
   signal icache_ready : std_logic := '0';
-  signal expected_icache_address : unsigned(27 downto 0) := "1111000011110000111010101010";
+  signal expected_icache_address : unsigned(31 downto 0) := "00001111000011110000111010101010";
   signal icache_read_line_number : unsigned(9 downto 0);
   signal icache_read_line_number_drive : unsigned(9 downto 0);
   signal icache_read_line_number_drive2 : unsigned(9 downto 0);
@@ -58,7 +59,7 @@ begin  -- behavioural
       -- CPU READ interface to I-CACHE
       clkb => cpuclock,
       addrb => icache_lookup_line,
-      doutb => icache_read_data_drive,
+      doutb => icache_read_data_drive2,
 
       -- MMU write interface to I-CACHE
       clka => cpuclock,
@@ -78,22 +79,34 @@ begin  -- behavioural
 
     if(rising_edge(cpuclock)) then
       -- Drive signals to help keep logic shallow to allow pipelining to work
-      icache_read_data <= icache_read_data_drive;
-      -- Also drive through the cache line ID, so that we know the low-order bits
-      -- of what is being presented.
-      icache_read_line_number <= icache_read_line_number_drive;
+
+      -- Pipeline Stage 1: Drive, and resolve next_pc and branch_pc
       icache_read_line_number_drive <= icache_read_line_number_drive2;
+      icache_bits := std_logic_vector_to_icache_line(icache_read_line_drive2);
+      address_resolver0_address_in <= icache_bits.next_pc;
+      address_resolver1_address_in <= icache_bits.branch_pc;
+
+      -- Pipeline Stage 2: Get resolved addresses out, report cache misses to MMU
+      icache_read_line_number <= icache_read_line_number_drive;
+      icache_read_data <= icache_read_data_drive;
+      icache_next_pc_resolved <= address_resolver0_address_out;
+      icache_branch_pc_resolved <= address_resolver1_address_out;
+      -- If read cache line is correct, but upper bits are wrong, then we have
+      -- a cache miss: Tell MMU so that it can fetch it.
       
-      -- But do what calculations we can on what we read from the cache line
-      -- immediately.
-      if (std_logic_vector(expected_icache_address(27 downto 10))
-          = icache_read_data_drive(17 downto 0))
-        and (icache_read_line_number = expected_icache_address(9 downto 0))
-      then
+      -- Is the next instruction the one we are looking for?
+      -- XXX Need to know if the branch is taken
+      icache_bits := std_logic_vector_to_icache_line(icache_read_data_drive);
+      if expected_icache_address := icache_bits.address then
         icache_ready <= '1';
       else
         icache_ready <= '0';
       end if;
+
+      -- But do what calculations we can on what we read from the cache line
+      -- immediately.
+
+      
       -- Ask for next instruction automatically.  This get changed later only if
       -- a branch is taken, or something else causes us to ask for something different.
       -- The idea is that we keep the instruction cache pipeline as full as possible,
@@ -119,7 +132,28 @@ begin  -- behavioural
       -- Do we have the next instruction we were looking for?
       if icache_ready='1' then
         -- Yes, execute instruction
-        reg_pc <= reg_pc + 1;
+        icache_bits := std_logic_vector_to_icache_line(icache_read_data);
+
+        -- Update PC based on instruction
+        reg_pc <= icache_bits.next_pc;
+        -- And then which address we expect to see from the cache.
+        -- (We don't need to update the line we are asking for from the cache,
+        -- however, because for us to have read this from the cache, the next
+        -- instruction will be automatically asked to come out next.  We only
+        -- need to change it if we are taking a branch or triggering an interrupt.
+        -- For branches, we can just take the appropriate bits from the decoded
+        -- instruction.  For interrupts, it would be nice to cache the vectors,
+        -- but that isn't entirely easy, since memory mappings can affect them.
+        expected_icache_address(15 downto 0) <= icache_bits.next_pc;
+        -- The other fun bit is that we need to work out the upper bits we are
+        -- requesting. For this, we need a little address resolution cache that
+        -- we can look in. If the appropriate page of memory is in the slot, then
+        -- we can set the upper bits. Else we need to hold this instruction.
+
+        -- XXX Address should be resolved in a specific pipeline stage.
+        -- This means no address resolution cache etc :)
+        expected_icache_address(31 downto 8) <= x"7FFFF";       
+        
       end if;
 
       -- Can we retire any resource blocks?

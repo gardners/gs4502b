@@ -100,8 +100,8 @@
 --    C_USE_BYTE_WEA              :  0 
 --    C_WEA_WIDTH                 :  1 
 --    C_WRITE_MODE_A              :  WRITE_FIRST 
---    C_WRITE_WIDTH_A             :  72 
---    C_READ_WIDTH_A              :  72 
+--    C_WRITE_WIDTH_A             :  106 
+--    C_READ_WIDTH_A              :  106 
 --    C_WRITE_DEPTH_A             :  1024 
 --    C_READ_DEPTH_A              :  1024 
 --    C_ADDRA_WIDTH               :  10 
@@ -114,8 +114,8 @@
 --    C_USE_BYTE_WEB              :  0 
 --    C_WEB_WIDTH                 :  1 
 --    C_WRITE_MODE_B              :  WRITE_FIRST 
---    C_WRITE_WIDTH_B             :  72 
---    C_READ_WIDTH_B              :  72 
+--    C_WRITE_WIDTH_B             :  106 
+--    C_READ_WIDTH_B              :  106 
 --    C_WRITE_DEPTH_B             :  1024 
 --    C_READ_DEPTH_B              :  1024 
 --    C_ADDRB_WIDTH               :  10 
@@ -158,8 +158,8 @@ ENTITY icache_ram_prod IS
     REGCEA     : IN STD_LOGIC;  --optional port
     WEA        : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
     ADDRA      : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-    DINA       : IN STD_LOGIC_VECTOR(71 DOWNTO 0);
-    DOUTA      : OUT STD_LOGIC_VECTOR(71 DOWNTO 0);
+    DINA       : IN STD_LOGIC_VECTOR(105 DOWNTO 0);
+    DOUTA      : OUT STD_LOGIC_VECTOR(105 DOWNTO 0);
 
     --Port B
     CLKB       : IN STD_LOGIC;
@@ -168,8 +168,8 @@ ENTITY icache_ram_prod IS
     REGCEB     : IN STD_LOGIC;  --optional port
     WEB        : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
     ADDRB      : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-    DINB       : IN STD_LOGIC_VECTOR(71 DOWNTO 0);
-    DOUTB      : OUT STD_LOGIC_VECTOR(71 DOWNTO 0);
+    DINB       : IN STD_LOGIC_VECTOR(105 DOWNTO 0);
+    DOUTB      : OUT STD_LOGIC_VECTOR(105 DOWNTO 0);
 
     --ECC
     INJECTSBITERR  : IN STD_LOGIC; --optional port
@@ -188,7 +188,7 @@ ENTITY icache_ram_prod IS
     S_AXI_AWBURST                  : IN  STD_LOGIC_VECTOR(1 DOWNTO 0);
     S_AXI_AWVALID                  : IN  STD_LOGIC;
     S_AXI_AWREADY                  : OUT STD_LOGIC;
-    S_AXI_WDATA                    : IN  STD_LOGIC_VECTOR(71  DOWNTO 0);
+    S_AXI_WDATA                    : IN  STD_LOGIC_VECTOR(105  DOWNTO 0);
     S_AXI_WSTRB                    : IN  STD_LOGIC_VECTOR(0  DOWNTO 0);
     S_AXI_WLAST                    : IN  STD_LOGIC;
     S_AXI_WVALID                   : IN  STD_LOGIC;
@@ -207,7 +207,7 @@ ENTITY icache_ram_prod IS
     S_AXI_ARVALID                  : IN  STD_LOGIC;
     S_AXI_ARREADY                  : OUT STD_LOGIC;
     S_AXI_RID                      : OUT STD_LOGIC_VECTOR(3  DOWNTO 0):= (OTHERS => '0');
-    S_AXI_RDATA                    : OUT STD_LOGIC_VECTOR(71  DOWNTO 0);
+    S_AXI_RDATA                    : OUT STD_LOGIC_VECTOR(105  DOWNTO 0);
     S_AXI_RRESP                    : OUT STD_LOGIC_VECTOR(1 DOWNTO 0);
     S_AXI_RLAST                    : OUT STD_LOGIC;
     S_AXI_RVALID                   : OUT STD_LOGIC;
@@ -236,7 +236,7 @@ ARCHITECTURE xilinx OF icache_ram_prod IS
     WEA            : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
     ADDRA          : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
   
-    DINA           : IN STD_LOGIC_VECTOR(71 DOWNTO 0);
+    DINA           : IN STD_LOGIC_VECTOR(105 DOWNTO 0);
 
   
     CLKA       : IN STD_LOGIC;
@@ -244,7 +244,7 @@ ARCHITECTURE xilinx OF icache_ram_prod IS
   
       --Port B
     ADDRB          : IN STD_LOGIC_VECTOR(9 DOWNTO 0);
-    DOUTB          : OUT STD_LOGIC_VECTOR(71 DOWNTO 0);
+    DOUTB          : OUT STD_LOGIC_VECTOR(105 DOWNTO 0);
     CLKB           : IN STD_LOGIC
 
 
