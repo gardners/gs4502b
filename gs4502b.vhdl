@@ -10,7 +10,13 @@ use work.icachetypes.all;
 ENTITY gs4502b IS
   PORT (
     cpuclock : IN STD_LOGIC;
-    monitor_PC : out unsigned(15 downto 0)
+    monitor_PC : out unsigned(15 downto 0);
+
+    rom_at_8000 : in std_logic;
+    rom_at_a000 : in std_logic;
+    rom_at_c000 : in std_logic;
+    rom_at_e000 : in std_logic;
+    viciii_iomode : in std_logic_vector(1 downto 0)
     );
 END gs4502b;
 
@@ -18,14 +24,19 @@ architecture behavioural of gs4502b is
 
   -- Instruction cache interface and logic
   signal icache_lookup_line : std_logic_vector(9 downto 0);
-  signal icache_read_data : std_logic_vector(71 downto 0);
-  signal icache_read_data_drive : std_logic_vector(71 downto 0);
-  signal icache_read_data_drive2 : std_logic_vector(71 downto 0);
+  signal icache_read_data : std_logic_vector(105 downto 0);
+  signal icache_read_data_drive : std_logic_vector(105 downto 0);
+  signal icache_read_data_drive2 : std_logic_vector(105 downto 0);
   signal icache_ready : std_logic := '0';
   signal expected_icache_address : unsigned(31 downto 0) := "00001111000011110000111010101010";
-  signal icache_read_line_number : unsigned(9 downto 0);
-  signal icache_read_line_number_drive : unsigned(9 downto 0);
-  signal icache_read_line_number_drive2 : unsigned(9 downto 0);
+  signal icache_next_pc_resolved : unsigned(31 downto 0);
+  signal icache_branch_pc_resolved : unsigned(31 downto 0);
+
+  signal address_translator0_address_in : unsigned(15 downto 0);
+  signal address_translator1_address_in : unsigned(15 downto 0);
+  signal address_translator0_address_out : unsigned(31 downto 0);
+  signal address_translator1_address_out : unsigned(31 downto 0);
+  
 
   -- CPU Registers & Flags
   signal reg_pc : unsigned(15 downto 0);
@@ -36,7 +47,43 @@ architecture behavioural of gs4502b is
   signal reg_spl : unsigned(7 downto 0);
   signal reg_sph : unsigned(7 downto 0);
 
+  -- Memory mapping registers and derivatives
+  signal reg_mb_low : unsigned(11 downto 0);
+  signal reg_offset_low : unsigned(11 downto 0);
+  signal reg_map_low : std_logic_vector(3 downto 0);
+  signal reg_mb_high : unsigned(11 downto 0);
+  signal reg_map_high : std_logic_vector(3 downto 0);
+  signal reg_offset_high : unsigned(11 downto 0);
+  signal cpuport_value : std_logic_vector(2 downto 0);
+  signal cpuport_ddr : std_logic_vector(2 downto 0);
 
+  component address_translator IS
+    PORT (
+      cpuclock : IN STD_LOGIC;
+
+      -- Things that affect address mapping
+      cpuport_value: in std_logic_vector(2 downto 0);
+      cpuport_ddr: in std_logic_vector(2 downto 0);
+      viciii_iomode : in std_logic_vector(1 downto 0);
+      rom_from_colour_ram : in std_logic;
+      reg_map_low : in std_logic_vector(3 downto 0);
+      reg_mb_low : in unsigned(11 downto 0);
+      reg_offset_low : in unsigned(11 downto 0);
+      reg_map_high : in std_logic_vector(3 downto 0);
+      reg_mb_high : in unsigned(11 downto 0);
+      reg_offset_high : in unsigned(11 downto 0);
+      rom_at_c000 : in std_logic;
+      rom_at_e000 : in std_logic;
+      rom_at_a000 : in std_logic;
+      rom_at_8000 : in std_logic;
+
+      memory_map_has_changed : out std_logic := '0';
+    
+      address_in : in unsigned(15 downto 0);
+      read_address : out unsigned(31 downto 0);
+      write_address : out unsigned(31 downto 0)
+      );
+  END component;
 
   
   component icache_ram IS
@@ -44,16 +91,60 @@ architecture behavioural of gs4502b is
       clka : IN STD_LOGIC;
       wea : IN STD_LOGIC_vector(0 downto 0);
       addra : IN std_logic_vector(9 DOWNTO 0);
-      dina : IN std_logic_vector(71 downto 0);
+      dina : IN std_logic_vector(105 downto 0);
       clkb : IN STD_LOGIC;
       addrb : IN std_logic_vector(9 DOWNTO 0);
-      doutb : OUT std_logic_vector(71 downto 0)
+      doutb : OUT std_logic_vector(105 downto 0)
       );
     END component;
 
   
 begin  -- behavioural
 
+  address_translator0: address_translator
+    port map (
+      cpuclock => cpuclock,
+      cpuport_value => cpuport_value,
+      cpuport_ddr => cpuport_ddr,
+      viciii_iomode => viciii_iomode,
+      rom_from_colour_ram => '0',
+      reg_map_low => reg_map_low,
+      reg_mb_low => reg_mb_low,
+      reg_offset_low => reg_offset_low,
+      reg_map_high => reg_map_high,
+      reg_mb_high => reg_mb_high,
+      reg_offset_high => reg_offset_high,
+      rom_at_8000 => rom_at_8000,
+      rom_at_a000 => rom_at_a000,
+      rom_at_c000 => rom_at_c000,
+      rom_at_e000 => rom_at_e000,
+
+      address_in => address_translator0_address_in,
+      read_address => address_translator0_address_out
+      );
+  
+  address_translator1: address_translator
+    port map (
+      cpuclock => cpuclock,
+      cpuport_value => cpuport_value,
+      cpuport_ddr => cpuport_ddr,
+      viciii_iomode => viciii_iomode,
+      rom_from_colour_ram => '0',
+      reg_map_low => reg_map_low,
+      reg_mb_low => reg_mb_low,
+      reg_offset_low => reg_offset_low,
+      reg_map_high => reg_map_high,
+      reg_mb_high => reg_mb_high,
+      reg_offset_high => reg_offset_high,
+      rom_at_8000 => rom_at_8000,
+      rom_at_a000 => rom_at_a000,
+      rom_at_c000 => rom_at_c000,
+      rom_at_e000 => rom_at_e000,
+
+      address_in => address_translator1_address_in,
+      read_address => address_translator1_address_out
+      );
+  
   icacheram : icache_ram
     port map (
       -- CPU READ interface to I-CACHE
@@ -81,23 +172,22 @@ begin  -- behavioural
       -- Drive signals to help keep logic shallow to allow pipelining to work
 
       -- Pipeline Stage 1: Drive, and resolve next_pc and branch_pc
-      icache_read_line_number_drive <= icache_read_line_number_drive2;
-      icache_bits := std_logic_vector_to_icache_line(icache_read_line_drive2);
-      address_resolver0_address_in <= icache_bits.next_pc;
-      address_resolver1_address_in <= icache_bits.branch_pc;
+      icache_bits := std_logic_vector_to_icache_line(icache_read_data_drive2);
+      icache_read_data_drive <= icache_read_data_drive2;
+      address_translator0_address_in <= icache_bits.next_pc;
+      address_translator1_address_in <= icache_bits.branch_pc;
 
       -- Pipeline Stage 2: Get resolved addresses out, report cache misses to MMU
-      icache_read_line_number <= icache_read_line_number_drive;
       icache_read_data <= icache_read_data_drive;
-      icache_next_pc_resolved <= address_resolver0_address_out;
-      icache_branch_pc_resolved <= address_resolver1_address_out;
+      icache_next_pc_resolved <= address_translator0_address_out;
+      icache_branch_pc_resolved <= address_translator1_address_out;
       -- If read cache line is correct, but upper bits are wrong, then we have
       -- a cache miss: Tell MMU so that it can fetch it.
       
       -- Is the next instruction the one we are looking for?
       -- XXX Need to know if the branch is taken
       icache_bits := std_logic_vector_to_icache_line(icache_read_data_drive);
-      if expected_icache_address := icache_bits.address then
+      if expected_icache_address = icache_bits.address then
         icache_ready <= '1';
       else
         icache_ready <= '0';
@@ -152,7 +242,7 @@ begin  -- behavioural
 
         -- XXX Address should be resolved in a specific pipeline stage.
         -- This means no address resolution cache etc :)
-        expected_icache_address(31 downto 8) <= x"7FFFF";       
+        expected_icache_address(31 downto 8) <= x"07FFFF";
         
       end if;
 

@@ -16,10 +16,12 @@ package icachetypes is
     byte2 : unsigned(7 downto 0);
     byte3 : unsigned(7 downto 0);
     next_pc : unsigned(15 downto 0);
+    branch_pc : unsigned(15 downto 0);
+    alu_op : std_logic_vector(3 downto 0);
+    src : std_logic_vector(2 downto 0);
+    branch_bits : std_logic_vector(2 downto 0);
     
-    padding : std_logic_vector((106-28+10
-                                -1 -- instruction data
-                                -8-8-16) downto 1);
+    padding : std_logic_vector(8 downto 0);
   end record;
 
   function std_logic_vector_to_icache_line(bits : in std_logic_vector(105 downto 0))
@@ -48,13 +50,23 @@ package body icachetypes is
     -- do any arithmatic on the PC, which should help keep the logic depth as
     -- shallow as possible.
     i.next_pc := unsigned(bits(71 downto 56));
+    i.branch_pc := unsigned(bits(87 downto 72));
+
+    -- 106 - 88 = 18 instruction decode bits: is it enough?
+    -- do we need to merge byte2 and byte3, so that they do double duty with
+    -- branch_pc? Probably something like that
 
     -- Instruction decode flags
     -- ALU OP (ADC,SBC,ASL,LSR,INC,DEC or NOP)
+    i.alu_op := std_logic_vector(bits(91 downto 88));
     -- SRC (A,X,Y,Z,FLAGS or M) (for ALU and for PHn)
-    -- BRANCH FLAGS TO BE SATISFIED (N,Z,C,V or none)
-    -- IS BRANCH INSTRUCTION
+    i.src := std_logic_vector(bits(95 downto 92));
+    -- BRANCH FLAG TO BE SATISFIED (N,Z,C,V or none), and whether instruction
+    -- is a branch
+    i.branch_bits := std_logic_vector(bits(98 downto 96));
+                       
     -- WHICH FLAGS GET SET BY WHICH UNIT (ALU, MEM READ)
+
 
     return i;    
     

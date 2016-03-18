@@ -13,24 +13,25 @@ ENTITY address_translator IS
 
     -- Things that affect address mapping
     cpuport_value: in std_logic_vector(2 downto 0);
+    cpuport_ddr: in std_logic_vector(2 downto 0);
+    viciii_iomode : in std_logic_vector(1 downto 0);
     rom_from_colour_ram : in std_logic;
     reg_map_low : in std_logic_vector(3 downto 0);
-    reg_mb_low : in unsigned(7 downto 0);
+    reg_mb_low : in unsigned(11 downto 0);
     reg_offset_low : in unsigned(11 downto 0);
     reg_map_high : in std_logic_vector(3 downto 0);
-    reg_mb_high : in unsigned(7 downto 0);
+    reg_mb_high : in unsigned(11 downto 0);
     reg_offset_high : in unsigned(11 downto 0);
-    rom_at_e000 : in std_logic;
+    rom_at_8000 : in std_logic;
+    rom_at_a000 : in std_logic;
     rom_at_c000 : in std_logic;
     rom_at_e000 : in std_logic;
-    rom_at_a000 : in std_logic;
-    rom_at_8000 : in std_logic;
 
     memory_map_has_changed : out std_logic := '0';
     
     address_in : in unsigned(15 downto 0);
-    read_address : out unsigned(27 downto 0);
-    write_address : out unsigned(27 downto 0)
+    read_address : out unsigned(31 downto 0);
+    write_address : out unsigned(31 downto 0)
     );
 END address_translator;
 
@@ -39,11 +40,11 @@ architecture behavioural of address_translator is
       impure function resolve_address_to_long(short_address : unsigned(15 downto 0);
                                             writeP : boolean)
       return unsigned is 
-      variable temp_address : unsigned(27 downto 0);
+      variable temp_address : unsigned(31 downto 0);
       variable blocknum : integer;
       variable lhc : std_logic_vector(2 downto 0);
     begin  -- resolve_long_address
-
+      
       -- Now apply C64-style $01 lines first, because MAP and $D030 take precedence
       blocknum := to_integer(short_address(15 downto 12));
 
@@ -69,7 +70,7 @@ architecture behavioural of address_translator is
       -- 1 1 1             BASIC-ROM  RAM       I/O        I/O       KERNAL-ROM RAM
       
       -- default is address in = address out
-      temp_address(27 downto 16) := (others => '0');
+      temp_address(31 downto 16) := (others => '0');
       temp_address(15 downto 0) := short_address;
 
       -- IO
@@ -77,34 +78,34 @@ architecture behavioural of address_translator is
         temp_address(11 downto 0) := short_address(11 downto 0);
         if writeP then
           case lhc(2 downto 0) is
-            when "000" => temp_address(27 downto 12) := x"000D";  -- WRITE RAM
-            when "001" => temp_address(27 downto 12) := x"000D";  -- WRITE RAM
-            when "010" => temp_address(27 downto 12) := x"000D";  -- WRITE RAM
-            when "011" => temp_address(27 downto 12) := x"000D";  -- WRITE RAM
-            when "100" => temp_address(27 downto 12) := x"000D";  -- WRITE RAM
+            when "000" => temp_address(31 downto 12) := x"0000D";  -- WRITE RAM
+            when "001" => temp_address(31 downto 12) := x"0000D";  -- WRITE RAM
+            when "010" => temp_address(31 downto 12) := x"0000D";  -- WRITE RAM
+            when "011" => temp_address(31 downto 12) := x"0000D";  -- WRITE RAM
+            when "100" => temp_address(31 downto 12) := x"0000D";  -- WRITE RAM
             when others =>
               -- All else accesses IO
               -- C64/C65/C65GS I/O is based on which secret knock has been applied
               -- to $D02F
-              temp_address(27 downto 12) := x"FFD3";
+              temp_address(31 downto 12) := x"0FFD3";
               temp_address(13 downto 12) := unsigned(viciii_iomode);          
           end case;        
         else
           -- READING
           case lhc(2 downto 0) is
-            when "000" => temp_address(27 downto 12) := x"000D";  -- READ RAM
-            when "001" => temp_address(27 downto 12) := x"002D";  -- CHARROM
-                          if rom_from_colour_ram='1' then temp_address(27 downto 16) := x"001"; end if;
-            when "010" => temp_address(27 downto 12) := x"002D";  -- CHARROM
-                          if rom_from_colour_ram='1' then temp_address(27 downto 16) := x"001"; end if;       
-            when "011" => temp_address(27 downto 12) := x"002D";  -- CHARROM
-                          if rom_from_colour_ram='1' then temp_address(27 downto 16) := x"001"; end if;       
-            when "100" => temp_address(27 downto 12) := x"000D";  -- READ RAM
+            when "000" => temp_address(31 downto 12) := x"0000D";  -- READ RAM
+            when "001" => temp_address(31 downto 12) := x"0002D";  -- CHARROM
+                          if rom_from_colour_ram='1' then temp_address(31 downto 16) := x"0001"; end if;
+            when "010" => temp_address(31 downto 12) := x"0002D";  -- CHARROM
+                          if rom_from_colour_ram='1' then temp_address(31 downto 16) := x"0001"; end if;       
+            when "011" => temp_address(31 downto 12) := x"0002D";  -- CHARROM
+                          if rom_from_colour_ram='1' then temp_address(31 downto 16) := x"0001"; end if;       
+            when "100" => temp_address(31 downto 12) := x"0000D";  -- READ RAM
             when others =>
               -- All else accesses IO
               -- C64/C65/C65GS I/O is based on which secret knock has been applied
               -- to $D02F
-              temp_address(27 downto 12) := x"FFD3";
+              temp_address(31 downto 12) := x"0FFD3";
               temp_address(13 downto 12) := unsigned(viciii_iomode);          
           end case;              end if;
       end if;
@@ -112,30 +113,30 @@ architecture behavioural of address_translator is
       -- C64 KERNEL
       if reg_map_high(3)='0' then
         if (blocknum=14) and (lhc(1)='1') and (writeP=false) then
-          temp_address(27 downto 12) := x"002E";      
+          temp_address(31 downto 12) := x"0002E";      
           if rom_from_colour_ram='1' then
-            temp_address(27 downto 12) := x"0018";
+            temp_address(31 downto 12) := x"00018";
           end if;
         end if;
         if (blocknum=15) and (lhc(1)='1') and (writeP=false) then
-          temp_address(27 downto 12) := x"002F";      
+          temp_address(31 downto 12) := x"0002F";
           if rom_from_colour_ram='1' then
-            temp_address(27 downto 12) := x"0019";
+            temp_address(31 downto 12) := x"00019";
           end if;
         end if;
       end if;
       -- C64 BASIC
       if reg_map_high(1)='0' then
         if (blocknum=10) and (lhc(0)='1') and (lhc(1)='1') and (writeP=false) then
-          temp_address(27 downto 12) := x"002A";
+          temp_address(31 downto 12) := x"0002A";
           if rom_from_colour_ram='1' then
-            temp_address(27 downto 12) := x"001A";
+            temp_address(31 downto 12) := x"0001A";
           end if;
         end if;
         if (blocknum=11) and (lhc(0)='1') and (lhc(1)='1') and (writeP=false) then
-          temp_address(27 downto 12) := x"002B";      
+          temp_address(31 downto 12) := x"0002B";      
           if rom_from_colour_ram='1' then
-            temp_address(27 downto 12) := x"001B";
+            temp_address(31 downto 12) := x"0001B";
           end if;
         end if;
       end if;
@@ -147,13 +148,13 @@ architecture behavioural of address_translator is
       blocknum := to_integer(short_address(14 downto 13));
       if short_address(15)='1' then
         if reg_map_high(blocknum)='1' then
-          temp_address(27 downto 20) := reg_mb_high;
+          temp_address(31 downto 20) := reg_mb_high;
           temp_address(19 downto 8) := reg_offset_high+to_integer(short_address(15 downto 8));
           temp_address(7 downto 0) := short_address(7 downto 0);       
         end if;
       else
         if reg_map_low(blocknum)='1' then
-          temp_address(27 downto 20) := reg_mb_low;
+          temp_address(31 downto 20) := reg_mb_low;
           temp_address(19 downto 8) := reg_offset_low+to_integer(short_address(15 downto 8));
           temp_address(7 downto 0) := short_address(7 downto 0);
           report "mapped memory address is $" & to_hstring(temp_address) severity note;
@@ -163,22 +164,22 @@ architecture behavioural of address_translator is
       -- $D030 ROM select lines:
       blocknum := to_integer(short_address(15 downto 12));
       if (blocknum=14 or blocknum=15) and rom_at_e000='1' then
-        temp_address(27 downto 12) := x"003E";
+        temp_address(31 downto 12) := x"0003E";
         if blocknum=15 then temp_address(12):='1'; end if;
       end if;
       if (blocknum=12) and rom_at_c000='1' then
-        temp_address(27 downto 12) := x"002C";
-        if rom_from_colour_ram='1' then temp_address(27 downto 16) := x"FF8"; end if;
+        temp_address(31 downto 12) := x"0002C";
+        if rom_from_colour_ram='1' then temp_address(31 downto 16) := x"0FF8"; end if;
       end if;
       if (blocknum=10 or blocknum=11) and rom_at_a000='1' then
-        temp_address(27 downto 12) := x"003A";
+        temp_address(31 downto 12) := x"0003A";
         if blocknum=11 then temp_address(12):='1'; end if;
       end if;
       if (blocknum=9) and rom_at_8000='1' then
-        temp_address(27 downto 12) := x"0039";
+        temp_address(31 downto 12) := x"00039";
       end if;
       if (blocknum=8) and rom_at_8000='1' then
-        temp_address(27 downto 12) := x"0038";
+        temp_address(31 downto 12) := x"00038";
       end if;
             
       return temp_address;
@@ -187,10 +188,10 @@ architecture behavioural of address_translator is
     signal last_cpuport_value: std_logic_vector(2 downto 0);
     signal last_rom_from_colour_ram : std_logic;
     signal last_reg_map_low : std_logic_vector(3 downto 0);
-    signal last_reg_mb_low : unsigned(7 downto 0);
+    signal last_reg_mb_low : unsigned(11 downto 0);
     signal last_reg_offset_low : unsigned(11 downto 0);
     signal last_reg_map_high : std_logic_vector(3 downto 0);
-    signal last_reg_mb_high : unsigned(7 downto 0);
+    signal last_reg_mb_high : unsigned(11 downto 0);
     signal last_reg_offset_high : unsigned(11 downto 0);
     signal last_rom_at_c000 : std_logic;
     signal last_rom_at_e000 : std_logic;
