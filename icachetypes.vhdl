@@ -11,7 +11,7 @@ package icachetypes is
   end record;
   
   type icache_line is record
-    address : unsigned(27 downto 10);
+    address : unsigned(31 downto 0);
     decode : instruction_data;
     byte2 : unsigned(7 downto 0);
     byte3 : unsigned(7 downto 0);
@@ -60,10 +60,10 @@ package body icachetypes is
     -- ALU OP (ADC,SBC,ASL,LSR,INC,DEC or NOP)
     i.alu_op := std_logic_vector(bits(91 downto 88));
     -- SRC (A,X,Y,Z,FLAGS or M) (for ALU and for PHn)
-    i.src := std_logic_vector(bits(95 downto 92));
+    i.src := std_logic_vector(bits(94 downto 92));
     -- BRANCH FLAG TO BE SATISFIED (N,Z,C,V or none), and whether instruction
     -- is a branch
-    i.branch_bits := std_logic_vector(bits(98 downto 96));
+    i.branch_bits := std_logic_vector(bits(97 downto 95));
                        
     -- WHICH FLAGS GET SET BY WHICH UNIT (ALU, MEM READ)
 

@@ -76,8 +76,14 @@ architecture Behavioral of container is
 
   component gs4502b is
     port (
-      cpuclock : in std_logic;
-      monitor_pc : out unsigned(15 downto 0)
+      cpuclock : IN STD_LOGIC;
+      monitor_PC : out unsigned(15 downto 0);
+
+      rom_at_8000 : in std_logic;
+      rom_at_a000 : in std_logic;
+      rom_at_c000 : in std_logic;
+      rom_at_e000 : in std_logic;
+      viciii_iomode : in std_logic_vector(1 downto 0)
       );
   end component;     
   
@@ -107,7 +113,13 @@ begin
   core0: gs4502b
     port map (
       cpuclock      => pixelclock,
-      monitor_pc    => monitor_pc
+      monitor_pc    => monitor_pc,
+
+      rom_at_8000 => '0',
+      rom_at_a000 => '0',
+      rom_at_c000 => '0',
+      rom_at_e000 => '0',
+      viciii_iomode => "11"
       );
 
   
