@@ -6,7 +6,8 @@ SIMULATIONFILES=	cpu_test.vhdl \
 			ghdl_ram72x1k.vhdl \
 			address_translator.vhdl \
 			gs4502b.vhdl \
-			gs4502b_stage_decode.vhdl
+			gs4502b_stage_decode.vhdl \
+			gs4502b_stage_validate.vhdl \
 
 cpu_test:	$(SIMULATIONFILES) Makefile
 	ghdl -i $(SIMULATIONFILES)
