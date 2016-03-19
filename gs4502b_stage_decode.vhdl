@@ -97,6 +97,8 @@ begin
       -- We assume that the instruction cache RAM has a latency of one cycle.
       cache_read_address_1 <= most_recently_requested_cache_line;
       icache_line_number <= cache_read_address_1;
+      report "I-CACHE is currently presenting line $" & to_hstring(icache_line_number);
+
     end if;
   end process;
   
@@ -135,6 +137,8 @@ begin
       -- Finally, if the CPU is elsewhere asking us to divert somewhere, then
       -- do indeed divert there.
       if cpu_divert = '1' then
+        report "CPU requests diversion to an address ending in $"
+          & to_hstring(cpu_divert_line);
         next_line := cpu_divert_line;
       end if;
 
