@@ -12,24 +12,27 @@ ENTITY icache_ram IS
     clka : IN STD_LOGIC;
     wea : IN STD_LOGIC_VECTOR(0 downto 0);
     addra : IN std_logic_vector(9 DOWNTO 0);
-    dina : IN std_logic_vector(71 downto 0);
+    dina : IN std_logic_vector(105 downto 0);
     clkb : IN STD_LOGIC;
     addrb : IN std_logic_vector(9 DOWNTO 0);
-    doutb : OUT std_logic_vector(71 downto 0)
+    doutb : OUT std_logic_vector(105 downto 0)
     );
 END icache_ram;
 
 architecture behavioural of icache_ram is
 
-  type ram_t is array (0 to 1023) of std_logic_vector(71 downto 0);
+  type ram_t is array (0 to 1023) of std_logic_vector(105 downto 0);
   signal ram : ram_t;
+  signal doutb_drive : std_logic_vector(105 downto 0);
   
 begin  -- behavioural
 
   process(clka,addra,ram)
   begin
-    if(rising_edge(Clka)) then 
-      doutb <= ram(to_integer(unsigned(addrb)));
+    if(rising_edge(Clka)) then
+      -- Mimic the one cycle read latency of the coregen generated RAM
+      doutb <= doutb_drive;
+      doutb_drive <= ram(to_integer(unsigned(addrb)));
     end if;
     
     report "I-CACHE: A Reading from $" & to_hstring(unsigned(addra));
