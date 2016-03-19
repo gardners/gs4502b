@@ -6,8 +6,7 @@ use ieee.numeric_std.all;
 package icachetypes is
   
   type instruction_data is record
-    dummy : std_logic;
-      
+    dummy : std_logic;      
   end record;
   
   type icache_line is record
@@ -19,6 +18,9 @@ package icachetypes is
     branch_predict : std_logic;
   end record;
 
+  function std_logic_vector_to_icache_line(bits : in std_logic_vector(105 downto 0))
+  return icache_line;
+  
   type instruction_resources is record
     reg_a : boolean;
     reg_b : boolean;
@@ -33,15 +35,14 @@ package icachetypes is
     flag_d : boolean;
     flag_v : boolean;
   end record;
-
+  
   function "and" (a : instruction_resources; b : instruction_resources)
     return instruction_resources;
 
   function not_empty(a : instruction_resources) return boolean;
-  
-  function std_logic_vector_to_icache_line(bits : in std_logic_vector(105 downto 0))
-  return icache_line;
 
+  function opcode_will_stall_4502(op : unsigned(7 downto 0)) return boolean;
+  
 end package;
 
 package body icachetypes is
@@ -88,6 +89,110 @@ package body icachetypes is
     i.branch_predict := bits(86);
 
     return i;    
+  end function;
+
+  -- Return if an instruction will surely stall in the execute stage.
+  -- 
+  function opcode_will_stall_4502(op : unsigned(7 downto 0)) return boolean is
+  begin
+    case op is
+      -- Basically any instruction that has a path from memory (other than the
+      -- instruction operands) into the ALU or PC.  Everything else clears the
+      -- execute stage in a single cycle, by passing hard memory work to the
+      -- memory controller (including execution of RMW instructions and stack
+      -- push/pops for flags and registers), and simply asserting that some CPU
+      -- resources will be locked until those operations complete.
+      when x"65" => -- ADC $nn             65   6502
+      when x"75" => -- ADC $nn,X           75   6502
+      when x"6D" => -- ADC $nnnn           6D   6502
+      when x"7D" => -- ADC $nnnn,X         7D   6502
+      when x"79" => -- ADC $nnnn,Y         79   6502
+      when x"71" => -- ADC ($nn),Y         71   6502
+      when x"72" => -- ADC ($nn),Z         72   65C02/65CE02
+      when x"61" => -- ADC ($nn,X)         61   6502
+      when x"25" => -- AND $nn             25   6502
+      when x"35" => -- AND $nn,X           35   6502
+      when x"2D" => -- AND $nnnn           2D   6502
+      when x"3D" => -- AND $nnnn,X         3D   6502
+      when x"39" => -- AND $nnnn,Y         39   6502
+      when x"31" => -- AND ($nn),Y         31   6502
+      when x"32" => -- AND ($nn),Z         32   65C02/65CE02
+      when x"21" => -- AND ($nn,X)         21   6502
+      when x"0F" => -- BBR0 $zp,$nn        0F   65SC02
+      when x"1F" => -- BBR1 $zp,$nn        1F   65SC02
+      when x"2F" => -- BBR2 $zp,$nn        2F   65SC02
+      when x"3F" => -- BBR3 $zp,$nn        3F   65SC02
+      when x"4F" => -- BBR4 $zp,$nn        4F   65SC02
+      when x"5F" => -- BBR5 $zp,$nn        5F   65SC02
+      when x"6F" => -- BBR6 $zp,$nn        6F   65SC02
+      when x"7F" => -- BBR7 $zp,$nn        7F   65SC02
+      when x"8F" => -- BBS0 $nn,$nn        8F   65SC02
+      when x"9F" => -- BBS1 $nn,$nn        9F   65SC02
+      when x"AF" => -- BBS2 $nn,$nn        AF   65SC02
+      when x"BF" => -- BBS3 $nn,$nn        BF   65SC02
+      when x"CF" => -- BBS4 $nn,$nn        CF   65SC02
+      when x"DF" => -- BBS5 $nn,$nn        DF   65SC02
+      when x"EF" => -- BBS6 $nn,$nn        EF   65SC02
+      when x"FF" => -- BBS7 $nn,$nn        FF   65SC02
+      when x"24" => -- BIT $nn             24   6502
+      when x"34" => -- BIT $nn,X           34   65SC02
+      when x"2C" => -- BIT $nnnn           2C   6502
+      when x"3C" => -- BIT $nnnn,X         3C   65SC02
+      when x"00" => -- BRK                 00   6502
+      when x"C5" => -- CMP $nn             C5   6502
+      when x"D5" => -- CMP $nn,X           D5   6502
+      when x"CD" => -- CMP $nnnn           CD   6502
+      when x"DD" => -- CMP $nnnn,X         DD   6502
+      when x"D9" => -- CMP $nnnn,Y         D9   6502
+      when x"D1" => -- CMP ($nn),Y         D1   6502
+      when x"D2" => -- CMP ($nn),Z         D2   65C02/65CE02
+      when x"C1" => -- CMP ($nn,X)         C1   6502
+      when x"E4" => -- CPX $nn             E4   6502
+      when x"EC" => -- CPX $nnnn           EC   6502
+      when x"C4" => -- CPY $nn             C4   6502
+      when x"CC" => -- CPY $nnnn           CC   6502
+      when x"D4" => -- CPZ $nn             D4   65CE02
+      when x"DC" => -- CPZ $nnnn           DC   65CE02
+      when x"45" => -- EOR $nn             45   6502
+      when x"55" => -- EOR $nn,X           55   6502
+      when x"4D" => -- EOR $nnnn           4D   6502
+      when x"5D" => -- EOR $nnnn,X         5D   6502
+      when x"59" => -- EOR $nnnn,Y         59   6502
+      when x"51" => -- EOR ($nn),Y         51   6502
+      when x"52" => -- EOR ($nn),Z         52   65C02/65CE02
+      when x"41" => -- EOR ($nn,X)         41   6502
+      when x"6C" => -- JMP ($nnnn)         6C   6502
+      when x"7C" => -- JMP ($nnnn,X)       7C   65C02
+      when x"22" => -- JSR ($nnnn)         22   65CE02
+      when x"23" => -- JSR ($nnnn,X)       23   65CE02
+      when x"05" => -- ORA $nn             05   6502
+      when x"15" => -- ORA $nn,X           15   6502
+      when x"0D" => -- ORA $nnnn           0D   6502
+      when x"1D" => -- ORA $nnnn,X         1D   6502
+      when x"19" => -- ORA $nnnn,Y         19   6502
+      when x"11" => -- ORA ($nn),Y         11   6502
+      when x"12" => -- ORA ($nn),Z         12   65C02/65CE02
+      when x"01" => -- ORA ($nn,X)         01   6502
+      when x"F4" => -- PHW #$nnnn          F4   65CE02
+      when x"FC" => -- PHW $nnnn           FC   65CE02
+      when x"40" => -- RTI                 40   6502
+      when x"60" => -- RTS                 60   6502
+      when x"E5" => -- SBC $nn             E5   6502
+      when x"F5" => -- SBC $nn,X           F5   6502
+      when x"ED" => -- SBC $nnnn           ED   6502
+      when x"FD" => -- SBC $nnnn,X         FD   6502
+      when x"F9" => -- SBC $nnnn,Y         F9   6502
+      when x"F1" => -- SBC ($nn),Y         F1   6502
+      when x"F2" => -- SBC ($nn),Z         F2   65C02/65CE02
+      when x"E1" => -- SBC ($nn,X)         E1   6502
+      when x"14" => -- TRB $nn             14   65SC02
+      when x"1C" => -- TRB $nnnn           1C   65SC02
+      when x"04" => -- TSB $nn             04   65SC02
+      when x"0C" => -- TSB $nnnn           0C   65SC02
+      when others =>
+        return false;
+    end case;
+    return true;
   end function;
   
 end icachetypes;
