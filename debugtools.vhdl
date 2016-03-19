@@ -18,17 +18,13 @@ package body debugtools is
       procedure HWRITE(L:inout LINE; VALUE:in BIT_VECTOR;
     JUSTIFIED:in SIDE := RIGHT; FIELD:in WIDTH := 0) is      
       variable quad: bit_vector(0 to 3);
-      constant ne:   integer := value'length/4;
-      variable bv:   bit_vector(0 to value'length-1) := value;
+      constant ne:   integer := (value'length+3)/4;
+      variable bv:   bit_vector(0 to value'length+4) := (others => '0');
       variable s:    string(1 to ne);
     begin
-      if value'length mod 4 /= 0 then
-        assert FALSE report 
-          "HWRITE Error: Trying to read vector " &
-          "with an odd (non multiple of 4) length";
-        return;
-      end if;
-      
+        
+      bv(0 to (value'length-1)) := value;
+    
       for i in 0 to ne-1 loop
         quad := bv(4*i to 4*i+3);
         case quad is
