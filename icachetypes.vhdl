@@ -19,12 +19,58 @@ package icachetypes is
     branch_predict : std_logic;
   end record;
 
+  type instruction_resources is record
+    reg_a : boolean;
+    reg_b : boolean;
+    reg_x : boolean;
+    reg_y : boolean;
+    reg_z : boolean;
+    reg_spl : boolean;
+    reg_sph : boolean;
+    flag_z : boolean;
+    flag_n : boolean;
+    flag_c : boolean;
+    flag_d : boolean;
+    flag_v : boolean;
+  end record;
+
+  function "and" (a : instruction_resources; b : instruction_resources)
+    return instruction_resources;
+
+  function not_empty(a : instruction_resources) return boolean;
+  
   function std_logic_vector_to_icache_line(bits : in std_logic_vector(105 downto 0))
   return icache_line;
 
 end package;
 
 package body icachetypes is
+
+  function "and" (a : instruction_resources; b : instruction_resources)
+    return instruction_resources is
+    variable r : instruction_resources;
+  begin
+    r.reg_a := a.reg_a and b.reg_a;
+    r.reg_b := a.reg_b and b.reg_b;
+    r.reg_x := a.reg_x and b.reg_x;
+    r.reg_y := a.reg_y and b.reg_y;
+    r.reg_z := a.reg_z and b.reg_z;
+    r.reg_spl := a.reg_spl and b.reg_spl;
+    r.reg_sph := a.reg_sph and b.reg_sph;
+    r.flag_c := a.flag_c and b.flag_c;
+    r.flag_d := a.flag_d and b.flag_d;
+    r.flag_n := a.flag_n and b.flag_n;
+    r.flag_v := a.flag_v and b.flag_v;
+    r.flag_z := a.flag_z and b.flag_z;
+    
+    return r;
+  end function;
+
+  function not_empty(a : instruction_resources) return boolean is
+  begin
+    return a.reg_a or a.reg_b or a.reg_x or a.reg_y or a.reg_z
+      or a.flag_z or a.flag_n or a.flag_c or a.flag_d or a.flag_v;
+  end function;
   
   function std_logic_vector_to_icache_line(bits : in std_logic_vector(105 downto 0))
   return icache_line is
