@@ -35,13 +35,13 @@ begin  -- behavioural
       doutb_drive <= ram(to_integer(unsigned(addrb)));
     end if;
     
-    report "I-CACHE: A Reading from $" & to_hstring(unsigned(addra));
---      & " = $" & to_hstring(ram(to_integer(unsigned(addra))));
+    report "I-CACHE: A Reading from $"
+      & to_hstring(unsigned(addrb));
 
     if(rising_edge(Clka)) then 
       if(wea(0)='1') then
         ram(to_integer(unsigned(addra(9 downto 0)))) <= dina;
-        report "COLOURRAM: A writing to $" & to_hstring(unsigned(addra))
+        report "I-CACHE: A writing to $" & to_hstring(unsigned(addra))
           & " = $" & to_hstring(dina);
       end if;
     end if;
