@@ -100,28 +100,81 @@ architecture behavioural of gs4502b_stage_validate is
 
   -- Resources that can be modified or required by a given instruction
   signal uncommitted_resources : instruction_resources;
+
+  -- Stall buffer
+  signal stall_buffer_occupied : std_logic := '0';
+  signal stalled_icache_src_address : unsigned(31 downto 0);
+  signal stalled_icache_bytes : std_logic_vector(23 downto 0);
+  signal stalled_pch : unsigned(15 downto 8);
+  signal stalled_pc_expected : unsigned(15 downto 0);
+  signal stalled_pc_mispredict : unsigned(15 downto 0);
+  signal stalled_branch_predict : std_logic;
+  
   
 begin
 
   process(cpuclock)
     variable next_line : unsigned(9 downto 0);
+
+    -- MUX variables to choose between stall buffer and incoming instruction
+    variable icache_src_address : unsigned(31 downto 0);
+    variable icache_bytes : std_logic_vector(23 downto 0);
+    variable pch : unsigned(15 downto 8);
+    variable pc_expected : unsigned(15 downto 0);
+    variable pc_mispredict : unsigned(15 downto 0);
+    variable branch_predict : std_logic;
   begin
     if (rising_edge(cpuclock)) then
+
+      -- We are stalled unless we are processing something we are reading in,
+      -- and we are not being asked to stall ourselves.
+      stall_out <= '1';
+      
       if stall='0' then
+        -- Downstream stage is willing to accept an instruction
+        
+        if stall_buffer_occupied = '1' then
+          -- Pass instruction from our stall buffer
+          icache_src_address := stalled_icache_src_address;
+          icache_line_number := stalled_icache_line_number;
+          icache_bytes := stalled_icache_bytes;
+          pch := stalled_pch;
+          branch_predict := stalled_branch_predict;
+          resources_modified := stalled_resources_modified;
+          resources_required := stalled_resources_required;
+        else
+          icache_src_address := icache_src_address_in;
+          icache_line_number := icache_line_number_in;
+          icache_bytes := icache_bytes_in;
+          pch := pch_in;
+          branch_predict := branch_predict_in;
+          resources_modified := resources_modified_in;
+          resources_required := resources_required_in;
+          
+          -- Reading from pipeline input, and we are not stalled, so we can tell
+          -- the upstream pipeline stage to resume
+          stall_out <= '0';                    
+        end if;
+
+        -- In either case above, the stall buffer becomes empty
+        stall_buffer_occupied <= '0';
+        
         -- Pass signals through
-        icache_src_address_out(31 downto 10) <= icache_src_address_in;
+        icache_src_address_out(31 downto 10) <= icache_src_address;
         icache_src_address_out(9 downto 0) <= icache_line_number;
-        icache_bytes_out <= icache_bytes_in;
-        icache_line_number_out <= icache_line_number_in;
-        pch_out <= pch_in;
-        branch_predict_out <= branch_predict_in;
-        resources_modified_out <= resources_modified_in;
-        resources_required_out <= resources_required_in;
+        icache_bytes_out <= icache_bytes;
+        icache_line_number_out <= icache_line_number;
+        pch_out <= pch;
+        branch_predict_out <= branch_predict;
+        resources_modified_out <= resources_modified;
+        resources_required_out <= resources_required;
 
         -- Remember resources that will be potentially modified by any uncommitted
         -- instructions. At the moment, the execute stage is the stage immediately
         -- following this one, so we need only remember the one instruction.
-        uncommitted_resources <= resources_modified_in;
+        -- XXX This memory needs to expand to multiple instructions if the
+        -- pipeline becomes deeper.
+        uncommitted_resources <= resources_modified;
         
         if
           -- Are all the resources we need here?
@@ -143,11 +196,11 @@ begin
           -- Therefore what we need to test now is whether we decided that the
           -- previous instruction will block on a memory access. If yes, then
           -- we need to hold this instruction.
-          (most_recent_instruction_will_stall = true)
 
           -- Currently locked instructions are easy to test
-          or not_empty(resource_required_in and locked_resources)
-          
+          not_empty(resource_required and locked_resources)
+          or
+          not_empty(resources_required and uncommitted_resources)
         then
           -- Instructions resource requirements not currently met.
           -- XXX - HOLD INPUT *and* OUTPUT values
