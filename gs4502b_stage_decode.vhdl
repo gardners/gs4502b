@@ -119,8 +119,7 @@ begin
         -- XXX - Decode instruction
       else
         -- Pipeline stalled: hold existing values.
-        -- XXX: We should assign them so that we avoid having flip-flops.
-        
+
         -- XXX: Work out the right address to ask from the instruction cache
         -- so that it gets automatically presented again as soon as possible.
         -- This will require a little delay register that shows the correct value
