@@ -101,6 +101,7 @@ begin
   end process;
   
   process(cpuclock)
+    variable next_line : unsigned(9 downto 0);
   begin
     if (rising_edge(cpuclock)) then
       if stall='0' then
@@ -112,8 +113,7 @@ begin
         icache_line_number_out <= icache_line_number;
         pch_out <= pch_in;
         branch_predict_out <= branch_predict_in;
-        next_cache_line <= pc_expected(9 downto 0);
-        most_recently_requested_cache_line <= pc_expected(9 downto 0);
+        next_line := pc_expected(9 downto 0);
         -- XXX - Decode instruction
       else
         -- Pipeline stalled: hold existing values.
@@ -130,15 +130,18 @@ begin
         -- the pipeline will happen without latency, just that there will then
         -- be a few cycles delay after that one instruction before the pipline
         -- starts to refill.  That's probably okay.
-        next_cache_line <= icache_line_number;
-        most_recently_requested_cache_line <= icache_line_number;
+        next_line := icache_line_number;
       end if;
       -- Finally, if the CPU is elsewhere asking us to divert somewhere, then
       -- do indeed divert there.
       if cpu_divert = '1' then
-        next_cache_line <= cpu_divert_line;
-        most_recently_requested_cache_line <= cpu_divert_line;
+        next_line := cpu_divert_line;
       end if;
+
+      report "I-CACHE read address set to $" & to_hstring(next_line);
+      next_cache_line <= next_line;
+      most_recently_requested_cache_line <= next_line;
+
     end if;    
   end process;    
   
