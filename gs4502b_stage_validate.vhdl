@@ -69,6 +69,8 @@ entity gs4502b_stage_validate is
     pc_mispredict : in unsigned(15 downto 0);
 -- Input: 1-bit Branch prediction flag: 1=assume take branch
     branch_predict_in : in std_logic;
+-- Is the instruction pipeline stalled?
+    stall : in std_logic;
 
 -- Output: 32-bit address source of instruction
     icache_src_address_out : out unsigned(31 downto 0);
@@ -87,30 +89,10 @@ entity gs4502b_stage_validate is
 --         (for passing to MMU if branch prediction is wrong, so that cache
 --         line can be updated).
     branch_predict_out : out std_logic;
--- Output: Cache line for the following instruction, consisting of lower
---         bits of PC value for conditional branch or not, based on branch
---         prediction flag.
---         UNLESS execute stage tells us we need to change PC abnormally
---         (eg branch mis-prediction, RTS/RTI, interrupt or trap entry/return)
-    next_cache_line : out unsigned(9 downto 0);
-
-    stall : in std_logic;
+-- Output: Boolean: Is the instruction we have here ready for execution
+-- (including that the pipeline is not stalled)
+    instruction_ready : out std_logic
     
-    -- Inputs required for address translators
-    reg_mb_low : in unsigned(11 downto 0);
-    reg_offset_low : in unsigned(11 downto 0);
-    reg_map_low : in std_logic_vector(3 downto 0);
-    reg_mb_high : in unsigned(11 downto 0);
-    reg_map_high : in std_logic_vector(3 downto 0);
-    reg_offset_high : in unsigned(11 downto 0);
-    cpuport_value : in std_logic_vector(2 downto 0);
-    cpuport_ddr : in std_logic_vector(2 downto 0);
-    rom_at_8000 : in std_logic;
-    rom_at_a000 : in std_logic;
-    rom_at_c000 : in std_logic;
-    rom_at_e000 : in std_logic;
-    viciii_iomode : in std_logic_vector(1 downto 0)
-   
     );
 end gs4502b_stage_validate;
 
@@ -141,17 +123,44 @@ begin
         -- following this one, so we need only remember the one instruction.
         uncommitted_resources <= resources_modified_in;
         
-        if not_empty(resources_required_in and uncommitted_resources)
-          or not_empty(resource_required_in and locked_resources) then
-          -- Instructions resource requirements not currently met
+        if
+          -- Are all the resources we need here?
+          --
+          -- All that we care about are those resources which will not be available
+          -- next cycle because they are either currently locked, or are about
+          -- to be locked because the most recent instruction requires a memory
+          -- access to resolve them, e.g, following a non-immediate mode ALU
+          -- operation. e.g., EOR $1234 / STA $2345 would require the STA to
+          -- stall until the EOR operation completes. 
+          -- 
+          -- (We also want to implement short-cutting register access when
+          -- registers are pending being loaded from memory. This basically consists
+          -- of using the memory transaction ID for a load as the source for
+          -- the store operation, instead of the register, when the operation is
+          -- passed to the memory controller (stores don't affect CPU flags),
+          -- so we can ignore that for now.)
+          --
+          -- Therefore what we need to test now is whether we decided that the
+          -- previous instruction will block on a memory access. If yes, then
+          -- we need to hold this instruction.
+          (most_recent_instruction_will_stall = true)
+
+          -- Currently locked instructions are easy to test
+          or not_empty(resource_required_in and locked_resources)
+          
+        then
+          -- Instructions resource requirements not currently met.
+          -- XXX - HOLD INPUT *and* OUTPUT values
+          -- What would be really nice is if we can insert bubbles in the
+          -- pipeline to be closed up when we get here, so that we can avoid
+          -- the need for any extra buffer registers and muxes.
+                  
+          instruction_ready <= '0';
         else
           -- Instruction meets all requirements
+          -- Release and pass forward
+          instruction_ready <= '1';
         end if;
-
-
-        
-        -- XXX - Validate instruction, and assert instruction_ready as appropriate.
-        instruction_ready <= '0';
       else
         -- Pipeline stalled: hold existing values.
         -- XXX: We should assign them so that we avoid having flip-flops.        
