@@ -27,8 +27,6 @@ package icachetypes is
     reg_x : boolean;
     reg_y : boolean;
     reg_z : boolean;
-    reg_spl : boolean;
-    reg_sph : boolean;
     flag_z : boolean;
     flag_n : boolean;
     flag_c : boolean;
@@ -44,6 +42,9 @@ package icachetypes is
   
   function not_empty(a : instruction_resources) return boolean;
 
+  -- Allow upto 7 memory transactions in flight at a time
+  subtype transaction_id is integer range 0 to 7;
+  
   type addressing_mode is (
     Implied,
     Immediate8,
@@ -102,8 +103,6 @@ package body icachetypes is
     r.reg_x := b;
     r.reg_y := b;
     r.reg_z := b;
-    r.reg_spl := b;
-    r.reg_sph := b;
     r.flag_c := b;
     r.flag_d := b;
     r.flag_n := b;
@@ -122,8 +121,6 @@ package body icachetypes is
     r.reg_x := a.reg_x and b.reg_x;
     r.reg_y := a.reg_y and b.reg_y;
     r.reg_z := a.reg_z and b.reg_z;
-    r.reg_spl := a.reg_spl and b.reg_spl;
-    r.reg_sph := a.reg_sph and b.reg_sph;
     r.flag_c := a.flag_c and b.flag_c;
     r.flag_d := a.flag_d and b.flag_d;
     r.flag_n := a.flag_n and b.flag_n;

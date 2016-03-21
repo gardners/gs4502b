@@ -79,6 +79,8 @@ entity gs4502b_stage_validate is
     stall_in : in std_logic;
 -- What resources have just been locked by the execute stage?
     resources_freshly_locked_by_execute_stage : in instruction_resources;
+    resource_lock_transaction_id_in : in transaction_id;
+    resource_lock_transaction_valid_in : boolean;
 
 -- Output: 32-bit address source of instruction
     instruction_address_out : out unsigned(31 downto 0);
@@ -114,6 +116,19 @@ architecture behavioural of gs4502b_stage_validate is
   -- Resources that can be modified or required by a given instruction
   signal resources_about_to_be_locked_by_execute_stage : instruction_resources := (others => false);
 
+  -- Register and flag renaming
+  signal reg_a_name : transaction_id;
+  signal reg_x_name : transaction_id;
+  signal reg_b_name : transaction_id;
+  signal reg_y_name : transaction_id;
+  signal reg_z_name : transaction_id;
+  signal reg_spl_name : transaction_id;
+  signal reg_sph_name : transaction_id;
+  signal flag_z_name : transaction_id;
+  signal flag_c_name : transaction_id;
+  signal flag_v_name : transaction_id;
+  signal flag_n_name : transaction_id;
+  
   -- Resources that we are still waiting to clear following memory accesses.
   -- XXX Implement logic to update this
   signal resources_what_will_still_be_outstanding_next_cycle : instruction_resources := (others => false);
@@ -149,6 +164,93 @@ begin
   begin
     if (rising_edge(cpuclock)) then
 
+      -- Watch for memory transactions coming in, so that we can commit and
+      -- unlock registers and flags as required.
+      -- XXX Don't modify resources that will be also modified by the execute
+      -- stage this cycle.
+      if completed_transaction_valid = true then
+        if completed_transaction_id = reg_a_name then
+          -- Must happen same cycle in execute: reg_a <= completed_transaction_value;
+          resources_what_will_still_be_outstanding_next_cycle.reg_a <= false;
+        end if;
+        if completed_transaction_id = reg_b_name then
+          -- Must happen same cycle in execute: reg_b <= completed_transaction_value;
+          resources_what_will_still_be_outstanding_next_cycle.reg_b <= false;
+        end if;
+        if completed_transaction_id = reg_x_name then
+          -- Must happen same cycle in execute: reg_x <= completed_transaction_value;
+          resources_what_will_still_be_outstanding_next_cycle.reg_x <= false;
+        end if;
+        if completed_transaction_id = reg_y_name then
+          -- Must happen same cycle in execute: reg_y <= completed_transaction_value;
+          resources_what_will_still_be_outstanding_next_cycle.reg_y <= false;
+        end if;
+        if completed_transaction_id = reg_z_name then
+          -- Must happen same cycle in execute: reg_z <= completed_transaction_value;
+          resources_what_will_still_be_outstanding_next_cycle.reg_z <= false;
+        end if;
+        if completed_transaction_id = flag_z_name then
+          -- Must happen same cycle in execute: flag_z <= completed_transaction_value;
+          resources_what_will_still_be_outstanding_next_cycle.flag_z <= false;
+        end if;
+        if completed_transaction_id = flag_c_name then
+          -- Must happen same cycle in execute: flag_c <= completed_transaction_value;
+          resources_what_will_still_be_outstanding_next_cycle.flag_c <= false;
+        end if;
+        if completed_transaction_id = flag_n_name then
+          -- Must happen same cycle in execute: flag_n <= completed_transaction_value;
+          resources_what_will_still_be_outstanding_next_cycle.flag_n <= false;
+        end if;
+        if completed_transaction_id = flag_v_name then
+          -- Must happen same cycle in execute: flag_v <= completed_transaction_value;
+          resources_what_will_still_be_outstanding_next_cycle.flag_v <= false;
+        end if;
+      end if;
+      
+      -- Watch for transaction announcements from execute stage so that we can
+      -- rename registers and flags as required.
+      -- This must come after the above, so that new locks take priority over
+      -- retiring old instructions.
+      if resource_lock_transaction_valid_in = true then
+        if resources_freshly_locked_by_execute_stage.reg_a then
+          reg_a_name <= resource_lock_transaction_id_in;
+          resources_what_will_still_be_outstanding_next_cycle.reg_a <= true;
+        end if;
+        if resources_freshly_locked_by_execute_stage.reg_b then
+          reg_b_name <= resource_lock_transaction_id_in;
+          resources_what_will_still_be_outstanding_next_cycle.reg_b <= true;
+        end if;
+        if resources_freshly_locked_by_execute_stage.reg_x then
+          reg_x_name <= resource_lock_transaction_id_in;
+          resources_what_will_still_be_outstanding_next_cycle.reg_x <= true;
+        end if;
+        if resources_freshly_locked_by_execute_stage.reg_y then
+          reg_y_name <= resource_lock_transaction_id_in;
+          resources_what_will_still_be_outstanding_next_cycle.reg_y <= true;
+        end if;
+        if resources_freshly_locked_by_execute_stage.reg_z then
+          reg_z_name <= resource_lock_transaction_id_in;
+          resources_what_will_still_be_outstanding_next_cycle.reg_z <= true;
+        end if;
+        if resources_freshly_locked_by_execute_stage.flag_z then
+          flag_z_name <= resource_lock_transaction_id_in;
+          resources_what_will_still_be_outstanding_next_cycle.flag_z <= true;
+        end if;
+        if resources_freshly_locked_by_execute_stage.flag_c then
+          flag_c_name <= resource_lock_transaction_id_in;
+          resources_what_will_still_be_outstanding_next_cycle.flag_c <= true;
+        end if;
+        if resources_freshly_locked_by_execute_stage.flag_v then
+          flag_v_name <= resource_lock_transaction_id_in;
+          resources_what_will_still_be_outstanding_next_cycle.flag_v <= true;
+        end if;
+        if resources_freshly_locked_by_execute_stage.flag_n then
+          flag_n_name <= resource_lock_transaction_id_in;
+          resources_what_will_still_be_outstanding_next_cycle.flag_n
+            <= true;
+        end if;
+      end if;
+      
       -- We are stalled unless we are processing something we are reading in,
       -- and we are not being asked to stall ourselves.
       stall_out <= '1';

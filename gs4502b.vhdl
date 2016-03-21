@@ -65,6 +65,8 @@ architecture behavioural of gs4502b is
   -- Signals output by execute stage
   signal execute_stall : std_logic;
   signal stage_execute_resources_locked : instruction_resources := (others => false);
+  signal stage_execute_transaction_id : transaction_id;
+  signal stage_execute_transaction_valid : boolean := false;
   
   -- CPU Registers & Flags
   signal reg_pc : unsigned(15 downto 0);
@@ -143,7 +145,9 @@ begin  -- behavioural
 
       stall_in => execute_stall,
       resources_freshly_locked_by_execute_stage
-        => stage_execute_resources_locked,
+      => stage_execute_resources_locked,
+      resource_lock_transaction_id_in => stage_execute_transaction_id,
+      resource_lock_transaction_valid_in => stage_execute_transaction_valid,
       
       instruction_address_in => stage_decode_instruction_address,
       instruction_bytes_in => stage_decode_instruction_bytes,
