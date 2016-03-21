@@ -64,6 +64,7 @@ architecture behavioural of gs4502b is
 
   -- Signals output by execute stage
   signal execute_stall : std_logic;
+  signal stage_execute_resources_locked : instruction_resources := (others => false);
   
   -- CPU Registers & Flags
   signal reg_pc : unsigned(15 downto 0);
@@ -139,7 +140,11 @@ begin  -- behavioural
   validate_stage: entity work.gs4502b_stage_validate
     port map (
       cpuclock => cpuclock,
+
       stall_in => execute_stall,
+      resources_freshly_locked_by_execute_stage
+        => stage_execute_resources_locked,
+      
       instruction_address_in => stage_decode_instruction_address,
       instruction_bytes_in => stage_decode_instruction_bytes,
       pch_in => stage_decode_pch,

@@ -74,9 +74,11 @@ entity gs4502b_stage_validate is
     resources_required_in : in instruction_resources;
     resources_modified_in : in instruction_resources;
     instruction_information_in : in instruction_information;
-    
+        
 -- Is the instruction pipeline stalled?
     stall_in : in std_logic;
+-- What resources have just been locked by the execute stage?
+    resources_freshly_locked_by_execute_stage : in instruction_resources;
 
 -- Output: 32-bit address source of instruction
     instruction_address_out : out unsigned(31 downto 0);
@@ -110,8 +112,12 @@ end gs4502b_stage_validate;
 architecture behavioural of gs4502b_stage_validate is
 
   -- Resources that can be modified or required by a given instruction
-  signal delayed_resources : instruction_resources;
+  signal resources_about_to_be_locked_by_execute_stage : instruction_resources := (others => false);
 
+  -- Resources that we are still waiting to clear following memory accesses.
+  -- XXX Implement logic to update this
+  signal resources_what_will_still_be_outstanding_next_cycle : instruction_resources := (others => false);
+  
   -- Stall buffer and stall logic
   signal stall_buffer_occupied : std_logic := '0';
   signal stall_out_current : std_logic := '0';  
@@ -206,21 +212,10 @@ begin
           -- XXX We can probably optimise this a bit, by not setting SPL
           -- delayed for a stack operation, for example, because the value
           -- of SP will be resolved. But we can worry about that later.
-          delayed_resources <= resources_modified;
+          resources_about_to_be_locked_by_execute_stage <= resources_modified;
         else
           -- Set delayed flag for all resources to false
-          delayed_resources.reg_a <= false;
-          delayed_resources.reg_b <= false;
-          delayed_resources.reg_x <= false;
-          delayed_resources.reg_y <= false;
-          delayed_resources.reg_z <= false;
-          delayed_resources.reg_spl <= false;
-          delayed_resources.reg_sph <= false;
-          delayed_resources.flag_z <= false;
-          delayed_resources.flag_c <= false;
-          delayed_resources.flag_d <= false;
-          delayed_resources.flag_n <= false;
-          delayed_resources.flag_v <= false;
+          resources_about_to_be_locked_by_execute_stage <= (others => false);
         end if;
         
         if
@@ -243,11 +238,19 @@ begin
           -- Therefore what we need to test now is whether we decided that the
           -- previous instruction will block on a memory access. If yes, then
           -- we need to hold this instruction.
+          --
+          -- We also have to check outstanding_resources, which is the list of
+          -- resources for which we are currently waiting for finalisation from
+          -- the memory controller, i.e., due to resolution of renamed
+          -- registers or flags.  Outstanding resources is computed by seeing
+          -- what transaction information the execute stage informs us of (it
+          -- is the stage that allocates transaction IDs to memory
+          -- transactions, and hence does the resource re-writing.
 
           -- Currently locked instructions are easy to test
-          not_empty(resources_required and locked_resources)
-          or
-          not_empty(resources_required and uncommitted_resources)
+          not_empty(resources_required and resources_about_to_be_locked_by_execute_stage)
+          or not_empty(resources_required and resources_what_will_still_be_outstanding_next_cycle)
+          or not_empty(resources_required and resources_freshly_locked_by_execute_stage)
         then
           -- Instructions resource requirements not currently met.
           -- XXX - HOLD INPUT *and* OUTPUT values
