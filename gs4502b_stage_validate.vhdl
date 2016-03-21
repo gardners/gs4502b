@@ -52,32 +52,36 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
+use work.icachetypes.all;
 
 entity gs4502b_stage_validate is
   port (
     cpuclock : in std_logic;
     
 -- Input: translated address of instruction in memory
-    icache_src_address_in : in unsigned(31 downto 0);
+    instruction_address_in : in unsigned(31 downto 0);
 -- Input: 3 instruction bytes
-    icache_bytes_in : in std_logic_vector(23 downto 0);
+    instruction_bytes_in : in std_logic_vector(23 downto 0);
 -- Input: 8-bit PCH (PC upper byte) for this instruction
     pch_in : in unsigned(15 downto 8);
--- Input: 16-bit PC for expected case
-    pc_expected : in unsigned(15 downto 0);
--- Input: 16-bit PC for branch mis-predict case
-    pc_mispredict : in unsigned(15 downto 0);
+-- Input: translated 32-bit PC for expected case
+    pc_expected_in : in unsigned(31 downto 0);
+-- Input: translated 32-bit PC for branch mis-predict case
+    pc_mispredict_in : in unsigned(31 downto 0);
 -- Input: 1-bit Branch prediction flag: 1=assume take branch
     branch_predict_in : in std_logic;
+-- Input: What resources does this instruction require and modify?
+    resources_required_in : in instruction_resources;
+    resources_modified_in : in instruction_resources;
+    instruction_information_in : in instruction_information;
+    
 -- Is the instruction pipeline stalled?
-    stall : in std_logic;
+    stall_in : in std_logic;
 
 -- Output: 32-bit address source of instruction
-    icache_src_address_out : out unsigned(31 downto 0);
--- Output: 10-bit cache line number, so that we can detect cache misses
-    icache_line_number_out : out unsigned(9 downto 0);
+    instruction_address_out : out unsigned(31 downto 0);
 -- Output: 3 instruction bytes
-    icache_bytes_out : out std_logic_vector(23 downto 0);
+    instruction_bytes_out : out std_logic_vector(23 downto 0);
 -- Output: 8-bit PCH (PC upper byte) for this instruction
     pch_out : out unsigned(15 downto 8);
 -- Output: Translated PC for expected case
@@ -91,7 +95,14 @@ entity gs4502b_stage_validate is
     branch_predict_out : out std_logic;
 -- Output: Boolean: Is the instruction we have here ready for execution
 -- (including that the pipeline is not stalled)
-    instruction_ready : out std_logic
+    instruction_valid : out std_logic;
+-- Output: What resources does this instruction require and modify?
+    resources_required_out : out instruction_resources;
+    resources_modified_out : out instruction_resources;
+    instruction_information_out : out instruction_information;
+
+-- Output: Stall signal to tell pipeline behind us to wait
+    stall_out : out std_logic
     
     );
 end gs4502b_stage_validate;
@@ -99,17 +110,20 @@ end gs4502b_stage_validate;
 architecture behavioural of gs4502b_stage_validate is
 
   -- Resources that can be modified or required by a given instruction
-  signal uncommitted_resources : instruction_resources;
+  signal delayed_resources : instruction_resources;
 
-  -- Stall buffer
+  -- Stall buffer and stall logic
   signal stall_buffer_occupied : std_logic := '0';
-  signal stalled_icache_src_address : unsigned(31 downto 0);
-  signal stalled_icache_bytes : std_logic_vector(23 downto 0);
+  signal stall_out_current : std_logic := '0';  
+  signal stalled_instruction_address : unsigned(31 downto 0);
+  signal stalled_instruction_bytes : std_logic_vector(23 downto 0);
+  signal stalled_instruction_information : instruction_information;
   signal stalled_pch : unsigned(15 downto 8);
   signal stalled_pc_expected : unsigned(15 downto 0);
   signal stalled_pc_mispredict : unsigned(15 downto 0);
   signal stalled_branch_predict : std_logic;
-  
+  signal stalled_resources_required : instruction_resources;
+  signal stalled_resources_modified : instruction_resources;
   
 begin
 
@@ -117,12 +131,15 @@ begin
     variable next_line : unsigned(9 downto 0);
 
     -- MUX variables to choose between stall buffer and incoming instruction
-    variable icache_src_address : unsigned(31 downto 0);
-    variable icache_bytes : std_logic_vector(23 downto 0);
+    variable instruction_address : unsigned(31 downto 0);
+    variable instruction_bytes : std_logic_vector(23 downto 0);
     variable pch : unsigned(15 downto 8);
     variable pc_expected : unsigned(15 downto 0);
     variable pc_mispredict : unsigned(15 downto 0);
     variable branch_predict : std_logic;
+    variable resources_modified : instruction_resources;
+    variable resources_required : instruction_resources;
+    variable instruction_information : instruction_information;
   begin
     if (rising_edge(cpuclock)) then
 
@@ -130,51 +147,81 @@ begin
       -- and we are not being asked to stall ourselves.
       stall_out <= '1';
       
-      if stall='0' then
+      if stall_in='0' then
         -- Downstream stage is willing to accept an instruction
         
         if stall_buffer_occupied = '1' then
           -- Pass instruction from our stall buffer
-          icache_src_address := stalled_icache_src_address;
-          icache_line_number := stalled_icache_line_number;
-          icache_bytes := stalled_icache_bytes;
+          instruction_address := stalled_instruction_address;
+          instruction_bytes := stalled_instruction_bytes;
           pch := stalled_pch;
           branch_predict := stalled_branch_predict;
           resources_modified := stalled_resources_modified;
           resources_required := stalled_resources_required;
+          instruction_information := stalled_instruction_information;
         else
-          icache_src_address := icache_src_address_in;
-          icache_line_number := icache_line_number_in;
-          icache_bytes := icache_bytes_in;
+          instruction_address := instruction_address_in;
+          instruction_bytes := instruction_bytes_in;
           pch := pch_in;
           branch_predict := branch_predict_in;
           resources_modified := resources_modified_in;
           resources_required := resources_required_in;
+          instruction_information := instruction_information_in;
           
           -- Reading from pipeline input, and we are not stalled, so we can tell
           -- the upstream pipeline stage to resume
-          stall_out <= '0';                    
+          stall_out <= '0';
+          stall_out_current <= '0';
         end if;
 
         -- In either case above, the stall buffer becomes empty
         stall_buffer_occupied <= '0';
         
         -- Pass signals through
-        icache_src_address_out(31 downto 10) <= icache_src_address;
-        icache_src_address_out(9 downto 0) <= icache_line_number;
-        icache_bytes_out <= icache_bytes;
-        icache_line_number_out <= icache_line_number;
+        instruction_address_out <= instruction_address;
+        instruction_bytes_out <= instruction_bytes;
         pch_out <= pch;
         branch_predict_out <= branch_predict;
         resources_modified_out <= resources_modified;
         resources_required_out <= resources_required;
+        instruction_information_out <= instruction_information;
 
-        -- Remember resources that will be potentially modified by any uncommitted
-        -- instructions. At the moment, the execute stage is the stage immediately
+        -- Remember resources that will be potentially modified by any
+        -- instructions that have not yet passed the execute stage.
+        -- At the moment, the execute stage is the stage immediately
         -- following this one, so we need only remember the one instruction.
         -- XXX This memory needs to expand to multiple instructions if the
         -- pipeline becomes deeper.
-        uncommitted_resources <= resources_modified;
+        -- More specifically, we only care about resources which will be
+        -- modified by this instruction following a memory access, as immediate
+        -- mode, register indexing etc will all happen during the execute
+        -- cycle, and so be available.  Therefore only memory load or
+        -- read-modify-write instructions are a problem here.  Thus, if the
+        -- instruction is a load (including stack pop) or RMW, then we need to note the
+        -- resources as being delayed. In all other cases we have no
+        -- delayed resources
+        if instruction_information.does_load=true then
+          -- Set delayed flag for all resources modified by this
+          -- instruction.
+          -- XXX We can probably optimise this a bit, by not setting SPL
+          -- delayed for a stack operation, for example, because the value
+          -- of SP will be resolved. But we can worry about that later.
+          delayed_resources <= resources_modified;
+        else
+          -- Set delayed flag for all resources to false
+          delayed_resources.reg_a <= false;
+          delayed_resources.reg_b <= false;
+          delayed_resources.reg_x <= false;
+          delayed_resources.reg_y <= false;
+          delayed_resources.reg_z <= false;
+          delayed_resources.reg_spl <= false;
+          delayed_resources.reg_sph <= false;
+          delayed_resources.flag_z <= false;
+          delayed_resources.flag_c <= false;
+          delayed_resources.flag_d <= false;
+          delayed_resources.flag_n <= false;
+          delayed_resources.flag_v <= false;
+        end if;
         
         if
           -- Are all the resources we need here?
@@ -198,7 +245,7 @@ begin
           -- we need to hold this instruction.
 
           -- Currently locked instructions are easy to test
-          not_empty(resource_required and locked_resources)
+          not_empty(resources_required and locked_resources)
           or
           not_empty(resources_required and uncommitted_resources)
         then
@@ -207,17 +254,36 @@ begin
           -- What would be really nice is if we can insert bubbles in the
           -- pipeline to be closed up when we get here, so that we can avoid
           -- the need for any extra buffer registers and muxes.
-                  
-          instruction_ready <= '0';
+
+          -- Tell downstream stage the instruction is not valid for execution.
+          instruction_valid <= '0';
+
+          -- Tell upstream stage that we are stalled
+          stall_out <= '1';
+          stall_out_current <= '1';
+
+          -- If we weren't already stalling the upstream, then we need to
+          -- copy the current inputs to the stall buffer, and mark the stall
+          -- buffer as occupied.
+          if stall_out_current='0' then
+            stalled_instruction_address <= instruction_address;
+            stalled_instruction_bytes <= instruction_bytes;
+            stalled_pch <= pch;
+            stalled_branch_predict <= branch_predict;
+            stalled_resources_modified <= resources_modified;
+            stalled_resources_required <= resources_required;
+            stalled_instruction_information <= instruction_information;
+            stall_buffer_occupied <= '1';
+          end if;
         else
           -- Instruction meets all requirements
           -- Release and pass forward
-          instruction_ready <= '1';
+          instruction_valid <= '1';
         end if;
       else
         -- Pipeline stalled: hold existing values.
         -- XXX: We should assign them so that we avoid having flip-flops.        
-        instruction_ready <= '0';        
+        instruction_valid <= '0';        
       end if;
 
     end if;    

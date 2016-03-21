@@ -25,7 +25,6 @@ architecture behavioural of gs4502b is
   signal rom_from_colour_ram : std_logic := '0';
 
   -- General pipeline control
-  signal stall : std_logic := '0';
   signal instruction_ready : std_logic := '0';
   signal expected_instruction_address : unsigned(31 downto 0)
     := "00001111000011110000111010101010";
@@ -39,13 +38,32 @@ architecture behavioural of gs4502b is
   signal cpu_divert_line : unsigned(9 downto 0);
 
   -- Signals output by decode stage
-  signal stage_decode_instruction_src_address : unsigned(31 downto 0);
+  signal stage_decode_instruction_address : unsigned(31 downto 0);
   signal stage_decode_instruction_bytes : std_logic_vector(23 downto 0);
   signal stage_decode_pc_expected_translated : unsigned(31 downto 0);
   signal stage_decode_pc_mispredict_translated : unsigned(31 downto 0);
   signal stage_decode_pch : unsigned(15 downto 8);
   signal stage_decode_branch_predict : std_logic;
   signal icache_ram_read_address : std_logic_vector(9 downto 0);
+  signal stage_decode_resources_required : instruction_resources;
+  signal stage_decode_resources_modified : instruction_resources;
+  signal stage_decode_instruction_information : instruction_information;
+
+  -- Signals output by validate stage
+  signal validate_stall : std_logic;
+  signal stage_validate_instruction_address : unsigned(31 downto 0);
+  signal stage_validate_instruction_bytes : std_logic_vector(23 downto 0);
+  signal stage_validate_pc_expected_translated : unsigned(31 downto 0);
+  signal stage_validate_pc_mispredict_translated : unsigned(31 downto 0);
+  signal stage_validate_pch : unsigned(15 downto 8);
+  signal stage_validate_branch_predict : std_logic;
+  signal stage_validate_resources_required : instruction_resources;
+  signal stage_validate_resources_modified : instruction_resources;
+  signal stage_validate_instruction_information : instruction_information;
+  signal instruction_valid : std_logic;
+
+  -- Signals output by execute stage
+  signal execute_stall : std_logic;
   
   -- CPU Registers & Flags
   signal reg_pc : unsigned(15 downto 0);
@@ -108,14 +126,42 @@ begin  -- behavioural
       branch_predict_in => icache_read_data(86),
       cpu_divert => cpu_divert,
       cpu_divert_line => cpu_divert_line,
-      stall => stall,
-      icache_src_address_out => stage_decode_instruction_src_address,
+      stall => validate_stall,
+      icache_src_address_out => stage_decode_instruction_address,
       icache_bytes_out => stage_decode_instruction_bytes,
       pch_out => stage_decode_pch,
       pc_expected_translated => stage_decode_pc_expected_translated,      
       pc_mispredict_translated => stage_decode_pc_mispredict_translated,
       branch_predict_out => stage_decode_branch_predict,
       std_logic_vector(next_cache_line) => icache_ram_read_address
+      );
+
+  validate_stage: entity work.gs4502b_stage_validate
+    port map (
+      cpuclock => cpuclock,
+      stall_in => execute_stall,
+      instruction_address_in => stage_decode_instruction_address,
+      instruction_bytes_in => stage_decode_instruction_bytes,
+      pch_in => stage_decode_pch,
+      pc_expected_in => stage_decode_pc_expected_translated,
+      pc_mispredict_in => stage_decode_pc_mispredict_translated,
+      branch_predict_in => stage_decode_branch_predict,
+      resources_required_in => stage_decode_resources_required,
+      resources_modified_in => stage_decode_resources_modified,
+      instruction_information_in => stage_decode_instruction_information,
+
+      instruction_address_out => stage_validate_instruction_address,
+      instruction_bytes_out => stage_validate_instruction_bytes,
+      pch_out => stage_validate_pch,
+      pc_expected_translated => stage_validate_pc_expected_translated,
+      pc_mispredict_translated => stage_validate_pc_mispredict_translated,
+      branch_predict_out => stage_validate_branch_predict,
+      instruction_valid => instruction_valid,      
+      resources_required_out => stage_validate_resources_required,
+      resources_modified_out => stage_validate_resources_modified,
+      instruction_information_out => stage_validate_instruction_information,
+      stall_out => validate_stall
+
       );
   
   process(cpuclock, icache_read_data)
@@ -127,7 +173,7 @@ begin  -- behavioural
 
     if(rising_edge(cpuclock)) then
             
-      if (expected_instruction_address = stage_decode_instruction_src_address)
+      if (expected_instruction_address = stage_decode_instruction_address)
          and (expected_instruction_pch = stage_decode_pch) then
         instruction_ready <= '1';
       else

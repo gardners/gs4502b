@@ -39,12 +39,80 @@ package icachetypes is
   function "and" (a : instruction_resources; b : instruction_resources)
     return instruction_resources;
 
+  function "=" (a : instruction_resources; b : boolean)
+    return instruction_resources;
+  
   function not_empty(a : instruction_resources) return boolean;
+
+  type addressing_mode is (
+    Implied,
+    Immediate8,
+    ZeroPage,
+    ZeroPageX,
+    ZeroPageY,
+    Absolute,
+    AbsoluteX,
+    AbsoluteY,
+    -- For pushing values to the stack (allows PH<X> instructions to be
+    -- considered as simple stores, which is what they are).
+    StackWrite,
+    -- For loading registers, including when pulling something from the stack.
+    StackRead,
+    -- Merges both Relative8 and Relative16 functions
+    ConditionalBranch
+    -- XXX - ZP+Relative8 mode not currently considered.
+    -- XXX Add the rest
+    );
+
+  type instruction is (
+    -- Nop here actually covers a few different things, including JMP and BRA,
+    -- where all we need to do is unconditionally change the program counter.
+    Nop,
+    -- One of various typical ALU-focused operations, such as ADC, SBC, ORA,
+    -- EOR etc.
+    Alu,
+    -- Pull a value off the stack or read a memory location (no matter which register is the destination)
+    Load,
+    -- Store a value, either to the stack or via an addressing mode
+    Store
+    -- XXX add the rest
+    );
+    
+
+  type instruction_information is record
+    -- Does this instruction load and/or store memory?
+    -- (both are set for a RMW instruction)
+    does_load : boolean;
+    does_store : boolean;
+    
+    addressing_mode : addressing_mode;
+    instruction : instruction;
+  end record;
   
 end package;
 
 package body icachetypes is
 
+  function "=" (a : instruction_resources; b : boolean)
+    return instruction_resources is
+    variable r : instruction_resources;
+  begin
+    r.reg_a := b;
+    r.reg_b := b;
+    r.reg_x := b;
+    r.reg_y := b;
+    r.reg_z := b;
+    r.reg_spl := b;
+    r.reg_sph := b;
+    r.flag_c := b;
+    r.flag_d := b;
+    r.flag_n := b;
+    r.flag_v := b;
+    r.flag_z := b;
+    return r;
+  end function;
+  
+  
   function "and" (a : instruction_resources; b : instruction_resources)
     return instruction_resources is
     variable r : instruction_resources;
