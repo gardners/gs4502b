@@ -44,6 +44,16 @@ package icachetypes is
 
   -- Allow upto 7 memory transactions in flight at a time
   subtype transaction_id is integer range 0 to 7;
+
+  type transaction_result is record
+    valid : boolean;
+    id : transaction_id;
+    value : unsigned(7 downto 0);
+    z : boolean;
+    v : boolean;
+    c : boolean;
+    n : boolean;    
+  end record;  
   
   type addressing_mode is (
     Implied,
@@ -79,7 +89,6 @@ package icachetypes is
     -- XXX add the rest
     );
     
-
   type instruction_information is record
     -- Does this instruction load and/or store memory?
     -- (both are set for a RMW instruction)

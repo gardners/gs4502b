@@ -82,6 +82,9 @@ entity gs4502b_stage_validate is
     resource_lock_transaction_id_in : in transaction_id;
     resource_lock_transaction_valid_in : boolean;
 
+-- What can we see from the memory controller?
+    completed_transaction : in transaction_result; 
+
 -- Output: 32-bit address source of instruction
     instruction_address_out : out unsigned(31 downto 0);
 -- Output: 3 instruction bytes

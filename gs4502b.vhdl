@@ -67,6 +67,10 @@ architecture behavioural of gs4502b is
   signal stage_execute_resources_locked : instruction_resources := (others => false);
   signal stage_execute_transaction_id : transaction_id;
   signal stage_execute_transaction_valid : boolean := false;
+
+  -- Signals output by the memory controller
+  signal completed_transaction_valid : boolean;
+  signal completed_transaction : transaction_result;
   
   -- CPU Registers & Flags
   signal reg_pc : unsigned(15 downto 0);
