@@ -386,6 +386,15 @@ begin
         else
           -- Instruction meets all requirements
           -- Release and pass forward
+          -- NOTE: This only means that the instruction COULD execute.
+          -- The execute stage will check if the instruction WILL in fact execute,
+          -- i.e., that the instruction address and CPU personality
+          -- (4502, 6502 or Hypervisor mode)
+          -- This does mean that we might mistakenly think that some resource
+          -- will be busy next cycle based on the last instruction we let through.
+          -- Thus we might not dispatch instructions sometimes when we should
+          -- be able to do so, but the delay will only be 1 cycle, as the
+          -- actual resource locks will are read back from the execute stage.
           instruction_valid <= '1';
         end if;
       else
