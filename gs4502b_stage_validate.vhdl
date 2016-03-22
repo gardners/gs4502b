@@ -171,40 +171,40 @@ begin
       -- unlock registers and flags as required.
       -- XXX Don't modify resources that will be also modified by the execute
       -- stage this cycle.
-      if completed_transaction_valid = true then
-        if completed_transaction_id = reg_a_name then
+      if completed_transaction.valid = true then
+        if completed_transaction.id = reg_a_name then
           -- Must happen same cycle in execute: reg_a <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.reg_a <= false;
         end if;
-        if completed_transaction_id = reg_b_name then
+        if completed_transaction.id = reg_b_name then
           -- Must happen same cycle in execute: reg_b <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.reg_b <= false;
         end if;
-        if completed_transaction_id = reg_x_name then
+        if completed_transaction.id = reg_x_name then
           -- Must happen same cycle in execute: reg_x <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.reg_x <= false;
         end if;
-        if completed_transaction_id = reg_y_name then
+        if completed_transaction.id = reg_y_name then
           -- Must happen same cycle in execute: reg_y <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.reg_y <= false;
         end if;
-        if completed_transaction_id = reg_z_name then
+        if completed_transaction.id = reg_z_name then
           -- Must happen same cycle in execute: reg_z <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.reg_z <= false;
         end if;
-        if completed_transaction_id = flag_z_name then
+        if completed_transaction.id = flag_z_name then
           -- Must happen same cycle in execute: flag_z <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.flag_z <= false;
         end if;
-        if completed_transaction_id = flag_c_name then
+        if completed_transaction.id = flag_c_name then
           -- Must happen same cycle in execute: flag_c <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.flag_c <= false;
         end if;
-        if completed_transaction_id = flag_n_name then
+        if completed_transaction.id = flag_n_name then
           -- Must happen same cycle in execute: flag_n <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.flag_n <= false;
         end if;
-        if completed_transaction_id = flag_v_name then
+        if completed_transaction.id = flag_v_name then
           -- Must happen same cycle in execute: flag_v <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.flag_v <= false;
         end if;

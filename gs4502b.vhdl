@@ -152,6 +152,8 @@ begin  -- behavioural
       => stage_execute_resources_locked,
       resource_lock_transaction_id_in => stage_execute_transaction_id,
       resource_lock_transaction_valid_in => stage_execute_transaction_valid,
+
+      completed_transaction => completed_transaction,      
       
       instruction_address_in => stage_decode_instruction_address,
       instruction_bytes_in => stage_decode_instruction_bytes,
