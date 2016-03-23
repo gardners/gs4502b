@@ -88,15 +88,22 @@ package icachetypes is
     Store
     -- XXX add the rest
     );
-    
+
+  type cpu_personality is (
+    Hypervisor, CPU6502, CPU4502
+    );
+  
   type instruction_information is record
     -- Does this instruction load and/or store memory?
     -- (both are set for a RMW instruction)
     does_load : boolean;
     does_store : boolean;
+    modifies_cpu_personality : boolean;
     
     addressing_mode : addressing_mode;
     instruction : instruction;
+
+    cpu_personality : cpu_personality;
   end record;
   
 end package;

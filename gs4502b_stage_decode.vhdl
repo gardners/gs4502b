@@ -12,6 +12,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
+use work.icachetypes.all;
 
 entity gs4502b_stage_decode is
   port (
@@ -59,6 +60,9 @@ entity gs4502b_stage_decode is
 --         UNLESS execute stage tells us we need to change PC abnormally
 --         (eg branch mis-prediction, RTS/RTI, interrupt or trap entry/return)
     next_cache_line : out unsigned(9 downto 0);
+
+-- Output: Instruction information for this instruction
+    instruction_information : out instruction_information;
 
     stall : in std_logic;
     
@@ -117,6 +121,16 @@ begin
         branch_predict_out <= branch_predict_in;
         next_line := pc_expected(9 downto 0);
         -- XXX - Decode instruction
+
+        -- CPU personality is only modified by writing to $D02F or $D640-$D67F
+        if (icache_bytes_in(23 downto 8) = x"D02F")
+          or ((icache_bytes_in(23 downto 16) = x"D6")
+              and (icache_bytes_in(15 downto 14) = "01")) then
+          instruction_information.modifies_cpu_personality <= true;
+        else
+          instruction_information.modifies_cpu_personality <= false;
+        end if;
+        
       else
         -- Pipeline stalled: hold existing values.
 
@@ -132,6 +146,11 @@ begin
         -- be a few cycles delay after that one instruction before the pipline
         -- starts to refill.  That's probably okay.
         next_line := icache_line_number;
+
+        -- XXX Make sure that outputs are invalid for next stage, since the
+        -- address translators are running no matter what. Or else allow
+        -- address translators to be able to stall.
+        
       end if;
       -- Finally, if the CPU is elsewhere asking us to divert somewhere, then
       -- do indeed divert there.

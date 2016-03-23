@@ -81,6 +81,8 @@ entity gs4502b_stage_validate is
     resources_freshly_locked_by_execute_stage : in instruction_resources;
     resource_lock_transaction_id_in : in transaction_id;
     resource_lock_transaction_valid_in : boolean;
+-- Current CPU personality
+    current_cpu_personality : cpu_personality;
 
 -- What can we see from the memory controller?
     completed_transaction : in transaction_result; 
@@ -356,6 +358,9 @@ begin
           not_empty(resources_required and resources_about_to_be_locked_by_execute_stage)
           or not_empty(resources_required and resources_what_will_still_be_outstanding_next_cycle)
           or not_empty(resources_required and resources_freshly_locked_by_execute_stage)
+          -- Make sure instruction personality will be valid
+          or (instruction_information.cpu_personality /= current_cpu_personality)
+          or (instruction_information.modifies_cpu_personality)
         then
           -- Instructions resource requirements not currently met.
           -- XXX - HOLD INPUT *and* OUTPUT values
@@ -390,6 +395,8 @@ begin
           -- The execute stage will check if the instruction WILL in fact execute,
           -- i.e., that the instruction address and CPU personality
           -- (4502, 6502 or Hypervisor mode)
+          -- XXX - We should check CPU personality here, to save the execute
+          -- stage checking it, as comparing a 32-bit PC will be deep enough logic.
           -- This does mean that we might mistakenly think that some resource
           -- will be busy next cycle based on the last instruction we let through.
           -- Thus we might not dispatch instructions sometimes when we should

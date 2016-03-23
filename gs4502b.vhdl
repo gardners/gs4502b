@@ -67,6 +67,8 @@ architecture behavioural of gs4502b is
   signal stage_execute_resources_locked : instruction_resources := (others => false);
   signal stage_execute_transaction_id : transaction_id;
   signal stage_execute_transaction_valid : boolean := false;
+  signal stage_execute_cpu_personality : cpu_personality := CPU4502;
+  
 
   -- Signals output by the memory controller
   signal completed_transaction_valid : boolean;
@@ -140,7 +142,9 @@ begin  -- behavioural
       pc_expected_translated => stage_decode_pc_expected_translated,      
       pc_mispredict_translated => stage_decode_pc_mispredict_translated,
       branch_predict_out => stage_decode_branch_predict,
-      std_logic_vector(next_cache_line) => icache_ram_read_address
+      std_logic_vector(next_cache_line) => icache_ram_read_address,
+
+      instruction_information => stage_decode_instruction_information
       );
 
   validate_stage: entity work.gs4502b_stage_validate
@@ -152,6 +156,7 @@ begin  -- behavioural
       => stage_execute_resources_locked,
       resource_lock_transaction_id_in => stage_execute_transaction_id,
       resource_lock_transaction_valid_in => stage_execute_transaction_valid,
+      current_cpu_personality => stage_execute_cpu_personality,
 
       completed_transaction => completed_transaction,      
       
