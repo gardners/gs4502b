@@ -120,8 +120,14 @@ begin
         pch_out <= pch_in;
         branch_predict_out <= branch_predict_in;
         next_line := pc_expected(9 downto 0);
-        -- XXX - Decode instruction
 
+        -- Decode instruction
+        -- XXX Read fields from instruction cache
+        instruction_information.does_load <= false;
+        instruction_information.does_store <= false;
+        instruction_information.addressing_mode <= Implied;
+        instruction_information.instruction <= Nop;
+        
         -- CPU personality is only modified by writing to $D02F or $D640-$D67F
         if (icache_bytes_in(23 downto 8) = x"D02F")
           or ((icache_bytes_in(23 downto 16) = x"D6")
