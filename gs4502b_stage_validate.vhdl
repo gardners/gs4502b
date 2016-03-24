@@ -27,6 +27,8 @@
 -- instruction.  In such cases we must ask the memory controller to fetch the
 -- instruction in question (and which will then begin speculatively fetching
 -- further instructions in that sequence as memory bandwidth allows).
+-- XXX - Is this happening in the execute stage now instead? It would be better
+-- here, as it would save one cycle of latency.
 --
 -- The memory controller is rather intelligent in this processor, being
 -- responsible for the operation of the read-modify-write instructions (thus
@@ -40,10 +42,30 @@
 -- are no instructions ahead of it in the pipeline, as those could mutate the
 -- index values.
 --
+-- This means that any index registers required for the addressing mode must be
+-- fully resolved before the instruction can be released for execution.
+-- This means LDX $1234 / LDA $2345,X will result in a stall of several cycles.
+-- Not ideal, but certainly acceptable for now until we can think of ways to
+-- optimise it.
+-- XXX - Are we making sure that such registers are ready before asserting valid?
+--
 -- If there are no uncommited instructions that would affect the destination of
 -- a branch, conditional branch instructions can be patched to present the correct
 -- expected pc, and have their conditional flags stripped, thus reducing them
 -- to unconditional branches
+--
+-- Another wrinkle we have to cater for is when working out if this instruction
+-- has the correct value.  Normally we reference the previously released
+-- instruction.  If we have checked the validity of the address of each
+-- instruction before releasing it, then this will be correct, provided that no
+-- branch-mispredictions occur, or equivalent events such as RTS/RTI or an
+-- interrupt.  In that case we need to reference the comparison instead to the
+-- requested target address.  This can be done by having the execute stage pass
+-- the next desired instruction address that it wants next, together with a
+-- flag to indicate when this is the value for the comparison. This will
+-- naturally be delayed by one cycle in order for it to be passed back to us.
+-- Thus the execute stage needs to ignore whatever it receives the cycle
+-- following it asserting the processor redirect signal.
 
 use WORK.ALL;
 
@@ -80,9 +102,13 @@ entity gs4502b_stage_validate is
 -- What resources have just been locked by the execute stage?
     resources_freshly_locked_by_execute_stage : in instruction_resources;
     resource_lock_transaction_id_in : in transaction_id;
-    resource_lock_transaction_valid_in : boolean;
+    resource_lock_transaction_valid_in : in boolean;
 -- Current CPU personality
-    current_cpu_personality : cpu_personality;
+    current_cpu_personality : in cpu_personality;
+-- Are we being redirected by the execute stage?
+    address_redirecting : in boolean;
+    redirected_address : in unsigned(31 downto 0);
+    redirected_pch : in unsigned(15 downto 8);
 
 -- What can we see from the memory controller?
     completed_transaction : in transaction_result; 
