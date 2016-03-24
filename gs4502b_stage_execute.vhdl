@@ -62,10 +62,6 @@ entity gs4502b_stage_execute is
     -- What mode is the CPU currently in? (4502, 6502 or hypervisor)
     current_cpu_personality : out cpu_personality := CPU4502;
 
-    fetch_valid_out : out boolean := false;
-    fetch_instruction_address_translated_out : out unsigned(31 downto 0);
-    fetch_instruction_pch : out unsigned(15 downto 8);
-  
     -- Tell validate stage to stall?
     stall_out : out std_logic := '0'
     );
@@ -149,14 +145,6 @@ begin
           renamed_resources.flag_v <= false;
         end if;
       end if;
-
-      
-      -- Tell memory controller about the next instruction to fetch
-      -- By default, let it keep fetching from wherever it was upto.
-      fetch_instruction_address_translated_out <= expected_instruction_address;
-      fetch_instruction_pch <= pch_in;
-      fetch_valid_out <= false;
-
       
       if instruction_valid = false then
         -- If there is no valid instruction, then we keep expecting the same address.
@@ -176,9 +164,10 @@ begin
           -- when the mis-predict occurs.
           -- Can it also also happen when there is an instruction cache miss?
           -- Well, it certainly seems like that is the most likely case for how
-          -- we could end up in this situation.  So we should tell the memory
-          -- controller to fetch the correct address.
-          fetch_valid_out <= false;
+          -- we could end up in this situation.  In which case, hopefully the
+          -- instruction validate stage has already told the memory controller
+          -- to fetch the correct data, so we can just do nothing here, while
+          -- we wait for the data to arrive.
         end if;
           
       end if;
