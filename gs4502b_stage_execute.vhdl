@@ -38,17 +38,23 @@ use work.icachetypes.all;
 entity gs4502b_stage_execute is
   port (
     cpuclock : in std_logic;
-
+    stall_in : in std_logic;
+    
     instruction_address : in unsigned(31 downto 0);
     instruction_valid : in boolean;
     instruction_address_is_as_expected : in boolean;
+    completed_transaction : in transaction_result;
+    completed_transaction_valid : in boolean;
 
 -- Are we redirecting execution?
     address_redirecting : out boolean;
     redirected_address : out unsigned(31 downto 0);
     redirected_pch : out unsigned(15 downto 8);
-
-    
+    resources_locked : out instruction_resources;
+    resource_lock_transaction_id_out : out transaction_id;
+    resource_lock_transaction_valid_out : out boolean := false;
+    current_cpu_personality : out cpu_personality := CPU4502;
+    stall_out : out std_logic := '0'
     );
 end gs4502b_stage_execute;
 
@@ -87,6 +93,7 @@ begin
           instruction_begin_fetching_out <= true;
         end if;
           
+      end if;
     end if;
   end process;
 end behavioural;

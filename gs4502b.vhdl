@@ -68,11 +68,14 @@ architecture behavioural of gs4502b is
   signal stage_execute_transaction_id : transaction_id;
   signal stage_execute_transaction_valid : boolean := false;
   signal stage_execute_cpu_personality : cpu_personality := CPU4502;
-  
+  signal stage_execute_redirecting : boolean := false;
+  signal stage_execute_redirected_address : unsigned(31 downto 0);
+  signal stage_execute_redirected_pch : unsigned(15 downto 8);
 
   -- Signals output by the memory controller
   signal completed_transaction_valid : boolean;
   signal completed_transaction : transaction_result;
+  signal memory_stall : std_logic := '0';
   
   -- CPU Registers & Flags
   signal reg_pc : unsigned(15 downto 0);
@@ -157,6 +160,9 @@ begin  -- behavioural
       resource_lock_transaction_id_in => stage_execute_transaction_id,
       resource_lock_transaction_valid_in => stage_execute_transaction_valid,
       current_cpu_personality => stage_execute_cpu_personality,
+      address_redirecting => stage_execute_redirecting,      
+      redirected_address => stage_execute_redirected_address,      
+      redirected_pch => stage_execute_redirected_pch,
 
       completed_transaction => completed_transaction,      
       
@@ -183,6 +189,25 @@ begin  -- behavioural
       stall_out => validate_stall
 
       );
+
+  execute_stage: entity work.gs4502b_stage_execute
+    port map (
+      cpuclock => cpuclock,
+
+      stall_in => memory_stall,
+      resources_locked => stage_execute_resources_locked,
+      resource_lock_transaction_id_out => stage_execute_transaction_id,
+      resource_lock_transaction_valid_out => stage_execute_transaction_valid,
+      current_cpu_personality => stage_execute_cpu_personality,
+      address_redirecting => stage_execute_redirecting,      
+      redirected_address => stage_execute_redirected_address,      
+      redirected_pch => stage_execute_redirected_pch,
+
+      completed_transaction => completed_transaction,
+
+      stall_out => execute_stall
+      );
+
   
   process(cpuclock, icache_read_data)
     variable icache_bits : icache_line;
