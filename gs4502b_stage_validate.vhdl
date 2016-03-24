@@ -82,6 +82,7 @@ entity gs4502b_stage_validate is
     
 -- Input: translated address of instruction in memory
     instruction_address_in : in translated_address;
+    icache_line_number_in : in unsigned(9 downto 0);
 -- Input: 3 instruction bytes
     instruction_bytes_in : in instruction_bytes;
 -- Input: 8-bit PCH (PC upper byte) for this instruction
@@ -113,6 +114,10 @@ entity gs4502b_stage_validate is
 -- What can we see from the memory controller?
     completed_transaction : in transaction_result;
 
+-- Tell memory controller about cache misses
+    cache_miss : out boolean := false;
+    cache_miss_address : out translated_address;
+    
 -- Output: 32-bit address source of instruction
     instruction_address_out : out translated_address;
 -- Output: 3 instruction bytes
@@ -290,12 +295,42 @@ begin
             <= true;
         end if;
       end if;
+
+      -- For any incoming instruction, if the lower bits of the expected
+      -- address match the cache line, but the instruction address is wrong,
+      -- then this is a cache miss. The expected address can be from one of two
+      -- sources: (a) from the previous valid instruction; or (b) from the
+      -- execute stage of the CPU, if it is redirecting program flow.
+      -- (Note that we must also check the CPU personality, which as far as
+      -- cache address space is concerned, effectively represents a couple of
+      -- extra bits).
+      cache_miss <= false;
+      cache_miss_address <= instruction_address_in;
+      if icache_line_number_in = last_instruction_expected_address(9 downto 0) then
+        if (last_instruction_expected_address(31 downto 10)
+            /= instruction_address_in(31 downto 10))
+          or (instruction_information.cpu_personality
+              /= current_cpu_personality) then
+          cache_miss <= true;
+        end if;
+      end if;
+      if address_redirecting then
+        if icache_line_number_in = redirected_address(9 downto 0) then
+          if (redirected_address(31 downto 10)
+              /= instruction_address_in(31 downto 10))
+            or (instruction_information.cpu_personality
+                /= current_cpu_personality) then
+            cache_miss <= true;
+            cache_miss_address <= redirected_address;
+          end if;
+        end if;
+      end if;
       
       -- We are stalled unless we are processing something we are reading in,
       -- and we are not being asked to stall ourselves.
       stall_out <= '1';
       last_instruction_expected_address <= last_instruction_expected_address;
-        
+     
       if stall_in='0' then
         -- Downstream stage is willing to accept an instruction
         

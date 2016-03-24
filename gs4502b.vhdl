@@ -44,6 +44,9 @@ architecture behavioural of gs4502b is
   signal stage_decode_pc_mispredict_translated : translated_address;
   signal stage_decode_pch : unsigned(15 downto 8);
   signal stage_decode_branch_predict : std_logic;
+  -- The value we last used, for passing along the pipeline
+  signal stage_decode_cache_line_number : unsigned(9 downto 0);
+  -- To be wired to cache ram for reading next line
   signal icache_ram_read_address : std_logic_vector(9 downto 0);
   signal stage_decode_resources_required : instruction_resources;
   signal stage_decode_resources_modified : instruction_resources;
@@ -142,6 +145,7 @@ begin  -- behavioural
       cpu_divert_line => cpu_divert_line,
       stall => validate_stall,
       icache_src_address_out => stage_decode_instruction_address,
+      icache_line_number_out => stage_decode_cache_line_number,
       icache_bytes_out => stage_decode_instruction_bytes,
       pch_out => stage_decode_pch,
       pc_expected_translated => stage_decode_pc_expected_translated,      
@@ -170,7 +174,8 @@ begin  -- behavioural
       redirected_pch => stage_execute_redirected_pch,
 
       completed_transaction => completed_transaction,      
-      
+
+      icache_line_number_in => stage_decode_cache_line_number,
       instruction_address_in => stage_decode_instruction_address,
       instruction_bytes_in => stage_decode_instruction_bytes,
       pch_in => stage_decode_pch,
