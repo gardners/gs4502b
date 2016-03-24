@@ -45,6 +45,9 @@ package icachetypes is
   -- Allow upto 7 memory transactions in flight at a time
   subtype transaction_id is integer range 0 to 7;
 
+  subtype translated_address is unsigned(31 downto 0);
+
+  
   type transaction_result is record
     valid : boolean;
     id : transaction_id;
@@ -54,6 +57,12 @@ package icachetypes is
     c : boolean;
     n : boolean;    
   end record;  
+
+  type instruction_bytes is record
+    opcode : unsigned(7 downto 0);
+    arg1 : unsigned(7 downto 0);
+    arg2 : unsigned(7 downto 0);
+  end record; 
   
   type addressing_mode is (
     Implied,

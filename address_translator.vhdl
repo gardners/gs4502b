@@ -30,8 +30,8 @@ ENTITY address_translator IS
     memory_map_has_changed : out std_logic := '0';
     
     address_in : in unsigned(15 downto 0);
-    read_address : out unsigned(31 downto 0);
-    write_address : out unsigned(31 downto 0)
+    read_address : out translated_address;
+    write_address : out translated_address
     );
 END address_translator;
 
@@ -40,7 +40,7 @@ architecture behavioural of address_translator is
       impure function resolve_address_to_long(short_address : unsigned(15 downto 0);
                                             writeP : boolean)
       return unsigned is 
-      variable temp_address : unsigned(31 downto 0);
+      variable temp_address : translated_address;
       variable blocknum : integer;
       variable lhc : std_logic_vector(2 downto 0);
     begin  -- resolve_long_address

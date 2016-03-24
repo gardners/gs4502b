@@ -38,10 +38,10 @@ architecture behavioural of gs4502b is
   signal cpu_divert_line : unsigned(9 downto 0);
 
   -- Signals output by decode stage
-  signal stage_decode_instruction_address : unsigned(31 downto 0);
-  signal stage_decode_instruction_bytes : std_logic_vector(23 downto 0);
-  signal stage_decode_pc_expected_translated : unsigned(31 downto 0);
-  signal stage_decode_pc_mispredict_translated : unsigned(31 downto 0);
+  signal stage_decode_instruction_address : translated_address;
+  signal stage_decode_instruction_bytes : instruction_bytes;
+  signal stage_decode_pc_expected_translated : translated_address;
+  signal stage_decode_pc_mispredict_translated : translated_address;
   signal stage_decode_pch : unsigned(15 downto 8);
   signal stage_decode_branch_predict : std_logic;
   signal icache_ram_read_address : std_logic_vector(9 downto 0);
@@ -51,16 +51,17 @@ architecture behavioural of gs4502b is
 
   -- Signals output by validate stage
   signal validate_stall : std_logic;
-  signal stage_validate_instruction_address : unsigned(31 downto 0);
-  signal stage_validate_instruction_bytes : std_logic_vector(23 downto 0);
-  signal stage_validate_pc_expected_translated : unsigned(31 downto 0);
-  signal stage_validate_pc_mispredict_translated : unsigned(31 downto 0);
+  signal stage_validate_instruction_address : translated_address;
+  signal stage_validate_instruction_bytes : instruction_bytes;
+  signal stage_validate_pc_expected_translated : translated_address;
+  signal stage_validate_pc_mispredict_translated : translated_address;
   signal stage_validate_pch : unsigned(15 downto 8);
   signal stage_validate_branch_predict : std_logic;
   signal stage_validate_resources_required : instruction_resources;
   signal stage_validate_resources_modified : instruction_resources;
   signal stage_validate_instruction_information : instruction_information;
   signal instruction_valid : boolean;
+  signal instruction_address_is_as_expected : boolean;
 
   -- Signals output by execute stage
   signal execute_stall : std_logic;
@@ -69,11 +70,10 @@ architecture behavioural of gs4502b is
   signal stage_execute_transaction_valid : boolean := false;
   signal stage_execute_cpu_personality : cpu_personality := CPU4502;
   signal stage_execute_redirecting : boolean := false;
-  signal stage_execute_redirected_address : unsigned(31 downto 0);
+  signal stage_execute_redirected_address : translated_address;
   signal stage_execute_redirected_pch : unsigned(15 downto 8);
 
   -- Signals output by the memory controller
-  signal completed_transaction_valid : boolean;
   signal completed_transaction : transaction_result;
   signal memory_stall : std_logic := '0';
   
@@ -131,7 +131,9 @@ begin  -- behavioural
 
       -- The fields must match those specified in icachetypes.vhdl
       icache_src_address_in => unsigned(icache_read_data(21 downto 0)),
-      icache_bytes_in => icache_read_data(45 downto 22),
+      icache_bytes_in.opcode => unsigned(icache_read_data(29 downto 22)),
+      icache_bytes_in.arg1 => unsigned(icache_read_data(37 downto 30)),
+      icache_bytes_in.arg2 => unsigned(icache_read_data(45 downto 38)),
       pch_in => unsigned(icache_read_data(85 downto 78)),
       pc_expected => unsigned(icache_read_data(61 downto 46)),
       pc_mispredict => unsigned(icache_read_data(77 downto 62)),
@@ -177,6 +179,7 @@ begin  -- behavioural
       instruction_information_in => stage_decode_instruction_information,
 
       instruction_address_out => stage_validate_instruction_address,
+      instruction_address_is_as_expected => instruction_address_is_as_expected,
       instruction_bytes_out => stage_validate_instruction_bytes,
       pch_out => stage_validate_pch,
       pc_expected_translated_out => stage_validate_pc_expected_translated,
@@ -195,6 +198,14 @@ begin  -- behavioural
       cpuclock => cpuclock,
 
       stall_in => memory_stall,
+      instruction_address => stage_validate_instruction_address,
+      instruction_valid => instruction_valid,
+      instruction_address_is_as_expected => instruction_address_is_as_expected,
+      instruction_bytes_in => stage_validate_instruction_bytes,
+      pch_in => stage_validate_pch,
+      pc_expected_translated_in => stage_validate_pc_expected_translated,
+      pc_mispredict_translated_in => stage_validate_pc_mispredict_translated,
+      
       resources_locked => stage_execute_resources_locked,
       resource_lock_transaction_id_out => stage_execute_transaction_id,
       resource_lock_transaction_valid_out => stage_execute_transaction_valid,

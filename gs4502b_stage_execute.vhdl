@@ -40,25 +40,38 @@ entity gs4502b_stage_execute is
     cpuclock : in std_logic;
     stall_in : in std_logic;
     
-    instruction_address : in unsigned(31 downto 0);
+    instruction_address : in translated_address;
     instruction_valid : in boolean;
     instruction_address_is_as_expected : in boolean;
     completed_transaction : in transaction_result;
-    completed_transaction_valid : in boolean;
-
--- Are we redirecting execution?
+    instruction_bytes_in : in instruction_bytes;
+    pch_in : in unsigned(15 downto 8);
+    pc_expected_translated_in : translated_address;
+    pc_mispredict_translated_in : translated_address;    
+    
+    -- Are we redirecting execution?
     address_redirecting : out boolean;
-    redirected_address : out unsigned(31 downto 0);
+    redirected_address : out translated_address;
     redirected_pch : out unsigned(15 downto 8);
+
+    -- What resources are we locking?
     resources_locked : out instruction_resources;
     resource_lock_transaction_id_out : out transaction_id;
     resource_lock_transaction_valid_out : out boolean := false;
+
+    -- What mode is the CPU currently in? (4502, 6502 or hypervisor)
     current_cpu_personality : out cpu_personality := CPU4502;
+
+    fetch_valid_out : out boolean := false;
+    fetch_instruction_address_translated_out : out unsigned(31 downto 0);
+    fetch_instruction_pch : out unsigned(15 downto 8);
+  
+    -- Tell validate stage to stall?
     stall_out : out std_logic := '0'
     );
 end gs4502b_stage_execute;
 
-architecture behavioural of gs4502b_stage_validate is
+architecture behavioural of gs4502b_stage_execute is
 
 begin
   process(cpuclock)
@@ -67,8 +80,10 @@ begin
 
       -- Tell memory controller about the next instruction to fetch
       -- By default, let it keep fetching from wherever it was upto.
-      instruction_address_translated_out <= expected_instruction_address;
-      instruction_begin_fetching_out <= false;
+      fetch_instruction_address_translated_out <= expected_instruction_address;
+      fetch_instruction_pch <= pch_in;
+      fetch_valid_out <= false;
+
       
       if instruction_valid='0' then
         -- If there is no valid instruction, then we keep expecting the same address.

@@ -81,15 +81,15 @@ entity gs4502b_stage_validate is
     cpuclock : in std_logic;
     
 -- Input: translated address of instruction in memory
-    instruction_address_in : in unsigned(31 downto 0);
+    instruction_address_in : in translated_address;
 -- Input: 3 instruction bytes
-    instruction_bytes_in : in std_logic_vector(23 downto 0);
+    instruction_bytes_in : in instruction_bytes;
 -- Input: 8-bit PCH (PC upper byte) for this instruction
     pch_in : in unsigned(15 downto 8);
 -- Input: translated 32-bit PC for expected case
-    pc_expected_translated_in : in unsigned(31 downto 0);
+    pc_expected_translated_in : in translated_address;
 -- Input: translated 32-bit PC for branch mis-predict case
-    pc_mispredict_translated_in : in unsigned(31 downto 0);
+    pc_mispredict_translated_in : in translated_address;
 -- Input: 1-bit Branch prediction flag: 1=assume take branch
     branch_predict_in : in std_logic;
 -- Input: What resources does this instruction require and modify?
@@ -107,22 +107,22 @@ entity gs4502b_stage_validate is
     current_cpu_personality : in cpu_personality;
 -- Are we being redirected by the execute stage?
     address_redirecting : in boolean;
-    redirected_address : in unsigned(31 downto 0);
+    redirected_address : in translated_address;
     redirected_pch : in unsigned(15 downto 8);
 
 -- What can we see from the memory controller?
-    completed_transaction : in transaction_result; 
+    completed_transaction : in transaction_result;
 
 -- Output: 32-bit address source of instruction
-    instruction_address_out : out unsigned(31 downto 0);
+    instruction_address_out : out translated_address;
 -- Output: 3 instruction bytes
-    instruction_bytes_out : out std_logic_vector(23 downto 0);
+    instruction_bytes_out : out instruction_bytes;
 -- Output: 8-bit PCH (PC upper byte) for this instruction
     pch_out : out unsigned(15 downto 8);
 -- Output: Translated PC for expected case
-    pc_expected_translated_out : out unsigned(31 downto 0);
+    pc_expected_translated_out : out translated_address;
 -- Output: 16-bit PC for branch mis-predict case
-    pc_mispredict_translated_out : out unsigned(31 downto 0);
+    pc_mispredict_translated_out : out translated_address;
 -- Output: Instruction decode signals that can be computed
 -- Output: 1-bit Branch prediction flag: 1=assume take branch
 --         (for passing to MMU if branch prediction is wrong, so that cache
@@ -167,7 +167,7 @@ architecture behavioural of gs4502b_stage_validate is
   -- by providing a single bit to check.  Is it therefore possible to do the
   -- complete instruction validity check? We probably can't due to branch
   -- mis-predictions alone.
-  signal last_instruction_expected_address : unsigned(31 downto 0);
+  signal last_instruction_expected_address : translated_address;
   
   -- Resources that we are still waiting to clear following memory accesses.
   -- XXX Implement logic to update this
@@ -176,12 +176,12 @@ architecture behavioural of gs4502b_stage_validate is
   -- Stall buffer and stall logic
   signal stall_buffer_occupied : std_logic := '0';
   signal stall_out_current : std_logic := '0';  
-  signal stalled_instruction_address : unsigned(31 downto 0);
-  signal stalled_instruction_bytes : std_logic_vector(23 downto 0);
+  signal stalled_instruction_address : translated_address;
+  signal stalled_instruction_bytes : instruction_bytes;
   signal stalled_instruction_information : instruction_information;
   signal stalled_pch : unsigned(15 downto 8);
-  signal stalled_pc_expected_translated : unsigned(31 downto 0);
-  signal stalled_pc_mispredict_translated : unsigned(31 downto 0);
+  signal stalled_pc_expected_translated : translated_address;
+  signal stalled_pc_mispredict_translated : translated_address;
   signal stalled_branch_predict : std_logic;
   signal stalled_resources_required : instruction_resources;
   signal stalled_resources_modified : instruction_resources;
@@ -192,11 +192,11 @@ begin
     variable next_line : unsigned(9 downto 0);
 
     -- MUX variables to choose between stall buffer and incoming instruction
-    variable instruction_address : unsigned(31 downto 0);
-    variable instruction_bytes : std_logic_vector(23 downto 0);
+    variable instruction_address : translated_address;
+    variable instruction_bytes : instruction_bytes;
     variable pch : unsigned(15 downto 8);
-    variable pc_expected_translated : unsigned(31 downto 0);
-    variable pc_mispredict_translated : unsigned(31 downto 0);
+    variable pc_expected_translated : translated_address;
+    variable pc_mispredict_translated : translated_address;
     variable branch_predict : std_logic;
     variable resources_modified : instruction_resources;
     variable resources_required : instruction_resources;

@@ -22,7 +22,7 @@ entity gs4502b_stage_decode is
 --        line ID, to save space and avoid need to initialise cache).
     icache_src_address_in : in unsigned(31 downto 10);
 -- Input: 3 instruction bytes
-    icache_bytes_in : in std_logic_vector(23 downto 0);
+    icache_bytes_in : in instruction_bytes;
 -- Input: 8-bit PCH (PC upper byte) for this instruction
     pch_in : in unsigned(15 downto 8);
 -- Input: 16-bit PC for expected case
@@ -38,17 +38,17 @@ entity gs4502b_stage_decode is
     cpu_divert_line : in unsigned(9 downto 0);
 
 -- Output: 32-bit address source of instruction
-    icache_src_address_out : out unsigned(31 downto 0);
+    icache_src_address_out : out translated_address;
 -- Output: 10-bit cache line number, so that we can detect cache misses
     icache_line_number_out : out unsigned(9 downto 0);
 -- Output: 3 instruction bytes
-    icache_bytes_out : out std_logic_vector(23 downto 0);
+    icache_bytes_out : out instruction_bytes;
 -- Output: 8-bit PCH (PC upper byte) for this instruction
     pch_out : out unsigned(15 downto 8);
 -- Output: Translated PC for expected case
-    pc_expected_translated : out unsigned(31 downto 0);
+    pc_expected_translated : out translated_address;
 -- Output: 16-bit PC for branch mis-predict case
-    pc_mispredict_translated : out unsigned(31 downto 0);
+    pc_mispredict_translated : out translated_address;
 -- Output: Instruction decode signals that can be computed
 -- Output: 1-bit Branch prediction flag: 1=assume take branch
 --         (for passing to MMU if branch prediction is wrong, so that cache
@@ -129,9 +129,9 @@ begin
         instruction_information.instruction <= Nop;
         
         -- CPU personality is only modified by writing to $D02F or $D640-$D67F
-        if (icache_bytes_in(23 downto 8) = x"D02F")
-          or ((icache_bytes_in(23 downto 16) = x"D6")
-              and (icache_bytes_in(15 downto 14) = "01")) then
+        if ((icache_bytes_in.arg2 = x"D0") and (icache_bytes_in.arg1 = x"2F"))
+          or ((icache_bytes_in.arg2 = x"D6")
+              and (icache_bytes_in.arg1(7 downto 6) = "01")) then
           instruction_information.modifies_cpu_personality <= true;
         else
           instruction_information.modifies_cpu_personality <= false;
