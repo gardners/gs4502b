@@ -65,9 +65,9 @@ entity gs4502b_stage_validate is
 -- Input: 8-bit PCH (PC upper byte) for this instruction
     pch_in : in unsigned(15 downto 8);
 -- Input: translated 32-bit PC for expected case
-    pc_expected_in : in unsigned(31 downto 0);
+    pc_expected_translated_in : in unsigned(31 downto 0);
 -- Input: translated 32-bit PC for branch mis-predict case
-    pc_mispredict_in : in unsigned(31 downto 0);
+    pc_mispredict_translated_in : in unsigned(31 downto 0);
 -- Input: 1-bit Branch prediction flag: 1=assume take branch
     branch_predict_in : in std_logic;
 -- Input: What resources does this instruction require and modify?
@@ -94,9 +94,9 @@ entity gs4502b_stage_validate is
 -- Output: 8-bit PCH (PC upper byte) for this instruction
     pch_out : out unsigned(15 downto 8);
 -- Output: Translated PC for expected case
-    pc_expected_translated : out unsigned(31 downto 0);
+    pc_expected_translated_out : out unsigned(31 downto 0);
 -- Output: 16-bit PC for branch mis-predict case
-    pc_mispredict_translated : out unsigned(31 downto 0);
+    pc_mispredict_translated_out : out unsigned(31 downto 0);
 -- Output: Instruction decode signals that can be computed
 -- Output: 1-bit Branch prediction flag: 1=assume take branch
 --         (for passing to MMU if branch prediction is wrong, so that cache
@@ -104,7 +104,9 @@ entity gs4502b_stage_validate is
     branch_predict_out : out std_logic;
 -- Output: Boolean: Is the instruction we have here ready for execution
 -- (including that the pipeline is not stalled)
-    instruction_valid : out std_logic;
+    instruction_valid : out boolean;
+-- Instruction address is that expected by the previous instruction?
+    instruction_address_is_as_expected : out boolean;
 -- Output: What resources does this instruction require and modify?
     resources_required_out : out instruction_resources;
     resources_modified_out : out instruction_resources;
@@ -133,6 +135,13 @@ architecture behavioural of gs4502b_stage_validate is
   signal flag_c_name : transaction_id;
   signal flag_v_name : transaction_id;
   signal flag_n_name : transaction_id;
+
+  -- Remember the instruction address of the last valid instruction we
+  -- announced. This greatly simplifies the check logic for the execute stage,
+  -- by providing a single bit to check.  Is it therefore possible to do the
+  -- complete instruction validity check? We probably can't due to branch
+  -- mis-predictions alone.
+  signal last_instruction_expected_address : unsigned(31 downto 0);
   
   -- Resources that we are still waiting to clear following memory accesses.
   -- XXX Implement logic to update this
@@ -145,8 +154,8 @@ architecture behavioural of gs4502b_stage_validate is
   signal stalled_instruction_bytes : std_logic_vector(23 downto 0);
   signal stalled_instruction_information : instruction_information;
   signal stalled_pch : unsigned(15 downto 8);
-  signal stalled_pc_expected : unsigned(15 downto 0);
-  signal stalled_pc_mispredict : unsigned(15 downto 0);
+  signal stalled_pc_expected_translated : unsigned(31 downto 0);
+  signal stalled_pc_mispredict_translated : unsigned(31 downto 0);
   signal stalled_branch_predict : std_logic;
   signal stalled_resources_required : instruction_resources;
   signal stalled_resources_modified : instruction_resources;
@@ -160,8 +169,8 @@ begin
     variable instruction_address : unsigned(31 downto 0);
     variable instruction_bytes : std_logic_vector(23 downto 0);
     variable pch : unsigned(15 downto 8);
-    variable pc_expected : unsigned(15 downto 0);
-    variable pc_mispredict : unsigned(15 downto 0);
+    variable pc_expected_translated : unsigned(31 downto 0);
+    variable pc_mispredict_translated : unsigned(31 downto 0);
     variable branch_predict : std_logic;
     variable resources_modified : instruction_resources;
     variable resources_required : instruction_resources;
@@ -259,7 +268,8 @@ begin
       -- We are stalled unless we are processing something we are reading in,
       -- and we are not being asked to stall ourselves.
       stall_out <= '1';
-      
+      last_instruction_expected_address <= last_instruction_expected_address;
+        
       if stall_in='0' then
         -- Downstream stage is willing to accept an instruction
         
@@ -268,6 +278,8 @@ begin
           instruction_address := stalled_instruction_address;
           instruction_bytes := stalled_instruction_bytes;
           pch := stalled_pch;
+          pc_expected_translated := stalled_pc_expected_translated;
+          pc_mispredict_translated := stalled_pc_mispredict_translated;
           branch_predict := stalled_branch_predict;
           resources_modified := stalled_resources_modified;
           resources_required := stalled_resources_required;
@@ -276,6 +288,8 @@ begin
           instruction_address := instruction_address_in;
           instruction_bytes := instruction_bytes_in;
           pch := pch_in;
+          pc_expected_translated := pc_expected_translated_in;
+          pc_mispredict_translated := pc_mispredict_translated_in;
           branch_predict := branch_predict_in;
           resources_modified := resources_modified_in;
           resources_required := resources_required_in;
@@ -294,11 +308,19 @@ begin
         instruction_address_out <= instruction_address;
         instruction_bytes_out <= instruction_bytes;
         pch_out <= pch;
+        pc_expected_translated_out <= pc_expected_translated;
+        pc_mispredict_translated_out <= pc_mispredict_translated;
         branch_predict_out <= branch_predict;
         resources_modified_out <= resources_modified;
         resources_required_out <= resources_required;
         instruction_information_out <= instruction_information;
 
+        if instruction_address = last_instruction_expected_address then
+          instruction_address_is_as_expected <= true;
+        else 
+          instruction_address_is_as_expected <= false;
+        end if;
+        
         -- Remember resources that will be potentially modified by any
         -- instructions that have not yet passed the execute stage.
         -- At the moment, the execute stage is the stage immediately
@@ -369,7 +391,7 @@ begin
           -- the need for any extra buffer registers and muxes.
 
           -- Tell downstream stage the instruction is not valid for execution.
-          instruction_valid <= '0';
+          instruction_valid <= false;
 
           -- Tell upstream stage that we are stalled
           stall_out <= '1';
@@ -402,12 +424,12 @@ begin
           -- Thus we might not dispatch instructions sometimes when we should
           -- be able to do so, but the delay will only be 1 cycle, as the
           -- actual resource locks will are read back from the execute stage.
-          instruction_valid <= '1';
+          instruction_valid <= true;
         end if;
       else
         -- Pipeline stalled: hold existing values.
         -- XXX: We should assign them so that we avoid having flip-flops.        
-        instruction_valid <= '0';        
+        instruction_valid <= false;        
       end if;
 
     end if;    

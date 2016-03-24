@@ -60,7 +60,7 @@ architecture behavioural of gs4502b is
   signal stage_validate_resources_required : instruction_resources;
   signal stage_validate_resources_modified : instruction_resources;
   signal stage_validate_instruction_information : instruction_information;
-  signal instruction_valid : std_logic;
+  signal instruction_valid : boolean;
 
   -- Signals output by execute stage
   signal execute_stall : std_logic;
@@ -163,8 +163,8 @@ begin  -- behavioural
       instruction_address_in => stage_decode_instruction_address,
       instruction_bytes_in => stage_decode_instruction_bytes,
       pch_in => stage_decode_pch,
-      pc_expected_in => stage_decode_pc_expected_translated,
-      pc_mispredict_in => stage_decode_pc_mispredict_translated,
+      pc_expected_translated_in => stage_decode_pc_expected_translated,
+      pc_mispredict_translated_in => stage_decode_pc_mispredict_translated,
       branch_predict_in => stage_decode_branch_predict,
       resources_required_in => stage_decode_resources_required,
       resources_modified_in => stage_decode_resources_modified,
@@ -173,8 +173,8 @@ begin  -- behavioural
       instruction_address_out => stage_validate_instruction_address,
       instruction_bytes_out => stage_validate_instruction_bytes,
       pch_out => stage_validate_pch,
-      pc_expected_translated => stage_validate_pc_expected_translated,
-      pc_mispredict_translated => stage_validate_pc_mispredict_translated,
+      pc_expected_translated_out => stage_validate_pc_expected_translated,
+      pc_mispredict_translated_out => stage_validate_pc_mispredict_translated,
       branch_predict_out => stage_validate_branch_predict,
       instruction_valid => instruction_valid,      
       resources_required_out => stage_validate_resources_required,
