@@ -73,6 +73,8 @@ end gs4502b_stage_execute;
 
 architecture behavioural of gs4502b_stage_execute is
 
+  signal expected_instruction_address : translated_address;
+  
 begin
   process(cpuclock)
   begin
@@ -85,7 +87,7 @@ begin
       fetch_valid_out <= false;
 
       
-      if instruction_valid='0' then
+      if instruction_valid = false then
         -- If there is no valid instruction, then we keep expecting the same address.
         expected_instruction_address <= expected_instruction_address;
 
@@ -105,7 +107,7 @@ begin
           -- Well, it certainly seems like that is the most likely case for how
           -- we could end up in this situation.  So we should tell the memory
           -- controller to fetch the correct address.
-          instruction_begin_fetching_out <= true;
+          fetch_valid_out <= false;
         end if;
           
       end if;
