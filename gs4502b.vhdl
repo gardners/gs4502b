@@ -112,6 +112,8 @@ begin  -- behavioural
       dina => icache_write_data
       );
 
+  to_stop_ghdl_bug: block
+  begin
   decode_stage: entity work.gs4502b_stage_decode
     port map (
       cpuclock => cpuclock,
@@ -131,9 +133,7 @@ begin  -- behavioural
 
       -- The fields must match those specified in icachetypes.vhdl
       icache_src_address_in => unsigned(icache_read_data(21 downto 0)),
-      icache_bytes_in.opcode => unsigned(icache_read_data(29 downto 22)),
-      icache_bytes_in.arg1 => unsigned(icache_read_data(37 downto 30)),
-      icache_bytes_in.arg2 => unsigned(icache_read_data(45 downto 38)),
+      icache_bytes_in => unsigned(icache_read_data(45 downto 22)),
       pch_in => unsigned(icache_read_data(85 downto 78)),
       pc_expected => unsigned(icache_read_data(61 downto 46)),
       pc_mispredict => unsigned(icache_read_data(77 downto 62)),
@@ -151,7 +151,10 @@ begin  -- behavioural
 
       instruction_information => stage_decode_instruction_information
       );
+  end block;
 
+  also_to_stop_ghdl_bug: block
+  begin
   validate_stage: entity work.gs4502b_stage_validate
     port map (
       cpuclock => cpuclock,
@@ -192,7 +195,10 @@ begin  -- behavioural
       stall_out => validate_stall
 
       );
+  end block;
 
+  and_this_one_too: block
+  begin
   execute_stage: entity work.gs4502b_stage_execute
     port map (
       cpuclock => cpuclock,
@@ -218,6 +224,7 @@ begin  -- behavioural
 
       stall_out => execute_stall
       );
+  end block;
 
   
   process(cpuclock, icache_read_data)

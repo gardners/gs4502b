@@ -22,7 +22,7 @@ entity gs4502b_stage_decode is
 --        line ID, to save space and avoid need to initialise cache).
     icache_src_address_in : in unsigned(31 downto 10);
 -- Input: 3 instruction bytes
-    icache_bytes_in : in instruction_bytes;
+    icache_bytes_in : in unsigned(23 downto 0);
 -- Input: 8-bit PCH (PC upper byte) for this instruction
     pch_in : in unsigned(15 downto 8);
 -- Input: 16-bit PC for expected case
@@ -108,12 +108,18 @@ begin
   
   process(cpuclock)
     variable next_line : unsigned(9 downto 0);
+    variable icache_bytes : instruction_bytes;
   begin
     if (rising_edge(cpuclock)) then
+      icache_bytes.opcode := icache_bytes_in(7 downto 0);
+      icache_bytes.arg1 := icache_bytes_in(15 downto 8);
+      icache_bytes.arg2 := icache_bytes_in(23 downto 16);
+      
+      
       if stall='0' then
         icache_src_address_out(31 downto 10) <= icache_src_address_in;
         icache_src_address_out(9 downto 0) <= icache_line_number;
-        icache_bytes_out <= icache_bytes_in;
+        icache_bytes_out <= icache_bytes;
         -- XXX Need to give line number as output. This requires a delay register
         -- that always shows the correct value.
         icache_line_number_out <= icache_line_number;
@@ -129,9 +135,10 @@ begin
         instruction_information.instruction <= Nop;
         
         -- CPU personality is only modified by writing to $D02F or $D640-$D67F
-        if ((icache_bytes_in.arg2 = x"D0") and (icache_bytes_in.arg1 = x"2F"))
-          or ((icache_bytes_in.arg2 = x"D6")
-              and (icache_bytes_in.arg1(7 downto 6) = "01")) then
+        
+        if ((icache_bytes.arg2 = x"D0") and (icache_bytes.arg1 = x"2F"))
+          or ((icache_bytes.arg2 = x"D6")
+              and (icache_bytes.arg1(7 downto 6) = "01")) then
           instruction_information.modifies_cpu_personality <= true;
         else
           instruction_information.modifies_cpu_personality <= false;
@@ -172,7 +179,7 @@ begin
 
     end if;    
   end process;    
-  
+
   address_translator0: entity work.address_translator
     port map (
       cpuclock => cpuclock,

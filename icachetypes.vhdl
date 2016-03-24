@@ -42,6 +42,15 @@ package icachetypes is
   
   function not_empty(a : instruction_resources) return boolean;
 
+  type instruction_bytes is record
+    opcode : unsigned(7 downto 0);
+    arg1 : unsigned(7 downto 0);
+    arg2 : unsigned(7 downto 0);
+  end record; 
+  
+  function to_instruction_bytes(op : unsigned(7 downto 0); arg1 : unsigned(7 downto 0);
+                                arg2 : unsigned(7 downto 0)) return instruction_bytes;
+  
   -- Allow upto 7 memory transactions in flight at a time
   subtype transaction_id is integer range 0 to 7;
 
@@ -58,12 +67,6 @@ package icachetypes is
     n : boolean;    
   end record;  
 
-  type instruction_bytes is record
-    opcode : unsigned(7 downto 0);
-    arg1 : unsigned(7 downto 0);
-    arg2 : unsigned(7 downto 0);
-  end record; 
-  
   type addressing_mode is (
     Implied,
     Immediate8,
@@ -119,6 +122,17 @@ end package;
 
 package body icachetypes is
 
+  function to_instruction_bytes(op : unsigned(7 downto 0); arg1 : unsigned(7 downto 0);
+                                arg2 : unsigned(7 downto 0)) return instruction_bytes is
+    variable i : instruction_bytes;
+  begin
+    i.opcode := op;
+    i.arg1   := arg1;
+    i.arg2   := arg2;
+    return i;
+  end function;
+
+  
   function "=" (a : instruction_resources; b : boolean)
     return instruction_resources is
     variable r : instruction_resources;
