@@ -73,13 +73,84 @@ end gs4502b_stage_execute;
 
 architecture behavioural of gs4502b_stage_execute is
 
+  -- Primary CPU state
+  signal reg_a : unsigned(7 downto 0) := x"00";
+  signal reg_b : unsigned(7 downto 0) := x"00";
+  signal reg_x : unsigned(7 downto 0) := x"00";
+  signal reg_y : unsigned(7 downto 0) := x"00";
+  signal reg_z : unsigned(7 downto 0) := x"00";
+  signal reg_spl : unsigned(7 downto 0) := x"FF";
+  signal reg_sph : unsigned(7 downto 0) := x"01";
+  signal flag_i : boolean := true;
+  signal flag_e : boolean := true;
+  signal flag_z : boolean := false;
+  signal flag_c : boolean := false;
+  signal flag_v : boolean := false;
+  signal flag_n : boolean := false;
+  
+  
   signal expected_instruction_address : translated_address;
+
+  -- Register and flag renaming
+  signal renamed_resources : instruction_resources;
+  signal reg_a_name : transaction_id;
+  signal reg_x_name : transaction_id;
+  signal reg_b_name : transaction_id;
+  signal reg_y_name : transaction_id;
+  signal reg_z_name : transaction_id;
+  signal reg_spl_name : transaction_id;
+  signal reg_sph_name : transaction_id;
+  signal flag_z_name : transaction_id;
+  signal flag_c_name : transaction_id;
+  signal flag_v_name : transaction_id;
+  signal flag_n_name : transaction_id;
   
 begin
   process(cpuclock)
   begin
     if (rising_edge(cpuclock)) then
 
+      -- Process any completed memory transaction
+      if completed_transaction.valid = true then
+        if completed_transaction.id = reg_a_name then
+          reg_a <= completed_transaction.value;
+          renamed_resources.reg_a <= false;
+        end if;
+        if completed_transaction.id = reg_b_name then
+          reg_b <= completed_transaction.value;
+          renamed_resources.reg_b <= false;
+        end if;
+        if completed_transaction.id = reg_x_name then
+          reg_x <= completed_transaction.value;
+          renamed_resources.reg_x <= false;
+        end if;
+        if completed_transaction.id = reg_y_name then
+          reg_y <= completed_transaction.value;
+          renamed_resources.reg_y <= false;
+        end if;
+        if completed_transaction.id = reg_z_name then
+          reg_z <= completed_transaction.value;
+          renamed_resources.reg_z <= false;
+        end if;
+        if completed_transaction.id = flag_z_name then
+          flag_z <= completed_transaction.z;
+          renamed_resources.flag_z <= false;
+        end if;
+        if completed_transaction.id = flag_c_name then
+          flag_c <= completed_transaction.c;
+          renamed_resources.flag_c <= false;
+        end if;
+        if completed_transaction.id = flag_n_name then
+          flag_n <= completed_transaction.n;
+          renamed_resources.flag_n <= false;
+        end if;
+        if completed_transaction.id = flag_v_name then
+          flag_v <= completed_transaction.v;
+          renamed_resources.flag_v <= false;
+        end if;
+      end if;
+
+      
       -- Tell memory controller about the next instruction to fetch
       -- By default, let it keep fetching from wherever it was upto.
       fetch_instruction_address_translated_out <= expected_instruction_address;
