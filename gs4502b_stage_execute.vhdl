@@ -154,8 +154,11 @@ begin
         if instruction_address_is_as_expected then
           -- Do the work of the instruction.
 
-          -- XXX
+          -- XXX Not yet implemented!
 
+          -- For now, just advance the PC to the next instruction we expect.
+          expected_instruction_address <= pc_expected_translated_in;
+         
           
         else
           -- Instruction address is wrong, but instruction is marked valid.
