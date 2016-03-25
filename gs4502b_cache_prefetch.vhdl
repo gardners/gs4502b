@@ -47,8 +47,8 @@
 --
 -- 4. The CPU could indicate a cache miss at anytime, in which case we need to
 -- finish what we are doing, and quickly start fetching instructions from the
--- new location.
-
+-- new location.  This will probably be handled just as though it were a normal
+-- cache miss.
 
 use WORK.ALL;
 
@@ -61,7 +61,18 @@ use work.icachetypes.all;
 
 entity gs4502b_cache_prefetch is
   port (
-    cpuclock : in std_logic
+    cpuclock : in std_logic;
+
+    -- Was there a cache miss?
+    cache_miss : in boolean := false;
+    cache_miss_address : in translated_address;
+    cache_miss_pch : in unsigned(15 downto 8)
+    
+    -- XXX Interface to instruction cache
+    -- Instruction cache must be four parallel BRAM structures, so that we can
+    -- read all three relevant cache lines in a single cycle after a memory
+    -- write occurs.
+    
     );
 end gs4502b_cache_prefetch;
 

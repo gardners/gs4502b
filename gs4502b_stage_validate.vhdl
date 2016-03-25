@@ -117,6 +117,7 @@ entity gs4502b_stage_validate is
 -- Tell memory controller about cache misses
     cache_miss : out boolean := false;
     cache_miss_address : out translated_address;
+    cache_miss_pch : out unsigned(15 downto 8);
     
 -- Output: 32-bit address source of instruction
     instruction_address_out : out translated_address;
@@ -306,6 +307,7 @@ begin
       -- extra bits).
       cache_miss <= false;
       cache_miss_address <= instruction_address_in;
+      cache_miss_pch <= pch;
       if icache_line_number_in = last_instruction_expected_address(9 downto 0) then
         if (last_instruction_expected_address(31 downto 10)
             /= instruction_address_in(31 downto 10))

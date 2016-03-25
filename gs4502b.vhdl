@@ -143,7 +143,10 @@ architecture behavioural of gs4502b is
   signal stage_validate_instruction_information : instruction_information;
   signal instruction_valid : boolean;
   signal instruction_address_is_as_expected : boolean;
-
+  signal cache_miss : boolean;
+  signal cache_miss_address : translated_address;
+  signal cache_miss_pch : unsigned(15 downto 8);
+  
   -- Signals output by execute stage
   signal execute_stall : std_logic;
   signal stage_execute_resources_locked : instruction_resources := (others => false);
@@ -264,6 +267,10 @@ begin  -- behavioural
       resources_modified_in => stage_decode_resources_modified,
       instruction_information_in => stage_decode_instruction_information,
 
+      cache_miss => cache_miss,
+      cache_miss_address => cache_miss_address,
+      cache_miss_pch => cache_miss_pch,
+      
       instruction_address_out => stage_validate_instruction_address,
       instruction_address_is_as_expected => instruction_address_is_as_expected,
       instruction_bytes_out => stage_validate_instruction_bytes,
@@ -309,6 +316,15 @@ begin  -- behavioural
       );
   end block;
 
+  cache_prefetcher: entity work.gs4502b_cache_prefetch
+    port map (
+      cpuclock => cpuclock,
+
+      cache_miss => cache_miss,
+      cache_miss_address => cache_miss_address,
+      cache_miss_pch => cache_miss_pch
+      
+      );  
   
   process(cpuclock, icache_read_data)
     variable icache_bits : icache_line;
