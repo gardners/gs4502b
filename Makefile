@@ -9,6 +9,7 @@ SIMULATIONFILES=	cpu_test.vhdl \
 			gs4502b_stage_decode.vhdl \
 			gs4502b_stage_validate.vhdl \
 			gs4502b_stage_execute.vhdl \
+			gs4502b_cache_prefetch.vhdl \
 
 cpu_test:	$(SIMULATIONFILES) Makefile
 	ghdl -i $(SIMULATIONFILES)
