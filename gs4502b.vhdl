@@ -1,3 +1,81 @@
+-- This CPU is designed to have much higher IPC than a standard 6502 core,
+-- through the introduction of a relatively sophisticated and deep pipeline.
+-- The objective is that it will be able to dispatch one instruction per cycle
+-- under most conditions.  To achieve this it includes an instruction cache so
+-- that instructions can be fed quickly, and register/flag renaming logic so
+-- that the pipeline stalls as rarely as possible when faced with simple
+-- instruction interdependency.
+--
+-- This approach has some challenges in supporting existing 6502 software,
+-- where self-modifying code is common.  In particular, self-modifying code on
+-- the 6502 often modifies the very next instruction to be executed, or at
+-- least an instruction that will be run within a very few cycles.  The
+-- instruction-cache must thus be rapidly updated whenever a memory write
+-- occurs.  However, this will likely have a latency of several cycles, which
+-- added to the latency of the pipeline, means that we need a way to flush the
+-- pipeline whenever self-modifying code is detected that is modifying the
+-- currently live instruction stream.  The strategy currently being considered
+-- is to stall the execute stage for a sufficient number of cycles to ensure
+-- that the pipeline has been flushed, and to allow time for the
+-- instruction-cache to be updated. This means we need to detect this before it
+-- happens, so that the very next instruction can be invalidated.
+--
+-- (A special case is if the self-modification only modifies the arguments of an
+-- instruction. In that case we can, in theory at least, just change the arg1
+-- and arg2 bytes of the instruction in the pipeline.  However, the instruction cache
+-- still needs to be invalidated.  Also, for the CHRGET/CHRGOT routine, it
+-- doesn't help us, as the instructions that modify the instruction are INC,
+-- which is a RMW instruction, and thus we have to wait for the RMW to
+-- complete, AND then flush the pipeline while invalidating the cache.
+--
+-- The real challenge is to work out when self-modification is occurring, so
+-- that the pipeline can be flushed and the cache updated.  We have the PC of
+-- each instruction as it passes through the pipeline, and we also have the
+-- target address of every instruction that writes to memory.  So we can, in
+-- theory at least, invalidate an instruction if we have noticed an instruction
+-- go through "recently" which would have modified the current instruction, and
+-- then trigger a cache miss for that instruction address.  This has the
+-- advantage of not requiring every memory write to modify the contents of the
+-- instruction-cache, which would pollute the cache, and stop the cache
+-- pre-fetch logic from being able to concentrate on populating the cache with
+-- the coming instruction stream as quickly as possible, and to be left alone
+-- to find consecutive independent instructions that could otherwise be merged.
+-- The down-side is that self-modifying code will suffer a noticeable
+-- performance hit, as each stalled instruction might cause a delay of
+-- somewhere around 16 cycles, while the pipeline flushes out and the
+-- cache-miss gets addressed.  Otherwise, it does require that the pipeline
+-- keep track of recent write addresses, which adds to the logical complexity.
+--
+-- But the biggest problem is that if self-modifying code is already loaded
+-- into the cache, and modified some distance (in terms of number of
+-- instructions) from when the modification occurs, it won't get detected.  It
+-- might well be that the only solution to this hazard is to invalidate
+-- instruction cache lines that correspond to memory writes, and just put up
+-- with the costs it introduces.  A possible trade-off would be to READ the
+-- cache lines in question and check if they require invalidation, and then
+-- only invalidate them (or better reload them) when this is detected.  Given
+-- that only one byte at a time changes, and the other bytes are known from the
+-- just-read value, this could be done in a single cycle.  If cached instructions
+-- are not modified, then the cache doesn't get invalidated, resulting in
+-- better performance, and if they are modified, then they get updated in the
+-- most efficient manner possible -- including avoiding a potential cache stall
+-- later if only an argument has been updated, which can be patched in the read
+-- cache line. In this context we need only keep track of the recent writes to
+-- flush the pipeline, and then separately watch memory writes to see if the
+-- instruction cache needs updating.
+--
+-- This approach requires that we can read all 3 potentially tainted cache
+-- lines (address, address-1 and address-2) at the same time, to avoid
+-- multi-cycle delays on the cache pre-fetch side of things.  This is another
+-- argument for having the instruction cache exist as four instruction caches,
+-- each corresponding to a different bottom 2 bits of the instruction address.
+--
+-- This discussion explains why and how we will implement our cache and
+-- pipeline management in the face of self-modifying code. It is not yet
+-- implemented, and probably won't be until the rest of the CPU is functioning.
+-- However, having thought it out, the implementation of the rest of the CPU
+-- can proceed, taking the architectural needs of this approach into account.
+
 use WORK.ALL;
 
 library IEEE;
