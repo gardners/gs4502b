@@ -40,6 +40,8 @@ entity gs4502b_stage_execute is
     cpuclock : in std_logic;
     stall_in : in std_logic;
     reset : in std_logic;
+
+    monitor_pc : out unsigned(15 downto 0);
     
     instruction_address : in translated_address;
     instruction_valid : in boolean;
@@ -129,6 +131,9 @@ begin
   begin
     if (rising_edge(cpuclock)) then
 
+      monitor_pc(15 downto 8) <= reg_pch;
+      monitor_pc(7 downto 0) <= reg_pcl;
+      
       -- By default CPU continues sequentially, without redirection.
       address_redirecting <= false;
       

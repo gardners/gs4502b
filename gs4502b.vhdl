@@ -162,15 +162,6 @@ architecture behavioural of gs4502b is
   signal completed_transaction : transaction_result;
   signal memory_stall : std_logic := '0';
   
-  -- CPU Registers & Flags
-  signal reg_pc : unsigned(15 downto 0);
-  signal reg_a : unsigned(7 downto 0);
-  signal reg_x : unsigned(7 downto 0);
-  signal reg_y : unsigned(7 downto 0);
-  signal reg_z : unsigned(7 downto 0);
-  signal reg_spl : unsigned(7 downto 0);
-  signal reg_sph : unsigned(7 downto 0);
-
   -- Memory mapping registers and derivatives
   signal reg_mb_low : unsigned(11 downto 0);
   signal reg_offset_low : unsigned(11 downto 0);
@@ -309,6 +300,8 @@ begin  -- behavioural
       reg_offset_high => reg_offset_high,
       cpuport_ddr => cpuport_ddr,
       cpuport_value => cpuport_value,
+
+      monitor_pc => monitor_pc,
       
       stall_in => memory_stall,
       instruction_address => stage_validate_instruction_address,
@@ -346,10 +339,6 @@ begin  -- behavioural
   process(cpuclock, icache_read_data)
     variable icache_bits : icache_line;
   begin
-    if(rising_edge(cpuclock)) then
-      monitor_pc <= reg_pc;
-    end if;
-
     if(rising_edge(cpuclock)) then
             
       if (expected_instruction_address = stage_decode_instruction_address)
