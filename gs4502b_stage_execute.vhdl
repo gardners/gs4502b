@@ -129,6 +129,9 @@ begin
   begin
     if (rising_edge(cpuclock)) then
 
+      -- By default CPU continues sequentially, without redirection.
+      address_redirecting <= false;
+      
       -- Propagate memory mapping state
       reg_mb_low <= reg_mb_lo;
       reg_offset_low <= reg_offset_lo;
