@@ -17,6 +17,8 @@ use work.icachetypes.all;
 entity gs4502b_stage_decode is
   port (
     cpuclock : in std_logic;
+
+    -- This first block is the fields from the cache line
     
 -- Input: 32-bit address source of instruction (bottom bits come from cache
 --        line ID, to save space and avoid need to initialise cache).
@@ -31,6 +33,9 @@ entity gs4502b_stage_decode is
     pc_mispredict : in unsigned(15 downto 0);
 -- Input: 1-bit Branch prediction flag: 1=assume take branch
     branch_predict_in : in std_logic;
+-- Input: 2-bit CPU personality
+    instruction_cpu_personality : in std_logic_vector(1 downto 0);
+    
 -- Input: 1-bit flag + cache line ID from execute stage to instruct us to
 --        divert (whether due to branch mis-predict, RTS/RTI, interrupt or trap
 --        entry/return).
@@ -151,6 +156,16 @@ begin
         instruction_information.does_store <= false;
         instruction_information.addressing_mode <= Implied;
         instruction_information.instruction <= Nop;
+        case instruction_cpu_personality is
+          when "00" => instruction_information.cpu_personality <= CPU6502;
+          when "01" => instruction_information.cpu_personality <= CPU4502;
+          when "10" =>
+            -- This value might eventually be replaced with another CPU personality.
+            -- Possibly 65816, or possibly something completely different.
+            instruction_information.cpu_personality <= Hypervisor;
+          when "11" => instruction_information.cpu_personality <= Hypervisor;
+          when others => instruction_information.cpu_personality <= Hypervisor;
+        end case;        
 
         pch_expected <= pc_expected(15 downto 8);
         pch_mispredict <= pc_mispredict(15 downto 8);

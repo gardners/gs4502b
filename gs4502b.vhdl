@@ -223,6 +223,8 @@ begin  -- behavioural
       pc_expected => unsigned(icache_read_data(61 downto 46)),
       pc_mispredict => unsigned(icache_read_data(77 downto 62)),
       branch_predict_in => icache_read_data(86),
+      instruction_cpu_personality => icache_read_data(88 downto 87),
+      
       address_redirecting => stage_execute_redirecting,
       redirected_address => stage_execute_redirected_address,
       stall => validate_stall,
