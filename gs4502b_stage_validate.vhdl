@@ -215,6 +215,9 @@ begin
       -- XXX Don't modify resources that will be also modified by the execute
       -- stage this cycle.
       if completed_transaction.valid = true then
+        report "$" & to_hstring(instruction_address_in) &
+            " VALIDATE : Processing completed memory transaction.";
+
         if completed_transaction.id = reg_a_name then
           -- Must happen same cycle in execute: reg_a <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.reg_a <= false;
@@ -258,6 +261,9 @@ begin
       -- This must come after the above, so that new locks take priority over
       -- retiring old instructions.
       if resource_lock_transaction_valid_in = true then
+        report "$" & to_hstring(instruction_address_in) &
+          " VALIDATE : Processing resource lock notification from EXECUTE.";
+
         if resources_freshly_locked_by_execute_stage.reg_a then
           reg_a_name <= resource_lock_transaction_id_in;
           resources_what_will_still_be_outstanding_next_cycle.reg_a <= true;
@@ -309,10 +315,16 @@ begin
       cache_miss_address <= instruction_address_in;
       cache_miss_pch <= pch;
       if icache_line_number_in = last_instruction_expected_address(9 downto 0) then
+        report "$" & to_hstring(instruction_address_in) &
+            " VALIDATE : Instruction is from correct cache line.";
+
         if (last_instruction_expected_address(31 downto 10)
             /= instruction_address_in(31 downto 10))
           or (instruction_information.cpu_personality
               /= current_cpu_personality) then
+          report "$" & to_hstring(instruction_address_in) &
+            " VALIDATE : Instruction is for wrong address, but right cache line: Announcing CACHE MISS.";
+
           cache_miss <= true;
         end if;
       end if;
@@ -322,6 +334,9 @@ begin
               /= instruction_address_in(31 downto 10))
             or (instruction_information.cpu_personality
                 /= current_cpu_personality) then
+            report "$" & to_hstring(instruction_address_in) &
+              " VALIDATE : Instruction for redirected address is wrong, but right cache line: Announcing CACHE MISS.";
+
             cache_miss <= true;
             cache_miss_address <= redirected_address;
           end if;
@@ -335,6 +350,9 @@ begin
      
       if stall_in='0' then
         -- Downstream stage is willing to accept an instruction
+          report "$" & to_hstring(instruction_address_in) &
+            " VALIDATE : not stalled";
+
         
         if stall_buffer_occupied = '1' then
           -- Pass instruction from our stall buffer
@@ -362,6 +380,10 @@ begin
           -- the upstream pipeline stage to resume
           stall_out <= '0';
           stall_out_current <= '0';
+
+          report "$" & to_hstring(instruction_address_in) &
+            " VALIDATE : not stalling upstream";
+
         end if;
 
         -- In either case above, the stall buffer becomes empty
@@ -491,6 +513,9 @@ begin
         end if;
       else
         -- Pipeline stalled: hold existing values.
+        report "$" & to_hstring(instruction_address_in) &
+          " VALIDATE : Stalled";
+        
         -- XXX: We should assign them so that we avoid having flip-flops.        
         instruction_valid <= false;        
       end if;
