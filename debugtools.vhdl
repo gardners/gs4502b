@@ -19,11 +19,14 @@ package body debugtools is
     JUSTIFIED:in SIDE := RIGHT; FIELD:in WIDTH := 0) is      
       variable quad: bit_vector(0 to 3);
       constant ne:   integer := (value'length+3)/4;
+      constant displaybits: integer := ne*4;
+      constant inputbits: integer := value'length;
+      constant emptybits: integer := displaybits - inputbits;
       variable bv:   bit_vector(0 to value'length+4) := (others => '0');
       variable s:    string(1 to ne);
     begin
-        
-      bv(0 to (value'length-1)) := value;
+
+      bv(emptybits to (emptybits+value'length-1)) := value;
     
       for i in 0 to ne-1 loop
         quad := bv(4*i to 4*i+3);
