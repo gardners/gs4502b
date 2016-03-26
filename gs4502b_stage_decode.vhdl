@@ -122,7 +122,8 @@ begin
       if stall='0' then
         report "$xxxxx" & to_hstring(most_recently_requested_cache_line) &
           " DECODE : Not stalled. Read instruction for $"
-          & to_hstring(icache_src_address_in&icache_line_number);
+          & to_hstring(icache_src_address_in&icache_line_number)
+          & " (expected PC = $" & to_hstring(pc_expected) & " for next_line)";
         
         icache_src_address_out(31 downto 10) <= icache_src_address_in;
         icache_src_address_out(9 downto 0) <= icache_line_number;
@@ -157,7 +158,8 @@ begin
       else
         -- Pipeline stalled: hold existing values.
         report "$xxxxx" & to_hstring(most_recently_requested_cache_line) &
-          " DECODE : Stalled -- holding values";
+          " DECODE : Stalled -- holding values. next_line := $"
+          & to_hstring(icache_line_number);
         
         -- XXX: Work out the right address to ask from the instruction cache
         -- so that it gets automatically presented again as soon as possible.
@@ -183,7 +185,7 @@ begin
           report "$xxxxx" & to_hstring(most_recently_requested_cache_line) &
             " DECODE : "
             & "DIVERSION requested to $" & to_hstring(redirected_address)
-            & ", requesting cache line $"
+            & ", next_line = $"
             & to_hstring(redirected_address(9 downto 0));
         next_line := redirected_address(9 downto 0);
       end if;
