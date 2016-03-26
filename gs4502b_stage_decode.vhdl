@@ -117,6 +117,10 @@ begin
       
       
       if stall='0' then
+        report "$xxxxx" & to_hstring(most_recently_requested_cache_line) &
+          " DECODE : Not stalled. Read instruction for $"
+          & to_hstring(icache_src_address_in&icache_line_number);
+        
         icache_src_address_out(31 downto 10) <= icache_src_address_in;
         icache_src_address_out(9 downto 0) <= icache_line_number;
         icache_bytes_out <= icache_bytes;
@@ -146,7 +150,9 @@ begin
         
       else
         -- Pipeline stalled: hold existing values.
-
+        report "$xxxxx" & to_hstring(most_recently_requested_cache_line) &
+          " DECODE : Stalled -- holding values";
+        
         -- XXX: Work out the right address to ask from the instruction cache
         -- so that it gets automatically presented again as soon as possible.
         -- This will require a little delay register that shows the correct value
