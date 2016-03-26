@@ -92,7 +92,8 @@ architecture behavioural of gs4502b_stage_decode is
   signal icache_line_number : unsigned(9 downto 0);
   signal cache_read_address_1 : unsigned(9 downto 0);
   signal most_recently_requested_cache_line : unsigned(9 downto 0);
-
+  signal cache_miss_hold : boolean := false;
+  
 begin
 
   -- Delay line for icache read address, so that we know which address is being
@@ -128,13 +129,22 @@ begin
         icache_src_address_out(31 downto 10) <= icache_src_address_in;
         icache_src_address_out(9 downto 0) <= icache_line_number;
         icache_bytes_out <= icache_bytes;
-        -- XXX Need to give line number as output. This requires a delay register
-        -- that always shows the correct value.
+        -- Need to give line number as output. This requires a delay register
+        -- that always shows the correct value.  icache_line_number is that
+        -- delayed register.
         icache_line_number_out <= icache_line_number;
         pch_out <= pch_in;
         branch_predict_out <= branch_predict_in;
         next_line := pc_expected(9 downto 0);
 
+        -- XXX - Also check CPU personality here.
+        if (icache_src_address_in & icache_line_number)
+          = redirected_address then
+          -- Read address matches redirected address, so we can release our
+          -- hold on the cache line while waiting for a cache miss to be corrected.
+          cache_miss_hold <= false;
+        end if;
+      
         -- Decode instruction
         -- XXX Read fields from instruction cache
         instruction_information.does_load <= false;
@@ -182,17 +192,22 @@ begin
       -- Finally, if the CPU is elsewhere asking us to divert somewhere, then
       -- do indeed divert there.
       if address_redirecting = true then
-          report "$xxxxx" & to_hstring(most_recently_requested_cache_line) &
-            " DECODE : "
-            & "DIVERSION requested to $" & to_hstring(redirected_address)
-            & ", next_line = $"
-            & to_hstring(redirected_address(9 downto 0));
+        report "$xxxxx" & to_hstring(most_recently_requested_cache_line) &
+          " DECODE : "
+          & "DIVERSION requested to $" & to_hstring(redirected_address)
+          & ", next_line = $"
+          & to_hstring(redirected_address(9 downto 0));
         next_line := redirected_address(9 downto 0);
+        -- Begin holding cache line, until such time as we have seen the
+        -- requested address
+        cache_miss_hold <= true;  
       end if;
 
-      report "I-CACHE read address set to $" & to_hstring(next_line);
-      next_cache_line <= next_line;
-      most_recently_requested_cache_line <= next_line;
+      if cache_miss_hold = false then
+        report "I-CACHE read address set to $" & to_hstring(next_line);
+        next_cache_line <= next_line;
+        most_recently_requested_cache_line <= next_line;
+      end if;
 
     end if;    
   end process;    
