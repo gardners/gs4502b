@@ -173,7 +173,7 @@ architecture behavioural of gs4502b_stage_validate is
   -- by providing a single bit to check.  Is it therefore possible to do the
   -- complete instruction validity check? We probably can't due to branch
   -- mis-predictions alone.
-  signal last_instruction_expected_address : translated_address;
+  signal last_instruction_expected_address : translated_address := (others => '0');
   
   -- Resources that we are still waiting to clear following memory accesses.
   -- XXX Implement logic to update this
@@ -215,7 +215,7 @@ begin
       -- XXX Don't modify resources that will be also modified by the execute
       -- stage this cycle.
       if completed_transaction.valid = true then
-        report "$" & to_hstring(instruction_address_in) &
+        report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : Processing completed memory transaction.";
 
         if completed_transaction.id = reg_a_name then
@@ -261,7 +261,7 @@ begin
       -- This must come after the above, so that new locks take priority over
       -- retiring old instructions.
       if resource_lock_transaction_valid_in = true then
-        report "$" & to_hstring(instruction_address_in) &
+        report "$" & to_hstring(last_instruction_expected_address) &
           " VALIDATE : Processing resource lock notification from EXECUTE.";
 
         if resources_freshly_locked_by_execute_stage.reg_a then
@@ -315,26 +315,38 @@ begin
       cache_miss_address <= instruction_address_in;
       cache_miss_pch <= pch;
       if icache_line_number_in = last_instruction_expected_address(9 downto 0) then
-        report "$" & to_hstring(instruction_address_in) &
+        report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : Instruction is from correct cache line.";
 
         if (last_instruction_expected_address(31 downto 10)
             /= instruction_address_in(31 downto 10))
           or (instruction_information.cpu_personality
               /= current_cpu_personality) then
-          report "$" & to_hstring(instruction_address_in) &
+          report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : Instruction is for wrong address, but right cache line: Announcing CACHE MISS.";
 
           cache_miss <= true;
+        else
+          report "$" & to_hstring(last_instruction_expected_address) &
+            " VALIDATE : Instruction is for correct address: CACHE HIT.";
         end if;
+      else
+        report "$" & to_hstring(last_instruction_expected_address) &
+          " VALIDATE : Instruction is for different cache line: saw line $"
+          & to_hstring(icache_line_number_in);
       end if;
       if address_redirecting then
+        -- Remember the address we are redirecting to.
+        last_instruction_expected_address <= redirected_address;
+        report "$" & to_hstring(redirected_address) &
+          " VALIDATE : Redirecting PC at request of EXECUTE stage.";
+
         if icache_line_number_in = redirected_address(9 downto 0) then
           if (redirected_address(31 downto 10)
               /= instruction_address_in(31 downto 10))
             or (instruction_information.cpu_personality
                 /= current_cpu_personality) then
-            report "$" & to_hstring(instruction_address_in) &
+            report "$" & to_hstring(last_instruction_expected_address) &
               " VALIDATE : Instruction for redirected address is wrong, but right cache line: Announcing CACHE MISS.";
 
             cache_miss <= true;
@@ -346,11 +358,13 @@ begin
       -- We are stalled unless we are processing something we are reading in,
       -- and we are not being asked to stall ourselves.
       stall_out <= '1';
-      last_instruction_expected_address <= last_instruction_expected_address;
+      if address_redirecting = false then
+        last_instruction_expected_address <= last_instruction_expected_address;
+      end if;
      
       if stall_in='0' then
         -- Downstream stage is willing to accept an instruction
-          report "$" & to_hstring(instruction_address_in) &
+          report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : not stalled";
 
         
@@ -381,7 +395,7 @@ begin
           stall_out <= '0';
           stall_out_current <= '0';
 
-          report "$" & to_hstring(instruction_address_in) &
+          report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : not stalling upstream";
 
         end if;
@@ -513,7 +527,7 @@ begin
         end if;
       else
         -- Pipeline stalled: hold existing values.
-        report "$" & to_hstring(instruction_address_in) &
+        report "$" & to_hstring(last_instruction_expected_address) &
           " VALIDATE : Stalled";
         
         -- XXX: We should assign them so that we avoid having flip-flops.        
