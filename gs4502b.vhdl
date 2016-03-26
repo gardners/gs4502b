@@ -88,6 +88,7 @@ use work.icachetypes.all;
 ENTITY gs4502b IS
   PORT (
     cpuclock : IN STD_LOGIC;
+    reset : in std_logic;
     monitor_PC : out unsigned(15 downto 0);
 
     rom_at_8000 : in std_logic;
@@ -174,9 +175,9 @@ architecture behavioural of gs4502b is
   signal reg_mb_low : unsigned(11 downto 0);
   signal reg_offset_low : unsigned(11 downto 0);
   signal reg_map_low : std_logic_vector(3 downto 0);
-  signal reg_mb_high : unsigned(11 downto 0);
+  signal reg_mb_high : unsigned(19 downto 8);
   signal reg_map_high : std_logic_vector(3 downto 0);
-  signal reg_offset_high : unsigned(11 downto 0);
+  signal reg_offset_high : unsigned(19 downto 8);
   signal cpuport_value : std_logic_vector(2 downto 0);
   signal cpuport_ddr : std_logic_vector(2 downto 0);
   
@@ -292,7 +293,17 @@ begin  -- behavioural
   execute_stage: entity work.gs4502b_stage_execute
     port map (
       cpuclock => cpuclock,
+      reset => reset,
 
+      reg_map_low => reg_map_low,
+      reg_mb_low => reg_mb_low,
+      reg_offset_low => reg_offset_low,
+      reg_map_high => reg_map_high,
+      reg_mb_high => reg_mb_high,
+      reg_offset_high => reg_offset_high,
+      cpuport_ddr => cpuport_ddr,
+      cpuport_value => cpuport_value,
+      
       stall_in => memory_stall,
       instruction_address => stage_validate_instruction_address,
       instruction_valid => instruction_valid,

@@ -78,5 +78,15 @@ end gs4502b_cache_prefetch;
 
 architecture behavioural of gs4502b_cache_prefetch is
 begin
+  process (cpuclock) is
+  begin
+    if rising_edge(cpuclock) then
+      if cache_miss then
+        report "$" & to_hstring(cache_miss_address) & " PREFETCH : " &
+          "Cache miss detected for PC=$" &
+          to_hstring(cache_miss_pch) & to_hstring(cache_miss_address(7 downto 0));
+      end if;
+    end if;    
+  end process;
   
 end behavioural;

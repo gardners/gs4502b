@@ -19,28 +19,15 @@ architecture behavior of cpu_test is
 
   signal monitor_pc : unsigned(15 downto 0);
   
-  component gs4502b IS
-  PORT (
-    cpuclock : IN STD_LOGIC;
-    monitor_PC : out unsigned(15 downto 0);
-    
-    rom_at_8000 : in std_logic;
-    rom_at_a000 : in std_logic;
-    rom_at_c000 : in std_logic;
-    rom_at_e000 : in std_logic;
-    viciii_iomode : in std_logic_vector(1 downto 0)
-
-    );
-  END component;
-
   
 begin
 
   -- instantiate components here
-  core0:        gs4502b
+  core0: entity work.gs4502b
     port map (
       cpuclock => cpuclock,
-      monitor_pc => monitor_pc,
+      reset => reset,
+      monitor_pc => monitor_pc,      
       rom_at_8000 => '0',
       rom_at_a000 => '0',
       rom_at_c000 => '0',

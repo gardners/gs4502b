@@ -39,6 +39,7 @@ entity gs4502b_stage_execute is
   port (
     cpuclock : in std_logic;
     stall_in : in std_logic;
+    reset : in std_logic;
     
     instruction_address : in translated_address;
     instruction_valid : in boolean;
@@ -59,6 +60,15 @@ entity gs4502b_stage_execute is
     resource_lock_transaction_id_out : out transaction_id;
     resource_lock_transaction_valid_out : out boolean := false;
 
+    reg_mb_low : out unsigned(11 downto 0);
+    reg_offset_low : out unsigned(11 downto 0);
+    reg_map_low : out std_logic_vector(3 downto 0);
+    reg_mb_high : out unsigned(11 downto 0);
+    reg_map_high : out std_logic_vector(3 downto 0);
+    reg_offset_high : out unsigned(11 downto 0);
+    cpuport_value : out std_logic_vector(2 downto 0);
+    cpuport_ddr : out std_logic_vector(2 downto 0);
+    
     -- What mode is the CPU currently in? (4502, 6502 or hypervisor)
     current_cpu_personality : out cpu_personality := CPU4502;
 
@@ -77,13 +87,26 @@ architecture behavioural of gs4502b_stage_execute is
   signal reg_z : unsigned(7 downto 0) := x"00";
   signal reg_spl : unsigned(7 downto 0) := x"FF";
   signal reg_sph : unsigned(7 downto 0) := x"01";
+  signal reg_pcl : unsigned(7 downto 0) := x"00";
+  signal reg_pch : unsigned(7 downto 0) := x"81";
   signal flag_i : boolean := true;
+  signal flag_d : boolean := false;
   signal flag_e : boolean := true;
   signal flag_z : boolean := false;
   signal flag_c : boolean := false;
   signal flag_v : boolean := false;
   signal flag_n : boolean := false;
-  
+
+  -- Memory mapping registers
+  signal reg_map_lo : std_logic_vector(3 downto 0) := (others => '0');
+  signal reg_map_hi : std_logic_vector(3 downto 0)
+    := (0 => '1', 1 => '1', others => '0');
+  signal reg_offset_lo : unsigned(19 downto 8) := (others => '0');
+  signal reg_offset_hi : unsigned(19 downto 8) := x"800";
+  signal reg_mb_lo : unsigned(11 downto 0) := (others => '0');
+  signal reg_mb_hi : unsigned(11 downto 0) := x"0FF";
+  signal port_ddr : std_logic_vector(2 downto 0) := "111";
+  signal port_value : std_logic_vector(2 downto 0) := "111";
   
   signal expected_instruction_address : translated_address;
 
@@ -106,6 +129,16 @@ begin
   begin
     if (rising_edge(cpuclock)) then
 
+      -- Propagate memory mapping state
+      reg_mb_low <= reg_mb_lo;
+      reg_offset_low <= reg_offset_lo;
+      reg_map_low <= reg_map_lo;
+      reg_mb_high <= reg_mb_hi;
+      reg_map_high <= reg_map_hi;
+      reg_offset_high <= reg_offset_hi;
+      cpuport_value <= port_value;
+      cpuport_ddr <= port_ddr;
+      
       -- Process any completed memory transaction
       if completed_transaction.valid = true then
         if completed_transaction.id = reg_a_name then
@@ -174,6 +207,52 @@ begin
         end if;
           
       end if;
+
+      -- On reset, force PC to Hypervisor mode and entry point, and reset
+      -- register values.
+      if reset = '0' then
+        current_cpu_personality <= Hypervisor;
+
+        -- Tell pipeline to stall while reset is held, as part of reset clamping.
+        -- Pipeline stages under reset flush themselves.
+        stall_out <= '1';
+
+        flag_e <= true;
+        flag_d <= false;
+        flag_c <= false;
+        flag_z <= true;
+        flag_n <= false;
+        flag_v <= false;
+        flag_i <= true;
+        reg_a <= x"00";
+        reg_b <= x"00";
+        reg_x <= x"00";
+        reg_y <= x"00";
+        reg_z <= x"00";
+        reg_sph <= x"01";
+        reg_spl <= x"FF";
+        reg_pch <= x"81";
+        reg_pcl <= x"00";
+        port_value <= "111";
+        port_ddr <= "111";
+
+        -- Clear any register renaming state
+        renamed_resources.reg_a <= false;
+        renamed_resources.reg_b <= false;
+        renamed_resources.reg_x <= false;
+        renamed_resources.reg_y <= false;
+        renamed_resources.reg_z <= false;
+        renamed_resources.flag_z <= false;
+        renamed_resources.flag_c <= false;
+        renamed_resources.flag_n <= false;
+        renamed_resources.flag_v <= false;
+
+        -- Set memory mapping registers to map hypervisor
+        reg_map_lo <= (others => '0');
+        reg_map_hi <= (others => '0');
+
+      end if;
+      
     end if;
   end process;
 end behavioural;
