@@ -34,8 +34,8 @@ entity gs4502b_stage_decode is
 -- Input: 1-bit flag + cache line ID from execute stage to instruct us to
 --        divert (whether due to branch mis-predict, RTS/RTI, interrupt or trap
 --        entry/return).
-    cpu_divert : in std_logic;
-    cpu_divert_line : in unsigned(9 downto 0);
+    address_redirecting : in boolean;
+    redirected_address : in translated_address;
 
 -- Output: 32-bit address source of instruction
     icache_src_address_out : out translated_address;
@@ -167,10 +167,13 @@ begin
       end if;
       -- Finally, if the CPU is elsewhere asking us to divert somewhere, then
       -- do indeed divert there.
-      if cpu_divert = '1' then
-        report "CPU requests diversion to an address ending in $"
-          & to_hstring(cpu_divert_line);
-        next_line := cpu_divert_line;
+      if address_redirecting = true then
+          report "$xxxxx" & to_hstring(most_recently_requested_cache_line) &
+            " DECODE : "
+            & "DIVERSION requested to $" & to_hstring(redirected_address)
+            & ", requesting cache line $"
+            & to_hstring(redirected_address(9 downto 0));
+        next_line := redirected_address(9 downto 0);
       end if;
 
       report "I-CACHE read address set to $" & to_hstring(next_line);

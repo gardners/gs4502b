@@ -113,8 +113,6 @@ architecture behavioural of gs4502b is
   signal icache_lookup_line : std_logic_vector(9 downto 0);
   signal icache_read_data : std_logic_vector(105 downto 0);
   signal icache_write_data : std_logic_vector(105 downto 0) := (others => '1');
-  signal cpu_divert : std_logic := '0';
-  signal cpu_divert_line : unsigned(9 downto 0);
 
   -- Signals output by decode stage
   signal stage_decode_instruction_address : translated_address;
@@ -223,8 +221,8 @@ begin  -- behavioural
       pc_expected => unsigned(icache_read_data(61 downto 46)),
       pc_mispredict => unsigned(icache_read_data(77 downto 62)),
       branch_predict_in => icache_read_data(86),
-      cpu_divert => cpu_divert,
-      cpu_divert_line => cpu_divert_line,
+      address_redirecting => stage_execute_redirecting,
+      redirected_address => stage_execute_redirected_address,
       stall => validate_stall,
       icache_src_address_out => stage_decode_instruction_address,
       icache_line_number_out => stage_decode_cache_line_number,

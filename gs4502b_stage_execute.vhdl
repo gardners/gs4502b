@@ -144,54 +144,94 @@ begin
         if completed_transaction.id = reg_a_name then
           reg_a <= completed_transaction.value;
           renamed_resources.reg_a <= false;
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : reg_a <= $" & to_hstring(completed_transaction.value) &
+            " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = reg_b_name then
           reg_b <= completed_transaction.value;
           renamed_resources.reg_b <= false;
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : reg_b <= $" & to_hstring(completed_transaction.value) &
+            " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = reg_x_name then
           reg_x <= completed_transaction.value;
           renamed_resources.reg_x <= false;
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : reg_x <= $" & to_hstring(completed_transaction.value) &
+            " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = reg_y_name then
           reg_y <= completed_transaction.value;
           renamed_resources.reg_y <= false;
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : reg_y <= $" & to_hstring(completed_transaction.value) &
+            " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = reg_z_name then
           reg_z <= completed_transaction.value;
           renamed_resources.reg_z <= false;
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : reg_z <= $" & to_hstring(completed_transaction.value) &
+            " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = flag_z_name then
           flag_z <= completed_transaction.z;
           renamed_resources.flag_z <= false;
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : flag_z <= " & boolean'image(completed_transaction.z) &
+            " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = flag_c_name then
           flag_c <= completed_transaction.c;
           renamed_resources.flag_c <= false;
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : flag_c <= " & boolean'image(completed_transaction.c) &
+            " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = flag_n_name then
           flag_n <= completed_transaction.n;
           renamed_resources.flag_n <= false;
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : flag_n <= " & boolean'image(completed_transaction.n) &
+            " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = flag_v_name then
           flag_v <= completed_transaction.v;
           renamed_resources.flag_v <= false;
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : flag_v <= " & boolean'image(completed_transaction.v) &
+            " from transaction #" & integer'image(completed_transaction.id);
         end if;
       end if;
       
       if instruction_valid = false then
         -- If there is no valid instruction, then we keep expecting the same address.
         expected_instruction_address <= expected_instruction_address;
+        report "$" & to_hstring(expected_instruction_address) &
+          " EXECUTE : instruction_valid=false -- doing nothing.";
 
       else
         if instruction_address_is_as_expected then
           -- Do the work of the instruction.
 
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : Executing instruction.";
+          -- XXX report details of instruction
+
+
           -- XXX Not yet implemented!
 
           -- For now, just advance the PC to the next instruction we expect.
           expected_instruction_address <= pc_expected_translated_in;
-         
+
+          -- XXX - Almost certainly not showing the correct PCH here: there
+          -- should be a PCH for both expected and mispredict cases.
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : Advancing PC to $" & to_hstring(pch_in)
+            & to_hstring(pch_in)
+            & "($" & to_hstring(pc_expected_translated_in) & ").";
           
         else
           -- Instruction address is wrong, but instruction is marked valid.
@@ -204,6 +244,9 @@ begin
           -- instruction validate stage has already told the memory controller
           -- to fetch the correct data, so we can just do nothing here, while
           -- we wait for the data to arrive.
+          report "$" & to_hstring(expected_instruction_address) &
+            " EXECUTE : Ingoring validated instruction (wrong instruction address or CPU personality).";
+
         end if;
           
       end if;
