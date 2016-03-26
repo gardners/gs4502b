@@ -208,17 +208,20 @@ begin
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
       end if;
+
+      -- Unstall pipeline by default.
+      -- Instruction execution will stall it if required
+      stall_out <= '0';
       
       if instruction_valid = false then
         -- If there is no valid instruction, then we keep expecting the same address.
         expected_instruction_address <= expected_instruction_address;
         report "$" & to_hstring(expected_instruction_address) &
-          " EXECUTE : instruction_valid=false -- doing nothing.";
-
+          " EXECUTE : instruction_valid=false -- doing nothing.";        
       else
         if instruction_address_is_as_expected then
           -- Do the work of the instruction.
-
+         
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : Executing instruction.";
           -- XXX report details of instruction
