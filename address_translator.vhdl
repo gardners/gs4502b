@@ -200,42 +200,46 @@ architecture behavioural of address_translator is
       
 begin
 
-  process(cpuclock)
+  process(cpuclock,address_in,last_cpuport_value,rom_at_8000,rom_at_a000,
+          rom_at_c000,rom_at_e000,rom_from_colour_ram,cpuport_value,
+          cpuport_ddr,reg_map_low,reg_mb_low,reg_offset_low,reg_map_high,
+          reg_mb_high,reg_offset_high)
   begin
     -- Resolve address
     read_address <= resolve_address_to_long(address_in,false);
     write_address <= resolve_address_to_long(address_in,true);
-    
-    -- Tell CPU if memory map has changed
-    if (last_cpuport_value /= cpuport_value)
-      or (last_rom_from_colour_ram /= rom_from_colour_ram)
-      or (last_reg_map_low /= reg_map_low)
-      or (last_reg_mb_low /= reg_mb_low)
-      or (last_reg_offset_low /= reg_offset_low)
-      or (last_reg_map_high /= reg_map_high)
-      or (last_reg_mb_high /= reg_mb_high)
-      or (last_reg_offset_high /= reg_offset_high)
-      or (last_rom_at_8000 /= rom_at_8000) 
-      or (last_rom_at_a000 /= rom_at_a000) 
-      or (last_rom_at_c000 /= rom_at_c000) 
-      or (last_rom_at_e000 /= rom_at_e000) then
-      memory_map_has_changed <= '1';
-    else
-      memory_map_has_changed <= '0';
-    end if;
-    last_cpuport_value <= cpuport_value;
-    last_rom_from_colour_ram <= rom_from_colour_ram;
-    last_reg_map_low <= reg_map_low;
-    last_reg_mb_low <= reg_mb_low;
-    last_reg_offset_low <= reg_offset_low;
-    last_reg_map_high <= reg_map_high;
-    last_reg_mb_high <= reg_mb_high;
-    last_reg_offset_high <= reg_offset_high;
-    last_rom_at_8000 <= rom_at_8000; 
-    last_rom_at_a000 <= rom_at_a000; 
-    last_rom_at_c000 <= rom_at_c000; 
-    last_rom_at_e000 <= rom_at_e000;                                         
 
+    if rising_edge(cpuclock) then
+      -- Tell CPU if memory map has changed
+      if (last_cpuport_value /= cpuport_value)
+        or (last_rom_from_colour_ram /= rom_from_colour_ram)
+        or (last_reg_map_low /= reg_map_low)
+        or (last_reg_mb_low /= reg_mb_low)
+        or (last_reg_offset_low /= reg_offset_low)
+        or (last_reg_map_high /= reg_map_high)
+        or (last_reg_mb_high /= reg_mb_high)
+        or (last_reg_offset_high /= reg_offset_high)
+        or (last_rom_at_8000 /= rom_at_8000) 
+        or (last_rom_at_a000 /= rom_at_a000) 
+        or (last_rom_at_c000 /= rom_at_c000) 
+        or (last_rom_at_e000 /= rom_at_e000) then
+        memory_map_has_changed <= '1';
+      else
+        memory_map_has_changed <= '0';
+      end if;
+      last_cpuport_value <= cpuport_value;
+      last_rom_from_colour_ram <= rom_from_colour_ram;
+      last_reg_map_low <= reg_map_low;
+      last_reg_mb_low <= reg_mb_low;
+      last_reg_offset_low <= reg_offset_low;
+      last_reg_map_high <= reg_map_high;
+      last_reg_mb_high <= reg_mb_high;
+      last_reg_offset_high <= reg_offset_high;
+      last_rom_at_8000 <= rom_at_8000; 
+      last_rom_at_a000 <= rom_at_a000; 
+      last_rom_at_c000 <= rom_at_c000; 
+      last_rom_at_e000 <= rom_at_e000;                                         
+    end if;
 end process;
 
 end behavioural;
