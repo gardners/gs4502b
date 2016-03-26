@@ -115,7 +115,8 @@ begin
   process (pixelclock) is
     variable digit : std_logic_vector(3 downto 0);
   begin    
-    
+
+    if rising_edge(pixelclock) then
       segled_counter <= segled_counter + 1;
 
       sseg_an <= (others => '1');
@@ -165,7 +166,7 @@ begin
         when x"F" => sseg_ca <= "10001110";
         when others => sseg_ca <= "10100001";
       end case; 
-
+    end if;
   end process;
 
   
