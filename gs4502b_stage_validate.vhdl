@@ -89,8 +89,10 @@ entity gs4502b_stage_validate is
     pch_in : in unsigned(15 downto 8);
 -- Input: translated 32-bit PC for expected case
     pc_expected_translated_in : in translated_address;
+    pch_expected_in : in unsigned(15 downto 8);
 -- Input: translated 32-bit PC for branch mis-predict case
     pc_mispredict_translated_in : in translated_address;
+    pch_mispredict_in : in unsigned(15 downto 8);
 -- Input: 1-bit Branch prediction flag: 1=assume take branch
     branch_predict_in : in std_logic;
 -- Input: What resources does this instruction require and modify?
@@ -127,8 +129,10 @@ entity gs4502b_stage_validate is
     pch_out : out unsigned(15 downto 8);
 -- Output: Translated PC for expected case
     pc_expected_translated_out : out translated_address;
+    pch_expected_out : out unsigned(15 downto 8);
 -- Output: 16-bit PC for branch mis-predict case
     pc_mispredict_translated_out : out translated_address;
+    pch_mispredict_out : out unsigned(15 downto 8);
 -- Output: Instruction decode signals that can be computed
 -- Output: 1-bit Branch prediction flag: 1=assume take branch
 --         (for passing to MMU if branch prediction is wrong, so that cache
@@ -174,6 +178,7 @@ architecture behavioural of gs4502b_stage_validate is
   -- complete instruction validity check? We probably can't due to branch
   -- mis-predictions alone.
   signal last_instruction_expected_address : translated_address := (others => '0');
+  signal last_instruction_expected_pch : unsigned(15 downto 8) := (others => '0');
   
   -- Resources that we are still waiting to clear following memory accesses.
   -- XXX Implement logic to update this
@@ -187,7 +192,9 @@ architecture behavioural of gs4502b_stage_validate is
   signal stalled_instruction_information : instruction_information;
   signal stalled_pch : unsigned(15 downto 8);
   signal stalled_pc_expected_translated : translated_address;
+  signal stalled_pch_expected : unsigned(15 downto 8);
   signal stalled_pc_mispredict_translated : translated_address;
+  signal stalled_pch_mispredict : unsigned(15 downto 8);
   signal stalled_branch_predict : std_logic;
   signal stalled_resources_required : instruction_resources;
   signal stalled_resources_modified : instruction_resources;
@@ -202,7 +209,9 @@ begin
     variable instruction_bytes : instruction_bytes;
     variable pch : unsigned(15 downto 8);
     variable pc_expected_translated : translated_address;
+    variable pch_expected : unsigned(15 downto 8);
     variable pc_mispredict_translated : translated_address;
+    variable pch_mispredict : unsigned(15 downto 8);
     variable branch_predict : std_logic;
     variable resources_modified : instruction_resources;
     variable resources_required : instruction_resources;
@@ -312,8 +321,8 @@ begin
       -- cache address space is concerned, effectively represents a couple of
       -- extra bits).
       cache_miss <= false;
-      cache_miss_address <= instruction_address_in;
-      cache_miss_pch <= pch;
+      cache_miss_address <= last_instruction_expected_address;
+      cache_miss_pch <= last_instruction_expected_pch;
       if icache_line_number_in = last_instruction_expected_address(9 downto 0) then
         report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : Instruction is from correct cache line.";
@@ -325,10 +334,12 @@ begin
           report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : Instruction is for wrong address, but right cache line: Announcing CACHE MISS.";
 
-          cache_miss <= true;
+          cache_miss <= true;          
         else
           report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : Instruction is for correct address: CACHE HIT.";
+          last_instruction_expected_address <= pc_expected_translated;
+          last_instruction_expected_pch <= pch_expected;
         end if;
       else
         report "$" & to_hstring(last_instruction_expected_address) &
@@ -338,29 +349,14 @@ begin
       if address_redirecting then
         -- Remember the address we are redirecting to.
         last_instruction_expected_address <= redirected_address;
+        last_instruction_expected_pch <= redirected_pch;
         report "$" & to_hstring(redirected_address) &
           " VALIDATE : Redirecting PC at request of EXECUTE stage.";
-
-        if icache_line_number_in = redirected_address(9 downto 0) then
-          if (redirected_address(31 downto 10)
-              /= instruction_address_in(31 downto 10))
-            or (instruction_information.cpu_personality
-                /= current_cpu_personality) then
-            report "$" & to_hstring(last_instruction_expected_address) &
-              " VALIDATE : Instruction for redirected address is wrong, but right cache line: Announcing CACHE MISS.";
-
-            cache_miss <= true;
-            cache_miss_address <= redirected_address;
-          end if;
-        end if;
       end if;
       
       -- We are stalled unless we are processing something we are reading in,
       -- and we are not being asked to stall ourselves.
       stall_out <= '1';
-      if address_redirecting = false then
-        last_instruction_expected_address <= last_instruction_expected_address;
-      end if;
      
       if stall_in='0' then
         -- Downstream stage is willing to accept an instruction
@@ -374,7 +370,9 @@ begin
           instruction_bytes := stalled_instruction_bytes;
           pch := stalled_pch;
           pc_expected_translated := stalled_pc_expected_translated;
+          pch_expected := stalled_pch_expected;
           pc_mispredict_translated := stalled_pc_mispredict_translated;
+          pch_mispredict := stalled_pch_mispredict;
           branch_predict := stalled_branch_predict;
           resources_modified := stalled_resources_modified;
           resources_required := stalled_resources_required;
@@ -384,7 +382,9 @@ begin
           instruction_bytes := instruction_bytes_in;
           pch := pch_in;
           pc_expected_translated := pc_expected_translated_in;
+          pch_expected := pch_expected_in;
           pc_mispredict_translated := pc_mispredict_translated_in;
+          pch_mispredict := pch_mispredict_in;
           branch_predict := branch_predict_in;
           resources_modified := resources_modified_in;
           resources_required := resources_required_in;
@@ -408,7 +408,9 @@ begin
         instruction_bytes_out <= instruction_bytes;
         pch_out <= pch;
         pc_expected_translated_out <= pc_expected_translated;
+        pch_expected_out <= pch_expected;
         pc_mispredict_translated_out <= pc_mispredict_translated;
+        pch_mispredict_out <= pch_mispredict;
         branch_predict_out <= branch_predict;
         resources_modified_out <= resources_modified;
         resources_required_out <= resources_required;
@@ -503,6 +505,10 @@ begin
             stalled_instruction_address <= instruction_address;
             stalled_instruction_bytes <= instruction_bytes;
             stalled_pch <= pch;
+            stalled_pc_expected_translated <= pc_expected_translated;
+            stalled_pch_expected <= pch_expected;
+            stalled_pc_mispredict_translated <= pc_mispredict_translated;
+            stalled_pch_mispredict <= pch_mispredict;
             stalled_branch_predict <= branch_predict;
             stalled_resources_modified <= resources_modified;
             stalled_resources_required <= resources_required;

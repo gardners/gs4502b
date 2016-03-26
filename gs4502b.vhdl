@@ -119,6 +119,8 @@ architecture behavioural of gs4502b is
   signal stage_decode_instruction_bytes : instruction_bytes;
   signal stage_decode_pc_expected_translated : translated_address;
   signal stage_decode_pc_mispredict_translated : translated_address;
+  signal stage_decode_pch_expected : unsigned(15 downto 8);
+  signal stage_decode_pch_mispredict : unsigned(15 downto 8);
   signal stage_decode_pch : unsigned(15 downto 8);
   signal stage_decode_branch_predict : std_logic;
   -- The value we last used, for passing along the pipeline
@@ -228,8 +230,10 @@ begin  -- behavioural
       icache_line_number_out => stage_decode_cache_line_number,
       icache_bytes_out => stage_decode_instruction_bytes,
       pch_out => stage_decode_pch,
-      pc_expected_translated => stage_decode_pc_expected_translated,      
+      pc_expected_translated => stage_decode_pc_expected_translated,
       pc_mispredict_translated => stage_decode_pc_mispredict_translated,
+      pch_expected => stage_decode_pch_expected,
+      pch_mispredict => stage_decode_pch_mispredict,
       branch_predict_out => stage_decode_branch_predict,
       std_logic_vector(next_cache_line) => icache_ram_read_address,
 
@@ -261,6 +265,8 @@ begin  -- behavioural
       pch_in => stage_decode_pch,
       pc_expected_translated_in => stage_decode_pc_expected_translated,
       pc_mispredict_translated_in => stage_decode_pc_mispredict_translated,
+      pch_expected_in => stage_decode_pch_expected,
+      pch_mispredict_in => stage_decode_pch_mispredict,
       branch_predict_in => stage_decode_branch_predict,
       resources_required_in => stage_decode_resources_required,
       resources_modified_in => stage_decode_resources_modified,

@@ -47,8 +47,11 @@ entity gs4502b_stage_decode is
     pch_out : out unsigned(15 downto 8);
 -- Output: Translated PC for expected case
     pc_expected_translated : out translated_address;
--- Output: 16-bit PC for branch mis-predict case
+-- Output: Translated PC for branch mis-predict case
     pc_mispredict_translated : out translated_address;
+-- Output: Upper byte of PC for both predicted and mis-prediction results
+    pch_expected : out unsigned(15 downto 8);
+    pch_mispredict : out unsigned(15 downto 8);
 -- Output: Instruction decode signals that can be computed
 -- Output: 1-bit Branch prediction flag: 1=assume take branch
 --         (for passing to MMU if branch prediction is wrong, so that cache
@@ -137,6 +140,9 @@ begin
         instruction_information.does_store <= false;
         instruction_information.addressing_mode <= Implied;
         instruction_information.instruction <= Nop;
+
+        pch_expected <= pc_expected(15 downto 8);
+        pch_mispredict <= pc_mispredict(15 downto 8);
         
         -- CPU personality is only modified by writing to $D02F or $D640-$D67F
         
