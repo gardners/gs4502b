@@ -60,35 +60,10 @@ entity container is
 end container;
 
 architecture Behavioral of container is
-
-  component dotclock is
-    port (
-      CLK_IN1           : in     std_logic;
-    -- Clock out ports
-    CLK_OUT1          : out    std_logic;
-    CLK_OUT2          : out    std_logic;
-    CLK_OUT3          : out    std_logic;
-    CPUCLOCK          : out    std_logic;
---    IOCLOCK          : out    std_logic;
-    PIX2CLOCK          : out    std_logic
-      );
-  end component;
-
-  component gs4502b is
-    port (
-      cpuclock : IN STD_LOGIC;
-      monitor_PC : out unsigned(15 downto 0);
-
-      rom_at_8000 : in std_logic;
-      rom_at_a000 : in std_logic;
-      rom_at_c000 : in std_logic;
-      rom_at_e000 : in std_logic;
-      viciii_iomode : in std_logic_vector(1 downto 0)
-      );
-  end component;     
   
   signal irq : std_logic := '1';
   signal nmi : std_logic := '1';
+  signal reset : std_logic := '0';
   
   signal pixelclock : std_logic;
   signal pixelclock2x : std_logic;
@@ -101,7 +76,7 @@ architecture Behavioral of container is
   
 begin
   
-  dotclock1: component dotclock
+  dotclock1: entity work.dotclock
     port map ( clk_in1 => CLK_IN,
                clk_out1 => clock100mhz,
                clk_out2 => pixelclock,
@@ -110,10 +85,11 @@ begin
 --               clk_out3 => ioclock -- also 48MHz
                );
   
-  core0: gs4502b
+  core0: entity work.gs4502b
     port map (
       cpuclock      => pixelclock,
       monitor_pc    => monitor_pc,
+      reset         => reset,
 
       rom_at_8000 => '0',
       rom_at_a000 => '0',
@@ -138,8 +114,8 @@ begin
   
   process (pixelclock) is
     variable digit : std_logic_vector(3 downto 0);
-  begin
-      
+  begin    
+    
       segled_counter <= segled_counter + 1;
 
       sseg_an <= (others => '1');
@@ -150,6 +126,9 @@ begin
           digit := std_logic_vector(monitor_pc(3 downto 0));
         when "001" =>
           digit := std_logic_vector(monitor_pc(7 downto 4));
+          -- Release reset after a while
+          -- XXX Replace this little hack with proper reset logic
+          reset <= '1';
         when "010" =>
           digit := std_logic_vector(monitor_pc(11 downto 8));
         when "011" =>
