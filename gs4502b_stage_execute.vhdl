@@ -211,6 +211,10 @@ begin
       -- On reset, force PC to Hypervisor mode and entry point, and reset
       -- register values.
       if reset = '0' then
+
+        report "$" & to_hstring(expected_instruction_address) &
+          " EXECUTE : /RESET asserted ";
+
         current_cpu_personality <= Hypervisor;
 
         -- Tell pipeline to stall while reset is held, as part of reset clamping.
@@ -231,11 +235,17 @@ begin
         reg_z <= x"00";
         reg_sph <= x"01";
         reg_spl <= x"FF";
-        reg_pch <= x"81";
-        reg_pcl <= x"00";
         port_value <= "111";
         port_ddr <= "111";
 
+        -- Set address of first instruction
+        address_redirecting <= true;
+        redirected_address <= x"0FF88100";
+        expected_instruction_address <= x"0FF88100";
+        redirected_pch <= x"81";                             
+        reg_pch <= x"81";
+        reg_pcl <= x"00";
+        
         -- Clear any register renaming state
         renamed_resources.reg_a <= false;
         renamed_resources.reg_b <= false;
