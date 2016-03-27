@@ -217,13 +217,25 @@ begin  -- behavioural
       rom_at_a000 => rom_at_a000,
 
       -- The fields must match those specified in icachetypes.vhdl
-      icache_src_address_in => unsigned(icache_read_data_b(21 downto 0)),
-      icache_bytes_in => unsigned(icache_read_data_b(45 downto 22)),
-      pch_in => unsigned(icache_read_data_b(85 downto 78)),
-      pc_expected => unsigned(icache_read_data_b(61 downto 46)),
-      pc_mispredict => unsigned(icache_read_data_b(77 downto 62)),
-      branch_predict_in => icache_read_data_b(86),
-      instruction_cpu_personality => icache_read_data_b(88 downto 87),
+      icache_src_address_in
+      => unsigned(icache_read_data_b(ICACHE_INSTRUCTION_ADDRESS_MAX downto
+                                     ICACHE_INSTRUCTION_ADDRESS_START)),
+      icache_bytes_in
+      => unsigned(icache_read_data_b(ICACHE_INSTRUCTION_BYTES_MAX downto
+                                     ICACHE_INSTRUCTION_BYTES_START)),
+      pch_in
+      => unsigned(icache_read_data_b(ICACHE_PCH_MAX downto
+                                     ICACHE_PCH_START)),
+      pc_expected
+      => unsigned(icache_read_data_b(ICACHE_PC_EXPECTED_MAX downto
+                                     ICACHE_PC_EXPECTED_START)),      
+      pc_mispredict
+      => unsigned(icache_read_data_b(ICACHE_PC_MISPREDICT_MAX downto
+                                     ICACHE_PC_MISPREDICT_START)),      
+      branch_predict_in => icache_read_data_b(ICACHE_BRANCH_PREDICT),
+      instruction_cpu_personality
+      => icache_read_data_b(ICACHE_CPU_PERSONALITY_MAX downto
+                            ICACHE_CPU_PERSONALITY_START),      
       
       address_redirecting => stage_execute_redirecting,
       redirected_address => stage_execute_redirected_address,
