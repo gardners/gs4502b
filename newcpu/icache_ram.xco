@@ -1,7 +1,7 @@
 ##############################################################
 #
 # Xilinx Core Generator version 14.7
-# Date: Fri Mar 18 09:54:55 2016
+# Date: Sun Mar 27 18:43:39 2016
 #
 ##############################################################
 #
@@ -41,7 +41,7 @@ SELECT Block_Memory_Generator xilinx.com:ip:blk_mem_gen:7.3
 # BEGIN Parameters
 CSET additional_inputs_for_power_estimation=false
 CSET algorithm=Minimum_Area
-CSET assume_synchronous_clk=false
+CSET assume_synchronous_clk=true
 CSET axi_id_width=4
 CSET axi_slave_type=Memory_Slave
 CSET axi_type=AXI4_Full
@@ -61,9 +61,9 @@ CSET fill_remaining_memory_locations=false
 CSET interface_type=Native
 CSET load_init_file=false
 CSET mem_file=no_Mem_file_loaded
-CSET memory_type=Simple_Dual_Port_RAM
-CSET operating_mode_a=WRITE_FIRST
-CSET operating_mode_b=WRITE_FIRST
+CSET memory_type=True_Dual_Port_RAM
+CSET operating_mode_a=READ_FIRST
+CSET operating_mode_b=READ_FIRST
 CSET output_reset_value_a=0
 CSET output_reset_value_b=0
 CSET pipeline_stages=0
@@ -72,10 +72,10 @@ CSET port_a_enable_rate=100
 CSET port_a_write_rate=50
 CSET port_b_clock=100
 CSET port_b_enable_rate=100
-CSET port_b_write_rate=0
+CSET port_b_write_rate=50
 CSET primitive=8kx2
-CSET read_width_a=106
-CSET read_width_b=106
+CSET read_width_a=108
+CSET read_width_b=108
 CSET register_porta_input_of_softecc=false
 CSET register_porta_output_of_memory_core=false
 CSET register_porta_output_of_memory_primitives=false
@@ -98,11 +98,11 @@ CSET use_regceb_pin=false
 CSET use_rsta_pin=false
 CSET use_rstb_pin=false
 CSET write_depth_a=1024
-CSET write_width_a=106
-CSET write_width_b=106
+CSET write_width_a=108
+CSET write_width_b=108
 # END Parameters
 # BEGIN Extra information
 MISC pkg_timestamp=2012-11-19T16:22:25Z
 # END Extra information
 GENERATE
-# CRC: 67b768bc
+# CRC: b5f1b4a5

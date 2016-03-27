@@ -181,10 +181,10 @@ begin  -- behavioural
       addrb => icache_ram_read_address,
       doutb => icache_read_data,
 
-      -- MMU write interface to I-CACHE
+      -- Cache pre-fetcher read and write interface to I-CACHE
       clka => cpuclock,
-      wea => "0",
-      addra => (others => '0'),
+      wea => icache_write_enable,
+      addra => icache_write_addr,
       dina => icache_write_data
       );
 
