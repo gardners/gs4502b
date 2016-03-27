@@ -20,15 +20,18 @@ EOF
 
 set bitcount=0
     
-foreach line ( `cat $1` )
+foreach line ( `cat $1 | sed s'/ /_/g'` )
     set fieldname=`echo $line | cut -f1 -d:`
     set fieldvalue=`echo $line | cut -f2 -d:`
+    set comment=`echo $line | cut -f3 -d: | sed 's/_/ /g'`
 
     set start=$bitcount
     set width=$fieldvalue
     @ max = $start + $width - 1
     @ bitcount = $bitcount + $width	
-    
+
+    echo >> $file
+    echo "  -- ${comment}" >> $file
     echo "  constant ICACHE_${fieldname}_START : integer := ${start};" >> $file
     echo "  constant ICACHE_${fieldname}_WIDTH : integer := ${width};" >> $file
     echo "  constant ICACHE_${fieldname}_MAX : integer := ${max};" >> $file	
