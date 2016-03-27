@@ -3,6 +3,7 @@ all:	cpu_test
 SIMULATIONFILES=	cpu_test.vhdl \
 			debugtools.vhdl \
 			icachetypes.vhdl \
+			icachebits.vhdl \
 			ghdl_ram108x1k.vhdl \
 			address_translator.vhdl \
 			gs4502b.vhdl \
@@ -10,6 +11,9 @@ SIMULATIONFILES=	cpu_test.vhdl \
 			gs4502b_stage_validate.vhdl \
 			gs4502b_stage_execute.vhdl \
 			gs4502b_cache_prefetch.vhdl \
+
+icachebits.vhdl: generate_icachebits_package.csh icache_structure.txt
+	./generate_icachebits_package.csh icache_structure.txt
 
 cpu_test:	$(SIMULATIONFILES) Makefile
 	ghdl -i $(SIMULATIONFILES)

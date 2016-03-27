@@ -84,6 +84,7 @@ use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
 use work.icachetypes.all;
+use work.icachebits.all;
 
 ENTITY gs4502b IS
   PORT (
