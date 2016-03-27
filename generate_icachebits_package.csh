@@ -32,9 +32,14 @@ foreach line ( `cat $1 | sed s'/ /_/g'` )
 
     echo >> $file
     echo "  -- ${comment}" >> $file
-    echo "  constant ICACHE_${fieldname}_START : integer := ${start};" >> $file
-    echo "  constant ICACHE_${fieldname}_WIDTH : integer := ${width};" >> $file
-    echo "  constant ICACHE_${fieldname}_MAX : integer := ${max};" >> $file	
+    if ( $width > 1 ) then
+      echo "  constant ICACHE_${fieldname}_START : integer := ${start};" >> $file
+      echo "  constant ICACHE_${fieldname}_WIDTH : integer := ${width};" >> $file
+      echo "  constant ICACHE_${fieldname}_MAX : integer := ${max};" >> $file
+	
+    else
+      echo "  constant ICACHE_${fieldname} : integer := ${start};" >> $file 
+    endif
 end
 
 if ( $bitcount > 108 ) then
@@ -43,7 +48,7 @@ if ( $bitcount > 108 ) then
 else
    @ freebits = 108 - $bitcount
    echo "OK: I-CACHE lines are $bitcount bits wide ($freebits bits free)." 
-endif;
+endif
     
 cat >>$file <<EOF
 end icachebits;
