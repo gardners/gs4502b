@@ -29,9 +29,9 @@ foreach line ( `cat $1` )
     @ max = $start + $width - 1
     @ bitcount = $bitcount + $width	
     
-    echo "  constant ICACHE_${fieldname}_START : integer :=${start};" >> $file
-    echo "  constant ICACHE_${fieldname}_WIDTH : integer :=${width};" >> $file
-    echo "  constant ICACHE_${fieldname}_MAX : integer :=${max};" >> $file	
+    echo "  constant ICACHE_${fieldname}_START : integer := ${start};" >> $file
+    echo "  constant ICACHE_${fieldname}_WIDTH : integer := ${width};" >> $file
+    echo "  constant ICACHE_${fieldname}_MAX : integer := ${max};" >> $file	
 end
 
 if ( $bitcount > 108 ) then
