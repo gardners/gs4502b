@@ -111,8 +111,12 @@ architecture behavioural of gs4502b is
 
   -- Inputs to first stage of pipeline (decode stage)
   signal icache_lookup_line : std_logic_vector(9 downto 0);
-  signal icache_read_data : std_logic_vector(105 downto 0);
-  signal icache_write_data : std_logic_vector(105 downto 0) := (others => '1');
+  signal icache_read_data_a : std_logic_vector(107 downto 0);
+  signal icache_read_data_b : std_logic_vector(107 downto 0);
+  signal icache_address_a : std_logic_vector(9 downto 0);
+  signal icache_address_b : std_logic_vector(9 downto 0);
+  signal icache_write_data : std_logic_vector(107 downto 0) := (others => '1');
+  signal icache_write_enable : std_logic_vector(0 downto 0) := "0";
 
   -- Signals output by decode stage
   signal stage_decode_instruction_address : translated_address;
@@ -176,16 +180,20 @@ begin  -- behavioural
   
   icacheram : entity work.icache_ram
     port map (
-      -- CPU READ interface to I-CACHE
+      -- Instruction Decode interface to I-CACHE: Used as a read-only interface
+      -- (you REALLY don't want instruction decode changing the cache)
       clkb => cpuclock,
-      addrb => icache_ram_read_address,
-      doutb => icache_read_data,
+      web => (others => '0'),
+      dinb => (others => '0'),
+      addrb => icache_address_b,
+      doutb => icache_read_data_b,
 
       -- Cache pre-fetcher read and write interface to I-CACHE
       clka => cpuclock,
       wea => icache_write_enable,
-      addra => icache_write_addr,
-      dina => icache_write_data
+      addra => icache_address_a,
+      dina => icache_write_data,
+      douta => icache_read_data_a
       );
 
   to_stop_ghdl_bug: block
@@ -208,13 +216,13 @@ begin  -- behavioural
       rom_at_a000 => rom_at_a000,
 
       -- The fields must match those specified in icachetypes.vhdl
-      icache_src_address_in => unsigned(icache_read_data(21 downto 0)),
-      icache_bytes_in => unsigned(icache_read_data(45 downto 22)),
-      pch_in => unsigned(icache_read_data(85 downto 78)),
-      pc_expected => unsigned(icache_read_data(61 downto 46)),
-      pc_mispredict => unsigned(icache_read_data(77 downto 62)),
-      branch_predict_in => icache_read_data(86),
-      instruction_cpu_personality => icache_read_data(88 downto 87),
+      icache_src_address_in => unsigned(icache_read_data_b(21 downto 0)),
+      icache_bytes_in => unsigned(icache_read_data_b(45 downto 22)),
+      pch_in => unsigned(icache_read_data_b(85 downto 78)),
+      pc_expected => unsigned(icache_read_data_b(61 downto 46)),
+      pc_mispredict => unsigned(icache_read_data_b(77 downto 62)),
+      branch_predict_in => icache_read_data_b(86),
+      instruction_cpu_personality => icache_read_data_b(88 downto 87),
       
       address_redirecting => stage_execute_redirecting,
       redirected_address => stage_execute_redirected_address,
@@ -336,7 +344,7 @@ begin  -- behavioural
       
       );  
   
-  process(cpuclock, icache_read_data)
+  process(cpuclock, icache_read_data_b)
     variable icache_bits : icache_line;
   begin
     if(rising_edge(cpuclock)) then

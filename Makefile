@@ -3,7 +3,7 @@ all:	cpu_test
 SIMULATIONFILES=	cpu_test.vhdl \
 			debugtools.vhdl \
 			icachetypes.vhdl \
-			ghdl_ram72x1k.vhdl \
+			ghdl_ram108x1k.vhdl \
 			address_translator.vhdl \
 			gs4502b.vhdl \
 			gs4502b_stage_decode.vhdl \

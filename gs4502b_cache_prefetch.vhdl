@@ -73,6 +73,7 @@ entity gs4502b_cache_prefetch is
     -- read all three relevant cache lines in a single cycle after a memory
     -- write occurs.
     
+    
     );
 end gs4502b_cache_prefetch;
 

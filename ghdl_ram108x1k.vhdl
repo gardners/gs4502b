@@ -12,18 +12,22 @@ ENTITY icache_ram IS
     clka : IN STD_LOGIC;
     wea : IN STD_LOGIC_VECTOR(0 downto 0);
     addra : IN std_logic_vector(9 DOWNTO 0);
-    dina : IN std_logic_vector(105 downto 0);
+    dina : IN std_logic_vector(107 downto 0);
+    douta : OUT std_logic_vector(107 downto 0);
     clkb : IN STD_LOGIC;
+    web : in STD_LOGIC_VECTOR(0 downto 0);
+    dinb : IN std_logic_vector(107 downto 0);
     addrb : IN std_logic_vector(9 DOWNTO 0);
-    doutb : OUT std_logic_vector(105 downto 0)
+    doutb : OUT std_logic_vector(107 downto 0)
     );
 END icache_ram;
 
 architecture behavioural of icache_ram is
 
-  type ram_t is array (0 to 1023) of std_logic_vector(105 downto 0);
+  type ram_t is array (0 to 1023) of std_logic_vector(107 downto 0);
   signal ram : ram_t;
-  signal doutb_drive : std_logic_vector(105 downto 0);
+  signal doutb_drive : std_logic_vector(107 downto 0);
+  signal douta_drive : std_logic_vector(107 downto 0);
   
 begin  -- behavioural
 
@@ -33,6 +37,8 @@ begin  -- behavioural
       -- Mimic the one cycle read latency of the coregen generated RAM
       doutb <= doutb_drive;
       doutb_drive <= ram(to_integer(unsigned(addrb)));
+      douta <= douta_drive;
+      douta_drive <= ram(to_integer(unsigned(addra)));
     end if;
     
     report "I-CACHE: A Reading from $"
@@ -43,6 +49,13 @@ begin  -- behavioural
         ram(to_integer(unsigned(addra(9 downto 0)))) <= dina;
         report "I-CACHE: A writing to $" & to_hstring(unsigned(addra))
           & " = $" & to_hstring(dina);
+      end if;
+    end if;
+    if(rising_edge(Clkb)) then 
+      if(web(0)='1') then
+        ram(to_integer(unsigned(addrb(9 downto 0)))) <= dinb;
+        report "I-CACHE: B writing to $" & to_hstring(unsigned(addrb))
+          & " = $" & to_hstring(dinb);
       end if;
     end if;
 
