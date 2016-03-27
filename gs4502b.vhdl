@@ -340,7 +340,12 @@ begin  -- behavioural
 
       cache_miss => cache_miss,
       cache_miss_address => cache_miss_address,
-      cache_miss_pch => cache_miss_pch
+      cache_miss_pch => cache_miss_pch,
+
+      icache_write_enable => icache_write_enable(0),
+      icache_address => icache_address_a,
+      icache_wdata => icache_write_data,
+      icache_rdata => icache_read_data_a
       
       );  
   

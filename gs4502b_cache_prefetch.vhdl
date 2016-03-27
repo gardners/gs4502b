@@ -66,13 +66,16 @@ entity gs4502b_cache_prefetch is
     -- Was there a cache miss?
     cache_miss : in boolean := false;
     cache_miss_address : in translated_address;
-    cache_miss_pch : in unsigned(15 downto 8)
+    cache_miss_pch : in unsigned(15 downto 8);
     
     -- XXX Interface to instruction cache
     -- Instruction cache must be four parallel BRAM structures, so that we can
     -- read all three relevant cache lines in a single cycle after a memory
     -- write occurs.
-    
+    icache_write_enable : out std_logic := '0';
+    icache_address : out std_logic_vector(9 downto 0);
+    icache_wdata : out std_logic_vector(107 downto 0);
+    icache_rdata : in std_logic_vector(107 downto 0)
     
     );
 end gs4502b_cache_prefetch;
