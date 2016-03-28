@@ -241,7 +241,7 @@ begin
           -- should be a PCH for both expected and mispredict cases.
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : Advancing PC to $" & to_hstring(pch_in)
-            & to_hstring(pch_in)
+            & to_hstring(pc_expected_translated_in(7 downto 0))
             & "($" & to_hstring(pc_expected_translated_in) & ").";
           
         else

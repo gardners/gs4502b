@@ -418,7 +418,10 @@ begin
 
         if instruction_address = last_instruction_expected_address then
           instruction_address_is_as_expected <= true;
-        else 
+        else
+          report "$" & to_hstring(last_instruction_expected_address)
+            & " VALIDATE : Marking instruction as incorrect address (saw $"
+            & to_hstring(instruction_address) & ").";
           instruction_address_is_as_expected <= false;
         end if;
         
