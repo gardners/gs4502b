@@ -245,10 +245,12 @@ begin
       -- multi-stage cache fetch pipeline that does the required memory
       -- requests, and actually prepares the instruction entry for putting into
       -- the cache.
+
+      report "$" & to_hstring(instruction_address) & " CACHE-FETCH";
       
       icache_line := (others => '0');
-      icache_line(ICACHE_ADDRESS_BITS_MAX downto ICACHE_ADDRESS_BITS_START)
-        := std_logic_vector(instruction_address(31 downto ICACHE_ADDRESS_BITS_WIDTH));
+      icache_line(ICACHE_INSTRUCTION_ADDRESS_MAX downto ICACHE_INSTRUCTION_ADDRESS_START)
+        := std_logic_vector(instruction_address(31 downto 10));
       icache_line(ICACHE_INSTRUCTION_BYTES_MAX downto ICACHE_INSTRUCTION_BYTES_START)
         := x"EAEAEA";
       icache_line((ICACHE_PC_EXPECTED_START+7) downto ICACHE_PC_EXPECTED_START)
@@ -266,6 +268,10 @@ begin
       
       icache_line(ICACHE_CPU_PERSONALITY_MAX downto ICACHE_CPU_PERSONALITY_START)
         := to_std_logic_vector(cpu_personality);
+
+      icache_wdata  <= icache_line;
+      icache_write_enable <= '1';
+      icache_address <= std_logic_vector(instruction_address(9 downto 0));
       
     end if;
   end process;

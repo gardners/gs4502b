@@ -1,5 +1,4 @@
-ADDRESS_BITS:10:Number of address bits implied by the cache line
-INSTRUCTION_ADDRESS:22:Upper bits of translated address of this instruction
+INSTRUCTION_ADDRESS:22:Upper bits of translated address of this instruction (bottom 10 are in cache line)
 INSTRUCTION_BYTES:24:Opcode and argument bytes for the instruction
 PC_EXPECTED:16:PC for next instruction if the branch prediction is correct
 PC_MISPREDICT:16:PC for next instruction if the branch prediction is incorrect
