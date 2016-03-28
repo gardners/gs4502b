@@ -117,11 +117,34 @@ package icachetypes is
 
     cpu_personality : cpu_personality;
   end record;
+
+  function to_std_logic_vector(c : cpu_personality) return std_logic_vector;
+  function to_cpu_personality(v : std_logic_vector(1 downto 0)) return cpu_personality;
+
   
 end package;
 
 package body icachetypes is
 
+  function to_cpu_personality(v : std_logic_vector(1 downto 0)) return cpu_personality is
+  begin
+    case v is
+      when "00" => return CPU6502;
+      when "01" => return CPU4502;
+      when "11" => return Hypervisor;
+      when others => return Hypervisor;
+    end case;    
+  end function;  
+  
+  function to_std_logic_vector(c : cpu_personality) return std_logic_vector is
+  begin
+    case c is
+      when Hypervisor => return "11";
+      when CPU6502 => return "00";
+      when CPU4502 => return "01";
+    end case;    
+  end function;
+  
   function to_instruction_bytes(op : unsigned(7 downto 0); arg1 : unsigned(7 downto 0);
                                 arg2 : unsigned(7 downto 0)) return instruction_bytes is
     variable i : instruction_bytes;
