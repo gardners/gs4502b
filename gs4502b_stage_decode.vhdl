@@ -156,16 +156,8 @@ begin
         instruction_information.does_store <= false;
         instruction_information.addressing_mode <= Implied;
         instruction_information.instruction <= Nop;
-        case instruction_cpu_personality is
-          when "00" => instruction_information.cpu_personality <= CPU6502;
-          when "01" => instruction_information.cpu_personality <= CPU4502;
-          when "10" =>
-            -- This value might eventually be replaced with another CPU personality.
-            -- Possibly 65816, or possibly something completely different.
-            instruction_information.cpu_personality <= Hypervisor;
-          when "11" => instruction_information.cpu_personality <= Hypervisor;
-          when others => instruction_information.cpu_personality <= Hypervisor;
-        end case;        
+        instruction_information.cpu_personality
+          <= to_cpu_personality(instruction_cpu_personality);
 
         pch_expected <= pc_expected(15 downto 8);
         pch_mispredict <= pc_mispredict(15 downto 8);
