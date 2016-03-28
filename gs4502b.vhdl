@@ -350,6 +350,7 @@ begin  -- behavioural
   cache_prefetcher: entity work.gs4502b_cache_prefetch
     port map (
       cpuclock => cpuclock,
+      cpu_personality => stage_execute_cpu_personality,
 
       cache_miss => cache_miss,
       cache_miss_address => cache_miss_address,

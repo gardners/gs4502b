@@ -157,6 +157,8 @@ entity gs4502b_cache_prefetch is
   port (
     cpuclock : in std_logic;
 
+    cpu_personality : in cpu_personality;
+    
     -- Was there a cache miss?
     cache_miss : in boolean := false;
     cache_miss_address : in translated_address;
@@ -253,7 +255,17 @@ begin
         := std_logic_vector(instruction_address(7 downto 0));
       icache_line(ICACHE_PC_EXPECTED_MAX downto (ICACHE_PC_EXPECTED_MAX-7))
         := std_logic_vector(instruction_pch);
+      icache_line((ICACHE_PC_MISPREDICT_START+7) downto ICACHE_PC_MISPREDICT_START)
+        := std_logic_vector(instruction_address(7 downto 0));
+      icache_line(ICACHE_PC_MISPREDICT_MAX downto (ICACHE_PC_MISPREDICT_MAX-7))
+        := std_logic_vector(instruction_pch);
+      icache_line(ICACHE_PCH_MAX downto ICACHE_PCH_START)
+        := std_logic_vector(instruction_pch);
+
+      icache_line(ICACHE_BRANCH_PREDICT) := '0';
       
+      icache_line(ICACHE_CPU_PERSONALITY_MAX downto ICACHE_CPU_PERSONALITY_START)
+        := to_std_logic_vector(cpu_personality);
       
     end if;
   end process;
