@@ -41,14 +41,13 @@ begin  -- behavioural
       douta_drive <= ram(to_integer(unsigned(addra)));
     end if;
     
-    report "I-CACHE: A Reading from $"
-      & to_hstring(unsigned(addrb));
-
     if(rising_edge(Clka)) then 
       if(wea(0)='1') then
         ram(to_integer(unsigned(addra(9 downto 0)))) <= dina;
         report "I-CACHE: A writing to $" & to_hstring(unsigned(addra))
           & " = $" & to_hstring(dina);
+      else
+        report "I-CACHE: A Reading from $" & to_hstring(unsigned(addra));
       end if;
     end if;
     if(rising_edge(Clkb)) then 
@@ -56,6 +55,8 @@ begin  -- behavioural
         ram(to_integer(unsigned(addrb(9 downto 0)))) <= dinb;
         report "I-CACHE: B writing to $" & to_hstring(unsigned(addrb))
           & " = $" & to_hstring(dinb);
+      else
+        report "I-CACHE: B Reading from $" & to_hstring(unsigned(addrb));
       end if;
     end if;
 

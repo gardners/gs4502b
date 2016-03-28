@@ -332,7 +332,7 @@ begin
           or (instruction_information.cpu_personality
               /= current_cpu_personality) then
           report "$" & to_hstring(last_instruction_expected_address) &
-            " VALIDATE : Instruction is for wrong address, but right cache line: Announcing CACHE MISS.";
+            " VALIDATE : Instruction is for wrong address, but right cache line: Announcing CACHE MISS (saw $" & to_hstring(instruction_address_in);
 
           cache_miss <= true;          
         else
