@@ -256,7 +256,7 @@ begin
           -- to fetch the correct data, so we can just do nothing here, while
           -- we wait for the data to arrive.
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : Ingoring validated instruction (wrong instruction address or CPU personality).";
+            " EXECUTE : Ignoring validated instruction (wrong instruction address or CPU personality).";
 
         end if;
           

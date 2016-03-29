@@ -188,6 +188,7 @@ architecture behavioural of gs4502b_cache_prefetch is
 begin
   process (cpuclock) is
     variable icache_line : std_logic_vector(107 downto 0);
+    variable next_pc : unsigned(15 downto 0);
   begin
     if rising_edge(cpuclock) then
       
@@ -247,6 +248,8 @@ begin
       -- the cache.
 
       report "$" & to_hstring(instruction_address) & " CACHE-FETCH";
+
+      next_pc := to_unsigned(to_integer(instruction_address(15 downto 0)) + 1,16);
       
       icache_line := (others => '0');
       icache_line(ICACHE_INSTRUCTION_ADDRESS_MAX downto ICACHE_INSTRUCTION_ADDRESS_START)
@@ -254,9 +257,9 @@ begin
       icache_line(ICACHE_INSTRUCTION_BYTES_MAX downto ICACHE_INSTRUCTION_BYTES_START)
         := x"EAEAEA";
       icache_line((ICACHE_PC_EXPECTED_START+7) downto ICACHE_PC_EXPECTED_START)
-        := std_logic_vector(instruction_address(7 downto 0));
+        := std_logic_vector(next_pc(7 downto 0));
       icache_line(ICACHE_PC_EXPECTED_MAX downto (ICACHE_PC_EXPECTED_MAX-7))
-        := std_logic_vector(instruction_pch);
+        := std_logic_vector(next_pc(15 downto 8));
       icache_line((ICACHE_PC_MISPREDICT_START+7) downto ICACHE_PC_MISPREDICT_START)
         := std_logic_vector(instruction_address(7 downto 0));
       icache_line(ICACHE_PC_MISPREDICT_MAX downto (ICACHE_PC_MISPREDICT_MAX-7))
