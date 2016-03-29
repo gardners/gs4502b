@@ -188,6 +188,7 @@ architecture behavioural of gs4502b_stage_validate is
   signal stall_buffer_occupied : std_logic := '0';
   signal stall_out_current : std_logic := '0';  
   signal stalled_instruction_address : translated_address;
+  signal stalled_icache_line_number : unsigned(9 downto 0);
   signal stalled_instruction_bytes : instruction_bytes;
   signal stalled_instruction_information : instruction_information;
   signal stalled_pch : unsigned(15 downto 8);
@@ -206,6 +207,7 @@ begin
 
     -- MUX variables to choose between stall buffer and incoming instruction
     variable instruction_address : translated_address;
+    variable icache_line_number : unsigned(9 downto 0);
     variable instruction_bytes : instruction_bytes;
     variable pch : unsigned(15 downto 8);
     variable pc_expected_translated : translated_address;
@@ -323,16 +325,16 @@ begin
       cache_miss <= false;
       cache_miss_address <= last_instruction_expected_address;
       cache_miss_pch <= last_instruction_expected_pch;
-      if icache_line_number_in = last_instruction_expected_address(9 downto 0) then
+      if icache_line_number = last_instruction_expected_address(9 downto 0) then
         report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : Instruction is from correct cache line.";
 
         if (last_instruction_expected_address(31 downto 10)
-            /= instruction_address_in(31 downto 10))
+            /= instruction_address(31 downto 10))
           or (instruction_information.cpu_personality
               /= current_cpu_personality) then
           report "$" & to_hstring(last_instruction_expected_address) &
-            " VALIDATE : Instruction is for wrong address, but right cache line: Announcing CACHE MISS (saw $" & to_hstring(instruction_address_in);
+            " VALIDATE : Instruction is for wrong address, but right cache line: Announcing CACHE MISS (saw $" & to_hstring(instruction_address);
 
           cache_miss <= true;          
         else
@@ -344,7 +346,7 @@ begin
       else
         report "$" & to_hstring(last_instruction_expected_address) &
           " VALIDATE : Instruction is for different cache line: saw line $"
-          & to_hstring(icache_line_number_in);
+          & to_hstring(icache_line_number);
       end if;
       if address_redirecting then
         -- Remember the address we are redirecting to.
@@ -367,6 +369,7 @@ begin
         if stall_buffer_occupied = '1' then
           -- Pass instruction from our stall buffer
           instruction_address := stalled_instruction_address;
+          icache_line_number := stalled_icache_line_number;
           instruction_bytes := stalled_instruction_bytes;
           pch := stalled_pch;
           pc_expected_translated := stalled_pc_expected_translated;
@@ -380,6 +383,7 @@ begin
         else
           instruction_address := instruction_address_in;
           instruction_bytes := instruction_bytes_in;
+          icache_line_number := icache_line_number_in;
           pch := pch_in;
           pc_expected_translated := pc_expected_translated_in;
           pch_expected := pch_expected_in;
@@ -507,6 +511,7 @@ begin
           if stall_out_current='0' then
             stalled_instruction_address <= instruction_address;
             stalled_instruction_bytes <= instruction_bytes;
+            stalled_icache_line_number <= icache_line_number;
             stalled_pch <= pch;
             stalled_pc_expected_translated <= pc_expected_translated;
             stalled_pch_expected <= pch_expected;
