@@ -70,7 +70,7 @@ begin
     if rising_edge(cpuclock) then
 
       if address_redirecting = true then
-        report "$xxxxx" & to_hstring(instruction_address) &
+        report "$" & to_hstring(instruction_address) &
           " PREFETCH : "
           & "DIVERSION requested to $" & to_hstring(redirected_address)
           & ", next_line = $"
@@ -93,7 +93,7 @@ begin
       -- requests, and actually prepares the instruction entry for putting into
       -- the cache.
 
-      report "$" & to_hstring(instruction_address) & " CACHE-FETCH";
+      report "$" & to_hstring(instruction_address) & " I-FETCH";
 
       next_pc := to_unsigned(to_integer(instruction_address(15 downto 0)) + 1,16);
       
