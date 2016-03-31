@@ -49,10 +49,10 @@ entity gs4502b_instruction_prefetch is
 
     -- Interface to 4x 64KB RAMs
     memory_address : out std_logic_vector(15 downto 0);
-    memory_data0 : out std_logic_vector(8 downto 0);
-    memory_data1 : out std_logic_vector(8 downto 0);
-    memory_data2 : out std_logic_vector(8 downto 0);
-    memory_data3 : out std_logic_vector(8 downto 0)
+    memory_data0 : in std_logic_vector(8 downto 0);
+    memory_data1 : in std_logic_vector(8 downto 0);
+    memory_data2 : in std_logic_vector(8 downto 0);
+    memory_data3 : in std_logic_vector(8 downto 0)
 
     
     );
@@ -61,14 +61,117 @@ end gs4502b_instruction_prefetch;
 architecture behavioural of gs4502b_instruction_prefetch is
   signal instruction_address : translated_address := (others => '0');
   signal instruction_pc : unsigned(15 downto 0) := x"8100";
+
+  -- 16 byte buffer for fetching instructions from memory
+  signal byte_buffer : unsigned((8*16)-1 downto 0);
+  signal bytes_ready : integer range 0 to 16 := 0;
+  signal buffer_address : translated_address := (others => '0');
+
+  -- Delayed signals to tell us which address of chip/fast RAM we are reading
+  -- in a given cycle
+  signal memory_address_0 : unsigned(15 downto 0) := (others => '0');
+  signal memory_address_1 : unsigned(15 downto 0) := (others => '0');
+  -- And which address are we currently looking for to append to the end of our
+  -- byte buffer?
+  signal desired_address : unsigned(15 downto 0) := (others => '0');
+  
 begin
   process (cpuclock) is
     variable instruction : instruction_information;
     variable bytes : instruction_bytes;
     variable next_pc : unsigned(15 downto 0);
+
+    variable store_offset : integer range 0 to 15 := 0;
+    variable consumed_bytes : integer range 0 to 3 := 0;
+    variable new_bytes_ready : integer range 0 to 16 := 0;
   begin
     if rising_edge(cpuclock) then
 
+      -- Provide delayed memory address signal, so that we know where the RAM
+      -- is reading from each cycle
+      memory_address_1 <= memory_address_0;
+      
+      if buffer_address /= instruction_address then
+        -- Buffer is useless, and must be reloaded
+        report "I-FETCH: Flushing buffer, because we need $"
+          & to_hstring(instruction_address)
+          & ", but our buffer points to $" & to_hstring(buffer_address);
+        
+        buffer_address <= instruction_address;
+        
+        -- No bytes yet
+        bytes_ready <= 0;
+
+        -- fastram/chipram from CPU side is a single 256KB RAM, composed of 4x
+        -- 64KB interleaved banks. This allows us to read 4 bytes at a time.
+        memory_address <= std_logic_vector(instruction_address(17 downto 2));
+        memory_address_0 <= instruction_address(17 downto 2);
+        desired_address <= instruction_address(17 downto 2);
+      else
+        store_offset := bytes_ready;
+        consumed_bytes := 0;
+        new_bytes_ready := bytes_ready;
+        report "I-FETCH: Fetching instruction @ $" & to_hstring(instruction_address);
+        
+        if bytes_ready >= 3 then
+          -- Work out bytes in instruction, so that we can shift down appropriately.
+          -- XXX
+          report "I-FETCH: Pretending to find a 1 byte instruction.";
+          consumed_bytes := 1;
+        end if;
+        
+        -- Shift buffer down
+        byte_buffer(((16-consumed_bytes)*8-1) downto 0)
+          <= byte_buffer((16*8-1) downto (consumed_bytes*8));
+        -- Update where we will store, and the number of valid bytes left in
+        -- the buffer.
+        store_offset := bytes_ready - consumed_bytes;
+        
+        -- We are reading for the correct address
+        report "I-FETCH: RAM READING $" & to_hstring(memory_address_1&"00")
+          &" - $" & to_hstring(memory_address_1&"11") &
+          ", " & integer'image(bytes_ready) & " bytes ready, am hoping for $"
+          & to_hstring(desired_address&"00");
+        if memory_address_1 = desired_address then
+          -- But make sure we don't over flow our read queue
+          report "I-FETCH: Found the bytes we were looking for to add to our buffer.";
+          if bytes_ready < 12 then
+            report "I-FETCH: We have space, so adding to byte_buffer.";
+            -- Append to the end
+            byte_buffer((8*(store_offset+3)+7) downto (8*(store_offset+3)))
+              <= unsigned(memory_data3(7 downto 0));
+            byte_buffer((8*(store_offset+2)+7) downto (8*(store_offset+2)))
+              <= unsigned(memory_data2(7 downto 0));
+            byte_buffer((8*(store_offset+1)+7) downto (8*(store_offset+1)))
+              <= unsigned(memory_data1(7 downto 0));
+            byte_buffer((8*(store_offset+0)+7) downto (8*(store_offset+0)))
+              <= unsigned(memory_data0(7 downto 0));
+            new_bytes_ready := bytes_ready - consumed_bytes + 4;
+            -- Read next 4 bytes
+            desired_address <= desired_address + 1;
+            memory_address <= std_logic_vector(desired_address + 1);
+            memory_address_0 <= desired_address + 1;
+
+          else
+            -- We already have enough bytes, so we don't need to do anything.
+            -- But we could use this time to perform some other memory action,
+            -- possibly reading the alternate path following a branch, for
+            -- example, so that we have it ready ahead of time. But that can
+            -- come later. Possibly much later.
+            new_bytes_ready := bytes_ready - consumed_bytes;
+          end if;
+        else
+          -- Not reading from the right place yet, but we assume it is on its way,
+          -- so do nothing right now, apart from wait.
+        end if;
+        bytes_ready <= new_bytes_ready;
+        buffer_address <= buffer_address + consumed_bytes;
+
+        -- XXX Dummy incremental advance of instruction address
+        instruction_address <= instruction_address + consumed_bytes;
+        instruction_pc <= instruction_pc + consumed_bytes;        
+      end if;
+      
       if address_redirecting = true then
         report "$" & to_hstring(instruction_address) &
           " PREFETCH : "
@@ -80,11 +183,6 @@ begin
         instruction_pc(7 downto 0) <= redirected_address(7 downto 0);
       else
         -- Otherwise, keep fetching from where we were.
-        -- XXX Dummy incremental advance of instruction address
-        instruction_address <= instruction_address + 1;
-        if (instruction_address(7 downto 0) = x"FF") then
-          instruction_pc(15 downto 8) <= instruction_pc(15 downto 8) + 1;
-        end if;
       end if;
 
       -- XXX Dummy code to prepare simple dummy icache lines to feed to
