@@ -108,6 +108,8 @@ architecture behavioural of gs4502b_stage_execute is
   
   signal expected_instruction_address : translated_address;
 
+  signal wrong_instruction_count : integer range 0 to 7 := 0;
+  
   -- Register and flag renaming
   signal renamed_resources : instruction_resources;
   signal reg_a_name : transaction_id;
@@ -222,7 +224,8 @@ begin
       else
         if instruction_address_is_as_expected then
           -- Do the work of the instruction.
-         
+          wrong_instruction_count <= 0;
+
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : Executing instruction.";
           -- XXX report details of instruction
@@ -253,6 +256,15 @@ begin
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : Ignoring validated instruction (wrong instruction address or CPU personality).";
 
+          if wrong_instruction_count < 7 then
+            wrong_instruction_count <= wrong_instruction_count + 1;
+          else
+            wrong_instruction_count <= 0;
+            address_redirecting <= true;
+            redirected_address <= expected_instruction_address;
+            redirected_pch <= expected_instruction_pch;
+          end if;
+          
         end if;
           
       end if;
