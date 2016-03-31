@@ -119,41 +119,32 @@ architecture behavioural of gs4502b is
   signal icache_write_data : std_logic_vector(107 downto 0) := (others => '1');
   signal icache_write_enable : std_logic_vector(0 downto 0) := "0";
 
+  -- Signals output by prefetch stage
+  signal stage_prefetch_instruction : instruction_information;
+  
   -- Signals output by decode stage
-  signal stage_decode_instruction_address : translated_address;
-  signal stage_decode_instruction_bytes : instruction_bytes;
-  signal stage_decode_pc_expected_translated : translated_address;
-  signal stage_decode_pc_mispredict_translated : translated_address;
-  signal stage_decode_pch_expected : unsigned(15 downto 8);
-  signal stage_decode_pch_mispredict : unsigned(15 downto 8);
-  signal stage_decode_pch : unsigned(15 downto 8);
-  signal stage_decode_branch_predict : std_logic;
+  signal stage_decode_instruction : instruction_information;
   -- The value we last used, for passing along the pipeline
   signal stage_decode_cache_line_number : unsigned(9 downto 0);
   -- To be wired to cache ram for reading next line
   signal stage_decode_resources_required : instruction_resources;
   signal stage_decode_resources_modified : instruction_resources;
   signal stage_decode_instruction_information : instruction_information;
+  signal decode_stalling : boolean;
 
   -- Signals output by validate stage
-  signal validate_stall : std_logic;
-  signal stage_validate_instruction_address : translated_address;
-  signal stage_validate_instruction_bytes : instruction_bytes;
-  signal stage_validate_pc_expected_translated : translated_address;
-  signal stage_validate_pc_mispredict_translated : translated_address;
-  signal stage_validate_pch : unsigned(15 downto 8);
-  signal stage_validate_branch_predict : std_logic;
+  signal validate_stalling : boolean;
+  signal stage_validate_instruction : instruction_information;
   signal stage_validate_resources_required : instruction_resources;
   signal stage_validate_resources_modified : instruction_resources;
-  signal stage_validate_instruction_information : instruction_information;
-  signal instruction_valid : boolean;
+  signal stage_validate_instruction_valid : boolean;
   signal instruction_address_is_as_expected : boolean;
   signal cache_miss : boolean;
   signal cache_miss_address : translated_address;
   signal cache_miss_pch : unsigned(15 downto 8);
   
   -- Signals output by execute stage
-  signal execute_stall : std_logic;
+  signal execute_stalling : boolean;
   signal stage_execute_resources_locked : instruction_resources := (others => false);
   signal stage_execute_transaction_id : transaction_id;
   signal stage_execute_transaction_valid : boolean := false;
@@ -164,7 +155,7 @@ architecture behavioural of gs4502b is
 
   -- Signals output by the memory controller
   signal completed_transaction : transaction_result;
-  signal memory_stall : std_logic := '0';
+  signal memory_stalling : boolean := false;
   
   -- Memory mapping registers and derivatives
   signal reg_mb_low : unsigned(11 downto 0);
@@ -175,27 +166,57 @@ architecture behavioural of gs4502b is
   signal reg_offset_high : unsigned(19 downto 8);
   signal cpuport_value : std_logic_vector(2 downto 0);
   signal cpuport_ddr : std_logic_vector(2 downto 0);
+
+  -- 4x 64KB x 8bit RAMs to make main memory
+  -- (Actually, they are 9-bit RAMs.  We aren't currently doing anything with
+  -- the 9th bit, but might, for example, us it to mark branch prediction
+  -- information.)
+  signal ram_instruction_port_address : std_logic_vector(15 downto 0);
+  signal ram_instruction_port_data0 : std_logic_vector(8 downto 0);
+  signal ram_instruction_port_data1 : std_logic_vector(8 downto 0);
+  signal ram_instruction_port_data2 : std_logic_vector(8 downto 0);
+  signal ram_instruction_port_data3 : std_logic_vector(8 downto 0);
+  signal mc_address : std_logic_vector(15 downto 0);
+  signal mc_write : std_logic_vector(3 downto 0) := (others => '0');
+  signal mc_write_data : std_logic_vector(8 downto 0) := (others => '0');
+  signal mc_read_data : std_logic_vector(8 downto 0);
   
 begin  -- behavioural
+
+  ram0: entity work.ram0
+    port map ( a_clk => cpuclock,
+               a_wr => '0',
+               a_addr => ram_instruction_port_address,
+               a_din => (others => '0'),
+               a_dout => ram_instruction_port_data0,
+
+               b_clk => cpuclock,
+               b_wr => mc_write(0),
+               b_addr => mc_address,
+               b_din => mc_write_data,
+               b_dout => mc_read_data
+               );
   
-  icacheram : entity work.icache_ram
+  instruction_prefetcher: entity work.gs4502b_instruction_prefetch
     port map (
-      -- Instruction Decode interface to I-CACHE: Used as a read-only interface
-      -- (you REALLY don't want instruction decode changing the cache)
-      clkb => cpuclock,
-      web => (others => '0'),
-      dinb => (others => '0'),
-      addrb => icache_address_b,
-      doutb => icache_read_data_b,
+      cpuclock => cpuclock,
+      current_cpu_personality => stage_execute_cpu_personality,
 
-      -- Cache pre-fetcher read and write interface to I-CACHE
-      clka => cpuclock,
-      wea => icache_write_enable,
-      addra => icache_address_a,
-      dina => icache_write_data,
-      douta => icache_read_data_a
-      );
+      address_redirecting => stage_execute_redirecting,
+      redirected_address => stage_execute_redirected_address,
+      redirected_pch => stage_execute_redirected_pch,
+      stall => decode_stalling,
 
+      instruction_out => stage_prefetch_instruction,
+
+      memory_address => ram_instruction_port_address,
+      memory_data0 => ram_instruction_port_data0,
+      memory_data1 => ram_instruction_port_data1,
+      memory_data2 => ram_instruction_port_data2,
+      memory_data3 => ram_instruction_port_data3
+      
+      );  
+  
   to_stop_ghdl_bug: block
   begin
   decode_stage: entity work.gs4502b_stage_decode
@@ -215,42 +236,14 @@ begin  -- behavioural
       rom_at_8000 => rom_at_8000,
       rom_at_a000 => rom_at_a000,
 
-      -- The fields must match those specified in icachetypes.vhdl
-      icache_src_address_in
-      => unsigned(icache_read_data_b(ICACHE_INSTRUCTION_ADDRESS_MAX downto
-                                     ICACHE_INSTRUCTION_ADDRESS_START)),
-      icache_bytes_in
-      => unsigned(icache_read_data_b(ICACHE_INSTRUCTION_BYTES_MAX downto
-                                     ICACHE_INSTRUCTION_BYTES_START)),
-      pch_in
-      => unsigned(icache_read_data_b(ICACHE_PCH_MAX downto
-                                     ICACHE_PCH_START)),
-      pc_expected
-      => unsigned(icache_read_data_b(ICACHE_PC_EXPECTED_MAX downto
-                                     ICACHE_PC_EXPECTED_START)),      
-      pc_mispredict
-      => unsigned(icache_read_data_b(ICACHE_PC_MISPREDICT_MAX downto
-                                     ICACHE_PC_MISPREDICT_START)),      
-      branch_predict_in => icache_read_data_b(ICACHE_BRANCH_PREDICT),
-      instruction_cpu_personality
-      => icache_read_data_b(ICACHE_CPU_PERSONALITY_MAX downto
-                            ICACHE_CPU_PERSONALITY_START),      
+      instruction_in => stage_prefetch_instruction,
+      instruction_out => stage_decode_instruction,
       
       address_redirecting => stage_execute_redirecting,
       redirected_address => stage_execute_redirected_address,
-      stall => validate_stall,
-      icache_src_address_out => stage_decode_instruction_address,
-      icache_line_number_out => stage_decode_cache_line_number,
-      icache_bytes_out => stage_decode_instruction_bytes,
-      pch_out => stage_decode_pch,
-      pc_expected_translated => stage_decode_pc_expected_translated,
-      pc_mispredict_translated => stage_decode_pc_mispredict_translated,
-      pch_expected => stage_decode_pch_expected,
-      pch_mispredict => stage_decode_pch_mispredict,
-      branch_predict_out => stage_decode_branch_predict,
-      std_logic_vector(next_cache_line) => icache_address_b,
+      stall => validate_stalling,
+      stalling => decode_stalling
 
-      instruction_information => stage_decode_instruction_information
       );
   end block;
 
@@ -260,7 +253,7 @@ begin  -- behavioural
     port map (
       cpuclock => cpuclock,
 
-      stall_in => execute_stall,
+      stall => execute_stalling,
       resources_freshly_locked_by_execute_stage
       => stage_execute_resources_locked,
       resource_lock_transaction_id_in => stage_execute_transaction_id,
@@ -272,35 +265,17 @@ begin  -- behavioural
 
       completed_transaction => completed_transaction,      
 
-      icache_line_number_in => stage_decode_cache_line_number,
-      instruction_address_in => stage_decode_instruction_address,
-      instruction_bytes_in => stage_decode_instruction_bytes,
-      pch_in => stage_decode_pch,
-      pc_expected_translated_in => stage_decode_pc_expected_translated,
-      pc_mispredict_translated_in => stage_decode_pc_mispredict_translated,
-      pch_expected_in => stage_decode_pch_expected,
-      pch_mispredict_in => stage_decode_pch_mispredict,
-      branch_predict_in => stage_decode_branch_predict,
       resources_required_in => stage_decode_resources_required,
       resources_modified_in => stage_decode_resources_modified,
-      instruction_information_in => stage_decode_instruction_information,
 
-      cache_miss => cache_miss,
-      cache_miss_address => cache_miss_address,
-      cache_miss_pch => cache_miss_pch,
-      
-      instruction_address_out => stage_validate_instruction_address,
+      instruction_in => stage_decode_instruction,
+      instruction_out => stage_validate_instruction,
+      instruction_valid => stage_validate_instruction_valid,      
       instruction_address_is_as_expected => instruction_address_is_as_expected,
-      instruction_bytes_out => stage_validate_instruction_bytes,
-      pch_out => stage_validate_pch,
-      pc_expected_translated_out => stage_validate_pc_expected_translated,
-      pc_mispredict_translated_out => stage_validate_pc_mispredict_translated,
-      branch_predict_out => stage_validate_branch_predict,
-      instruction_valid => instruction_valid,      
+
       resources_required_out => stage_validate_resources_required,
       resources_modified_out => stage_validate_resources_modified,
-      instruction_information_out => stage_validate_instruction_information,
-      stall_out => validate_stall
+      stalling => validate_stalling
 
       );
   end block;
@@ -323,14 +298,10 @@ begin  -- behavioural
 
       monitor_pc => monitor_pc,
       
-      stall_in => memory_stall,
-      instruction_address => stage_validate_instruction_address,
-      instruction_valid => instruction_valid,
+      stall => memory_stalling,
+      instruction_in => stage_validate_instruction,
+      instruction_valid => stage_validate_instruction_valid,
       instruction_address_is_as_expected => instruction_address_is_as_expected,
-      instruction_bytes_in => stage_validate_instruction_bytes,
-      pch_in => stage_validate_pch,
-      pc_expected_translated_in => stage_validate_pc_expected_translated,
-      pc_mispredict_translated_in => stage_validate_pc_mispredict_translated,
       
       resources_locked => stage_execute_resources_locked,
       resource_lock_transaction_id_out => stage_execute_transaction_id,
@@ -342,62 +313,15 @@ begin  -- behavioural
 
       completed_transaction => completed_transaction,
 
-      stall_out => execute_stall
+      stalling => execute_stalling
       );
   end block;
 
-  cache_prefetcher: entity work.gs4502b_cache_prefetch
-    port map (
-      cpuclock => cpuclock,
-      cpu_personality => stage_execute_cpu_personality,
-
-      cache_miss => cache_miss,
-      cache_miss_address => cache_miss_address,
-      cache_miss_pch => cache_miss_pch,
-
-      icache_write_enable => icache_write_enable(0),
-      icache_address => icache_address_a,
-      icache_wdata => icache_write_data,
-      icache_rdata => icache_read_data_a
-      
-      );  
-  
   process(cpuclock, icache_read_data_b)
     variable icache_bits : icache_line;
   begin
     if(rising_edge(cpuclock)) then
             
-      if (expected_instruction_address = stage_decode_instruction_address)
-         and (expected_instruction_pch = stage_decode_pch) then
-        instruction_ready <= '1';
-      else
-        instruction_ready <= '0';
-      end if;
-
-      -- But do what calculations we can on what we read from the cache line
-      -- immediately.     
-      
-      -- XXX Check for branch conditions by checking if instruction is
-      -- branch, and if any of the branch conditions fail, so that we know
-      -- whether to take the branch address or not.
-
-
-
-      -- Do we have the next instruction we were looking for?
-      if instruction_ready='1' then
-        -- Yes, execute instruction
-
-        -- XXX Note implemented. For now we just keep requesting a given address
-        expected_instruction_address <= x"07FFFFFF";
-        expected_instruction_pch(15 downto 8) <= x"FF";
-        
-      end if;
-
-      -- Can we retire any resource blocks?
-      -- i.e., load registers from memory, or set flags based on conclusion of
-      -- an instruction, or return of RMW result flags from MMU.
-
-      
     end if;
   end process;
 

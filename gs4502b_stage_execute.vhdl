@@ -38,19 +38,15 @@ use work.icachetypes.all;
 entity gs4502b_stage_execute is
   port (
     cpuclock : in std_logic;
-    stall_in : in std_logic;
+    stall : in boolean;
     reset : in std_logic;
 
     monitor_pc : out unsigned(15 downto 0);
     
-    instruction_address : in translated_address;
+    instruction_in : in instruction_information;
     instruction_valid : in boolean;
     instruction_address_is_as_expected : in boolean;
     completed_transaction : in transaction_result;
-    instruction_bytes_in : in instruction_bytes;
-    pch_in : in unsigned(15 downto 8);
-    pc_expected_translated_in : translated_address;
-    pc_mispredict_translated_in : translated_address;    
     
     -- Are we redirecting execution?
     address_redirecting : out boolean;
@@ -75,7 +71,7 @@ entity gs4502b_stage_execute is
     current_cpu_personality : out cpu_personality := CPU4502;
 
     -- Tell validate stage to stall?
-    stall_out : out std_logic := '0'
+    stalling : out boolean := false
     );
 end gs4502b_stage_execute;
 
@@ -216,7 +212,7 @@ begin
 
       -- Unstall pipeline by default.
       -- Instruction execution will stall it if required
-      stall_out <= '0';
+      stalling <= false;
       
       if instruction_valid = false then
         -- If there is no valid instruction, then we keep expecting the same address.
@@ -235,14 +231,13 @@ begin
           -- XXX Not yet implemented!
 
           -- For now, just advance the PC to the next instruction we expect.
-          expected_instruction_address <= pc_expected_translated_in;
+          expected_instruction_address <= instruction_in.expected_translated;
 
           -- XXX - Almost certainly not showing the correct PCH here: there
           -- should be a PCH for both expected and mispredict cases.
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : Advancing PC to $" & to_hstring(pch_in)
-            & to_hstring(pc_expected_translated_in(7 downto 0))
-            & "($" & to_hstring(pc_expected_translated_in) & ").";
+            " EXECUTE : Advancing PC to $" & to_hstring(instruction_in.pc_expected)
+            & "($" & to_hstring(instruction_in.expected_translated) & ").";
           
         else
           -- Instruction address is wrong, but instruction is marked valid.
@@ -273,7 +268,7 @@ begin
 
         -- Tell pipeline to stall while reset is held, as part of reset clamping.
         -- Pipeline stages under reset flush themselves.
-        stall_out <= '1';
+        stalling <= true;
 
         flag_e <= true;
         flag_d <= false;

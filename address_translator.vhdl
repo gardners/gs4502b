@@ -7,38 +7,49 @@ use Std.TextIO.all;
 use work.debugtools.all;
 use work.icachetypes.all;
 
-ENTITY address_translator IS
-  PORT (
-    cpuclock : IN STD_LOGIC;
+package address_translator is
+    function resolve_address_to_long(short_address : unsigned(15 downto 0);
+                                   writeP : boolean;
 
-    -- Things that affect address mapping
-    cpuport_value: in std_logic_vector(2 downto 0);
-    cpuport_ddr: in std_logic_vector(2 downto 0);
-    viciii_iomode : in std_logic_vector(1 downto 0);
-    rom_from_colour_ram : in std_logic;
-    reg_map_low : in std_logic_vector(3 downto 0);
-    reg_mb_low : in unsigned(11 downto 0);
-    reg_offset_low : in unsigned(11 downto 0);
-    reg_map_high : in std_logic_vector(3 downto 0);
-    reg_mb_high : in unsigned(11 downto 0);
-    reg_offset_high : in unsigned(11 downto 0);
-    rom_at_8000 : in std_logic;
-    rom_at_a000 : in std_logic;
-    rom_at_c000 : in std_logic;
-    rom_at_e000 : in std_logic;
+                                   -- Things that affect address mapping
+                                   cpuport_value: in std_logic_vector(2 downto 0);
+                                   cpuport_ddr: in std_logic_vector(2 downto 0);
+                                   viciii_iomode : in std_logic_vector(1 downto 0);
+                                   reg_map_low : in std_logic_vector(3 downto 0);
+                                   reg_mb_low : in unsigned(11 downto 0);
+                                   reg_offset_low : in unsigned(11 downto 0);
+                                   reg_map_high : in std_logic_vector(3 downto 0);
+                                   reg_mb_high : in unsigned(11 downto 0);
+                                   reg_offset_high : in unsigned(11 downto 0);
+                                   rom_at_8000 : in std_logic;
+                                   rom_at_a000 : in std_logic;
+                                   rom_at_c000 : in std_logic;
+                                   rom_at_e000 : in std_logic
 
-    memory_map_has_changed : out std_logic := '0';
-    
-    address_in : in unsigned(15 downto 0);
-    read_address : out translated_address;
-    write_address : out translated_address
-    );
-END address_translator;
+                                   ) return unsigned;
+end package;
 
-architecture behavioural of address_translator is
+package body address_translator is
+  
+  function resolve_address_to_long(short_address : unsigned(15 downto 0);
+                                   writeP : boolean;
 
-      impure function resolve_address_to_long(short_address : unsigned(15 downto 0);
-                                            writeP : boolean)
+                                   -- Things that affect address mapping
+                                   cpuport_value: in std_logic_vector(2 downto 0);
+                                   cpuport_ddr: in std_logic_vector(2 downto 0);
+                                   viciii_iomode : in std_logic_vector(1 downto 0);
+                                   reg_map_low : in std_logic_vector(3 downto 0);
+                                   reg_mb_low : in unsigned(11 downto 0);
+                                   reg_offset_low : in unsigned(11 downto 0);
+                                   reg_map_high : in std_logic_vector(3 downto 0);
+                                   reg_mb_high : in unsigned(11 downto 0);
+                                   reg_offset_high : in unsigned(11 downto 0);
+                                   rom_at_8000 : in std_logic;
+                                   rom_at_a000 : in std_logic;
+                                   rom_at_c000 : in std_logic;
+                                   rom_at_e000 : in std_logic
+
+                                   )
       return unsigned is 
       variable temp_address : translated_address;
       variable blocknum : integer;
@@ -95,11 +106,8 @@ architecture behavioural of address_translator is
           case lhc(2 downto 0) is
             when "000" => temp_address(31 downto 12) := x"0000D";  -- READ RAM
             when "001" => temp_address(31 downto 12) := x"0002D";  -- CHARROM
-                          if rom_from_colour_ram='1' then temp_address(31 downto 16) := x"0001"; end if;
             when "010" => temp_address(31 downto 12) := x"0002D";  -- CHARROM
-                          if rom_from_colour_ram='1' then temp_address(31 downto 16) := x"0001"; end if;       
             when "011" => temp_address(31 downto 12) := x"0002D";  -- CHARROM
-                          if rom_from_colour_ram='1' then temp_address(31 downto 16) := x"0001"; end if;       
             when "100" => temp_address(31 downto 12) := x"0000D";  -- READ RAM
             when others =>
               -- All else accesses IO
@@ -114,30 +122,18 @@ architecture behavioural of address_translator is
       if reg_map_high(3)='0' then
         if (blocknum=14) and (lhc(1)='1') and (writeP=false) then
           temp_address(31 downto 12) := x"0002E";      
-          if rom_from_colour_ram='1' then
-            temp_address(31 downto 12) := x"00018";
-          end if;
         end if;
         if (blocknum=15) and (lhc(1)='1') and (writeP=false) then
           temp_address(31 downto 12) := x"0002F";
-          if rom_from_colour_ram='1' then
-            temp_address(31 downto 12) := x"00019";
-          end if;
         end if;
       end if;
       -- C64 BASIC
       if reg_map_high(1)='0' then
         if (blocknum=10) and (lhc(0)='1') and (lhc(1)='1') and (writeP=false) then
           temp_address(31 downto 12) := x"0002A";
-          if rom_from_colour_ram='1' then
-            temp_address(31 downto 12) := x"0001A";
-          end if;
         end if;
         if (blocknum=11) and (lhc(0)='1') and (lhc(1)='1') and (writeP=false) then
           temp_address(31 downto 12) := x"0002B";      
-          if rom_from_colour_ram='1' then
-            temp_address(31 downto 12) := x"0001B";
-          end if;
         end if;
       end if;
 
@@ -169,7 +165,6 @@ architecture behavioural of address_translator is
       end if;
       if (blocknum=12) and rom_at_c000='1' then
         temp_address(31 downto 12) := x"0002C";
-        if rom_from_colour_ram='1' then temp_address(31 downto 16) := x"0FF8"; end if;
       end if;
       if (blocknum=10 or blocknum=11) and rom_at_a000='1' then
         temp_address(31 downto 12) := x"0003A";
@@ -185,63 +180,93 @@ architecture behavioural of address_translator is
       return temp_address;
     end resolve_address_to_long;
 
-    signal last_cpuport_value: std_logic_vector(2 downto 0);
-    signal last_rom_from_colour_ram : std_logic;
-    signal last_reg_map_low : std_logic_vector(3 downto 0);
-    signal last_reg_mb_low : unsigned(11 downto 0);
-    signal last_reg_offset_low : unsigned(11 downto 0);
-    signal last_reg_map_high : std_logic_vector(3 downto 0);
-    signal last_reg_mb_high : unsigned(11 downto 0);
-    signal last_reg_offset_high : unsigned(11 downto 0);
-    signal last_rom_at_c000 : std_logic;
-    signal last_rom_at_e000 : std_logic;
-    signal last_rom_at_a000 : std_logic;
-    signal last_rom_at_8000 : std_logic;
+end package body;
+
+--ENTITY address_translator IS
+--  PORT (
+--    cpuclock : IN STD_LOGIC;
+
+--    -- Things that affect address mapping
+--    cpuport_value: in std_logic_vector(2 downto 0);
+--    cpuport_ddr: in std_logic_vector(2 downto 0);
+--    viciii_iomode : in std_logic_vector(1 downto 0);
+--    rom_from_colour_ram : in std_logic;
+--    reg_map_low : in std_logic_vector(3 downto 0);
+--    reg_mb_low : in unsigned(11 downto 0);
+--    reg_offset_low : in unsigned(11 downto 0);
+--    reg_map_high : in std_logic_vector(3 downto 0);
+--    reg_mb_high : in unsigned(11 downto 0);
+--    reg_offset_high : in unsigned(11 downto 0);
+--    rom_at_8000 : in std_logic;
+--    rom_at_a000 : in std_logic;
+--    rom_at_c000 : in std_logic;
+--    rom_at_e000 : in std_logic;
+
+--    memory_map_has_changed : out std_logic := '0';
+    
+--    address_in : in unsigned(15 downto 0);
+--    read_address : out translated_address;
+--    write_address : out translated_address
+--    );
+--END address_translator;
+--
+--
+--architecture behavioural of address_translator is
+
+--    signal last_cpuport_value: std_logic_vector(2 downto 0);
+--    signal last_rom_from_colour_ram : std_logic;
+--    signal last_reg_map_low : std_logic_vector(3 downto 0);
+--    signal last_reg_mb_low : unsigned(11 downto 0);
+--    signal last_reg_offset_low : unsigned(11 downto 0);
+--    signal last_reg_map_high : std_logic_vector(3 downto 0);
+--    signal last_reg_mb_high : unsigned(11 downto 0);
+--    signal last_reg_offset_high : unsigned(11 downto 0);
+--    signal last_rom_at_c000 : std_logic;
+--    signal last_rom_at_e000 : std_logic;
+--    signal last_rom_at_a000 : std_logic;
+--    signal last_rom_at_8000 : std_logic;
       
-begin
+--begin
 
-  process(cpuclock,address_in,last_cpuport_value,rom_at_8000,rom_at_a000,
-          rom_at_c000,rom_at_e000,rom_from_colour_ram,cpuport_value,
-          cpuport_ddr,reg_map_low,reg_mb_low,reg_offset_low,reg_map_high,
-          reg_mb_high,reg_offset_high)
-  begin
-    -- Resolve address
-    read_address <= resolve_address_to_long(address_in,false);
-    write_address <= resolve_address_to_long(address_in,true);
+--  process(cpuclock,address_in,last_cpuport_value,rom_at_8000,rom_at_a000,
+--          rom_at_c000,rom_at_e000,rom_from_colour_ram,cpuport_value,
+--          cpuport_ddr,reg_map_low,reg_mb_low,reg_offset_low,reg_map_high,
+--          reg_mb_high,reg_offset_high)
+--  begin
 
-    if rising_edge(cpuclock) then
-      -- Tell CPU if memory map has changed
-      if (last_cpuport_value /= cpuport_value)
-        or (last_rom_from_colour_ram /= rom_from_colour_ram)
-        or (last_reg_map_low /= reg_map_low)
-        or (last_reg_mb_low /= reg_mb_low)
-        or (last_reg_offset_low /= reg_offset_low)
-        or (last_reg_map_high /= reg_map_high)
-        or (last_reg_mb_high /= reg_mb_high)
-        or (last_reg_offset_high /= reg_offset_high)
-        or (last_rom_at_8000 /= rom_at_8000) 
-        or (last_rom_at_a000 /= rom_at_a000) 
-        or (last_rom_at_c000 /= rom_at_c000) 
-        or (last_rom_at_e000 /= rom_at_e000) then
-        memory_map_has_changed <= '1';
-      else
-        memory_map_has_changed <= '0';
-      end if;
-      last_cpuport_value <= cpuport_value;
-      last_rom_from_colour_ram <= rom_from_colour_ram;
-      last_reg_map_low <= reg_map_low;
-      last_reg_mb_low <= reg_mb_low;
-      last_reg_offset_low <= reg_offset_low;
-      last_reg_map_high <= reg_map_high;
-      last_reg_mb_high <= reg_mb_high;
-      last_reg_offset_high <= reg_offset_high;
-      last_rom_at_8000 <= rom_at_8000; 
-      last_rom_at_a000 <= rom_at_a000; 
-      last_rom_at_c000 <= rom_at_c000; 
-      last_rom_at_e000 <= rom_at_e000;                                         
-    end if;
-end process;
+--    if rising_edge(cpuclock) then
+--      -- Tell CPU if memory map has changed
+--      if (last_cpuport_value /= cpuport_value)
+--        or (last_rom_from_colour_ram /= rom_from_colour_ram)
+--        or (last_reg_map_low /= reg_map_low)
+--        or (last_reg_mb_low /= reg_mb_low)
+--        or (last_reg_offset_low /= reg_offset_low)
+--        or (last_reg_map_high /= reg_map_high)
+--        or (last_reg_mb_high /= reg_mb_high)
+--        or (last_reg_offset_high /= reg_offset_high)
+--        or (last_rom_at_8000 /= rom_at_8000) 
+--        or (last_rom_at_a000 /= rom_at_a000) 
+--        or (last_rom_at_c000 /= rom_at_c000) 
+--        or (last_rom_at_e000 /= rom_at_e000) then
+--        memory_map_has_changed <= '1';
+--      else
+--        memory_map_has_changed <= '0';
+--      end if;
+--      last_cpuport_value <= cpuport_value;
+--      last_rom_from_colour_ram <= rom_from_colour_ram;
+--      last_reg_map_low <= reg_map_low;
+--      last_reg_mb_low <= reg_mb_low;
+--      last_reg_offset_low <= reg_offset_low;
+--      last_reg_map_high <= reg_map_high;
+--      last_reg_mb_high <= reg_mb_high;
+--      last_reg_offset_high <= reg_offset_high;
+--      last_rom_at_8000 <= rom_at_8000; 
+--      last_rom_at_a000 <= rom_at_a000; 
+--      last_rom_at_c000 <= rom_at_c000; 
+--      last_rom_at_e000 <= rom_at_e000;                                         
+--    end if;
+--end process;
 
-end behavioural;
+--end behavioural;
 
 

@@ -81,27 +81,14 @@ entity gs4502b_stage_validate is
     cpuclock : in std_logic;
     
 -- Input: translated address of instruction in memory
-    instruction_address_in : in translated_address;
-    icache_line_number_in : in unsigned(9 downto 0);
--- Input: 3 instruction bytes
-    instruction_bytes_in : in instruction_bytes;
--- Input: 8-bit PCH (PC upper byte) for this instruction
-    pch_in : in unsigned(15 downto 8);
--- Input: translated 32-bit PC for expected case
-    pc_expected_translated_in : in translated_address;
-    pch_expected_in : in unsigned(15 downto 8);
--- Input: translated 32-bit PC for branch mis-predict case
-    pc_mispredict_translated_in : in translated_address;
-    pch_mispredict_in : in unsigned(15 downto 8);
--- Input: 1-bit Branch prediction flag: 1=assume take branch
-    branch_predict_in : in std_logic;
+    instruction_in : in instruction_information;
+
 -- Input: What resources does this instruction require and modify?
     resources_required_in : in instruction_resources;
     resources_modified_in : in instruction_resources;
-    instruction_information_in : in instruction_information;
         
 -- Is the instruction pipeline stalled?
-    stall_in : in std_logic;
+    stall : in boolean;
 -- What resources have just been locked by the execute stage?
     resources_freshly_locked_by_execute_stage : in instruction_resources;
     resource_lock_transaction_id_in : in transaction_id;
@@ -122,22 +109,7 @@ entity gs4502b_stage_validate is
     cache_miss_pch : out unsigned(15 downto 8);
     
 -- Output: 32-bit address source of instruction
-    instruction_address_out : out translated_address;
--- Output: 3 instruction bytes
-    instruction_bytes_out : out instruction_bytes;
--- Output: 8-bit PCH (PC upper byte) for this instruction
-    pch_out : out unsigned(15 downto 8);
--- Output: Translated PC for expected case
-    pc_expected_translated_out : out translated_address;
-    pch_expected_out : out unsigned(15 downto 8);
--- Output: 16-bit PC for branch mis-predict case
-    pc_mispredict_translated_out : out translated_address;
-    pch_mispredict_out : out unsigned(15 downto 8);
--- Output: Instruction decode signals that can be computed
--- Output: 1-bit Branch prediction flag: 1=assume take branch
---         (for passing to MMU if branch prediction is wrong, so that cache
---         line can be updated).
-    branch_predict_out : out std_logic;
+    instruction_out : out instruction_information;
 -- Output: Boolean: Is the instruction we have here ready for execution
 -- (including that the pipeline is not stalled)
     instruction_valid : out boolean;
@@ -146,10 +118,9 @@ entity gs4502b_stage_validate is
 -- Output: What resources does this instruction require and modify?
     resources_required_out : out instruction_resources;
     resources_modified_out : out instruction_resources;
-    instruction_information_out : out instruction_information;
 
 -- Output: Stall signal to tell pipeline behind us to wait
-    stall_out : out std_logic
+    stalling : out boolean
     
     );
 end gs4502b_stage_validate;
@@ -185,18 +156,9 @@ architecture behavioural of gs4502b_stage_validate is
   signal resources_what_will_still_be_outstanding_next_cycle : instruction_resources := (others => false);
   
   -- Stall buffer and stall logic
-  signal stall_buffer_occupied : std_logic := '0';
-  signal stall_out_current : std_logic := '0';  
-  signal stalled_instruction_address : translated_address;
-  signal stalled_icache_line_number : unsigned(9 downto 0);
-  signal stalled_instruction_bytes : instruction_bytes;
-  signal stalled_instruction_information : instruction_information;
-  signal stalled_pch : unsigned(15 downto 8);
-  signal stalled_pc_expected_translated : translated_address;
-  signal stalled_pch_expected : unsigned(15 downto 8);
-  signal stalled_pc_mispredict_translated : translated_address;
-  signal stalled_pch_mispredict : unsigned(15 downto 8);
-  signal stalled_branch_predict : std_logic;
+  signal stall_buffer_occupied : boolean := false;
+  signal stall_out_current : boolean := false;  
+  signal stalled_instruction : instruction_information;
   signal stalled_resources_required : instruction_resources;
   signal stalled_resources_modified : instruction_resources;
   
@@ -206,18 +168,9 @@ begin
     variable next_line : unsigned(9 downto 0);
 
     -- MUX variables to choose between stall buffer and incoming instruction
-    variable instruction_address : translated_address;
-    variable icache_line_number : unsigned(9 downto 0);
-    variable instruction_bytes : instruction_bytes;
-    variable pch : unsigned(15 downto 8);
-    variable pc_expected_translated : translated_address;
-    variable pch_expected : unsigned(15 downto 8);
-    variable pc_mispredict_translated : translated_address;
-    variable pch_mispredict : unsigned(15 downto 8);
-    variable branch_predict : std_logic;
     variable resources_modified : instruction_resources;
     variable resources_required : instruction_resources;
-    variable instruction_information : instruction_information;
+    variable instruction : instruction_information;
   begin
     if (rising_edge(cpuclock)) then
 
@@ -322,31 +275,18 @@ begin
       -- (Note that we must also check the CPU personality, which as far as
       -- cache address space is concerned, effectively represents a couple of
       -- extra bits).
-      cache_miss <= false;
-      cache_miss_address <= last_instruction_expected_address;
-      cache_miss_pch <= last_instruction_expected_pch;
-      if icache_line_number = last_instruction_expected_address(9 downto 0) then
+      if (instruction.translated = last_instruction_expected_address)
+          and (instruction.cpu_personality = current_cpu_personality) then
         report "$" & to_hstring(last_instruction_expected_address) &
-            " VALIDATE : Instruction is from correct cache line.";
+            " VALIDATE : Instruction is valid.";
 
-        if (last_instruction_expected_address(31 downto 10)
-            /= instruction_address(31 downto 10))
-          or (instruction_information.cpu_personality
-              /= current_cpu_personality) then
-          report "$" & to_hstring(last_instruction_expected_address) &
-            " VALIDATE : Instruction is for wrong address, but right cache line: Announcing CACHE MISS (saw $" & to_hstring(instruction_address);
-
-          cache_miss <= true;          
-        else
-          report "$" & to_hstring(last_instruction_expected_address) &
-            " VALIDATE : Instruction is for correct address: CACHE HIT.";
-          last_instruction_expected_address <= pc_expected_translated;
-          last_instruction_expected_pch <= pch_expected;
+          last_instruction_expected_address <= instruction.expected_translated;
+          last_instruction_expected_pch <= instruction.pc_expected(15 downto 8);
         end if;
       else
         report "$" & to_hstring(last_instruction_expected_address) &
-          " VALIDATE : Instruction is for different cache line: saw line $"
-          & to_hstring(icache_line_number);
+          " VALIDATE : Instruction is not valid $"
+          & to_hstring(instruction.translated);
       end if;
       if address_redirecting then
         -- Remember the address we are redirecting to.
@@ -358,46 +298,28 @@ begin
       
       -- We are stalled unless we are processing something we are reading in,
       -- and we are not being asked to stall ourselves.
-      stall_out <= '1';
+      stalling <= true;
      
-      if stall_in='0' then
+      if stall = false then
         -- Downstream stage is willing to accept an instruction
           report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : not stalled";
 
         
-        if stall_buffer_occupied = '1' then
+        if stall_buffer_occupied then
           -- Pass instruction from our stall buffer
-          instruction_address := stalled_instruction_address;
-          icache_line_number := stalled_icache_line_number;
-          instruction_bytes := stalled_instruction_bytes;
-          pch := stalled_pch;
-          pc_expected_translated := stalled_pc_expected_translated;
-          pch_expected := stalled_pch_expected;
-          pc_mispredict_translated := stalled_pc_mispredict_translated;
-          pch_mispredict := stalled_pch_mispredict;
-          branch_predict := stalled_branch_predict;
+          instruction := stalled_instruction;
           resources_modified := stalled_resources_modified;
           resources_required := stalled_resources_required;
-          instruction_information := stalled_instruction_information;
         else
-          instruction_address := instruction_address_in;
-          instruction_bytes := instruction_bytes_in;
-          icache_line_number := icache_line_number_in;
-          pch := pch_in;
-          pc_expected_translated := pc_expected_translated_in;
-          pch_expected := pch_expected_in;
-          pc_mispredict_translated := pc_mispredict_translated_in;
-          pch_mispredict := pch_mispredict_in;
-          branch_predict := branch_predict_in;
+          instruction := instruction_in;
           resources_modified := resources_modified_in;
           resources_required := resources_required_in;
-          instruction_information := instruction_information_in;
           
           -- Reading from pipeline input, and we are not stalled, so we can tell
           -- the upstream pipeline stage to resume
-          stall_out <= '0';
-          stall_out_current <= '0';
+          stalling <= false;
+          stall_out_current <= false;
 
           report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : not stalling upstream";
@@ -405,27 +327,19 @@ begin
         end if;
 
         -- In either case above, the stall buffer becomes empty
-        stall_buffer_occupied <= '0';
+        stall_buffer_occupied <= false;
         
         -- Pass signals through
-        instruction_address_out <= instruction_address;
-        instruction_bytes_out <= instruction_bytes;
-        pch_out <= pch;
-        pc_expected_translated_out <= pc_expected_translated;
-        pch_expected_out <= pch_expected;
-        pc_mispredict_translated_out <= pc_mispredict_translated;
-        pch_mispredict_out <= pch_mispredict;
-        branch_predict_out <= branch_predict;
+        instruction_out <= instruction;
         resources_modified_out <= resources_modified;
         resources_required_out <= resources_required;
-        instruction_information_out <= instruction_information;
 
-        if instruction_address = last_instruction_expected_address then
+        if instruction.translated = last_instruction_expected_address then
           instruction_address_is_as_expected <= true;
         else
           report "$" & to_hstring(last_instruction_expected_address)
             & " VALIDATE : Marking instruction as incorrect address (saw $"
-            & to_hstring(instruction_address) & ").";
+            & to_hstring(instruction.translated) & ").";
           instruction_address_is_as_expected <= false;
         end if;
         
@@ -443,7 +357,7 @@ begin
         -- instruction is a load (including stack pop) or RMW, then we need to note the
         -- resources as being delayed. In all other cases we have no
         -- delayed resources
-        if instruction_information.does_load=true then
+        if instruction.does_load=true then
           -- Set delayed flag for all resources modified by this
           -- instruction.
           -- XXX We can probably optimise this a bit, by not setting SPL
@@ -489,8 +403,8 @@ begin
           or not_empty(resources_required and resources_what_will_still_be_outstanding_next_cycle)
           or not_empty(resources_required and resources_freshly_locked_by_execute_stage)
           -- Make sure instruction personality will be valid
-          or (instruction_information.cpu_personality /= current_cpu_personality)
-          or (instruction_information.modifies_cpu_personality)
+          or (instruction.cpu_personality /= current_cpu_personality)
+          or (instruction.modifies_cpu_personality)
         then
           -- Instructions resource requirements not currently met.
           -- XXX - HOLD INPUT *and* OUTPUT values
@@ -502,26 +416,17 @@ begin
           instruction_valid <= false;
 
           -- Tell upstream stage that we are stalled
-          stall_out <= '1';
-          stall_out_current <= '1';
+          stalling <= true;
+          stall_out_current <= true;
 
           -- If we weren't already stalling the upstream, then we need to
           -- copy the current inputs to the stall buffer, and mark the stall
           -- buffer as occupied.
-          if stall_out_current='0' then
-            stalled_instruction_address <= instruction_address;
-            stalled_instruction_bytes <= instruction_bytes;
-            stalled_icache_line_number <= icache_line_number;
-            stalled_pch <= pch;
-            stalled_pc_expected_translated <= pc_expected_translated;
-            stalled_pch_expected <= pch_expected;
-            stalled_pc_mispredict_translated <= pc_mispredict_translated;
-            stalled_pch_mispredict <= pch_mispredict;
-            stalled_branch_predict <= branch_predict;
+          if stall_out_current=false then
+            stalled_instruction <= instruction;
             stalled_resources_modified <= resources_modified;
             stalled_resources_required <= resources_required;
-            stalled_instruction_information <= instruction_information;
-            stall_buffer_occupied <= '1';
+            stall_buffer_occupied <= true;
           end if;
         else
           -- Instruction meets all requirements
@@ -547,8 +452,6 @@ begin
         -- XXX: We should assign them so that we avoid having flip-flops.        
         instruction_valid <= false;        
       end if;
-
-    end if;    
   end process;    
       
 end behavioural;

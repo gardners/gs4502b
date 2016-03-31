@@ -4,11 +4,7 @@ use ieee.STD_LOGIC_1164.all;
 use ieee.numeric_std.all;
 
 package icachetypes is
-  
-  type instruction_data is record
-    dummy : std_logic;      
-  end record;
-  
+    
   type icache_line is record
     src_address : unsigned(31 downto 10);
     bytes : std_logic_vector(23 downto 0);
@@ -116,6 +112,23 @@ package icachetypes is
     instruction : instruction;
 
     cpu_personality : cpu_personality;
+
+    bytes : instruction_bytes;
+    
+    -- Address and PC information
+    translated : translated_address;
+    pc : unsigned(15 downto 0);
+    
+    pc_expected : unsigned(15 downto 0);
+    pc_mispredict : unsigned(15 downto 0);
+
+    expected_translated : translated_address;
+    mispredict_translated : translated_address;
+      
+    branch_predict : boolean;
+    -- XXX add information for conditional branches
+    -- (i.e., which flag and positive or negative test)
+    
   end record;
 
   function to_std_logic_vector(c : cpu_personality) return std_logic_vector;
