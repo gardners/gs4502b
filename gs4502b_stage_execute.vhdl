@@ -323,7 +323,7 @@ begin
 
         -- Set memory mapping registers to map hypervisor
         reg_map_lo <= (others => '0');
-        reg_map_hi <= (others => '0');
+        reg_map_hi <= "0011"; -- $8000-$BFFF maps to Hypervisor memory
 
       end if;
       

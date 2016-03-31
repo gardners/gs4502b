@@ -72,7 +72,9 @@ begin
       
       if stall = false then
         report "$" & to_hstring(instruction.translated) &
-          " DECODE : Not stalled. Decoding.";
+          " DECODE : Not stalled. Decoding. reg_map_high="
+          & to_string(reg_map_high)
+          & ", reg_mb_high=$" & to_hstring(reg_mb_high);
       
         -- Decode instruction
         -- XXX Read fields from instruction bytes and work it all out
