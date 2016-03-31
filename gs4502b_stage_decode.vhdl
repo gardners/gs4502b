@@ -136,7 +136,7 @@ begin
         
       else
         -- Pipeline stalled: hold existing values.
-        report "$xxxxx" & to_hstring(instruction.translated) &
+        report "$" & to_hstring(instruction.translated) &
           " DECODE : Stalled -- holding values.";
         stall_buffer_occupied <= true;
         stalled_instruction <= instruction;
