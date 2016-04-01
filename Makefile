@@ -25,5 +25,23 @@ simulate:	cpu_test
 transfer: cpu_test
 	cd .. ;	scp -r newcpu/* 192.168.56.102:newcpu/
 
+ram0.vhdl:	makeram	mega65mem.bin
+	./makeram mega65mem.bin
+
+ram1.vhdl:	makeram	mega65mem.bin
+	./makeram mega65mem.bin
+
+ram2.vhdl:	makeram	mega65ram.bin
+	./makeram mega65mem.bin
+
+ram3.vhdl:	makeram	mega65mem.bin
+	./makeram mega65mem.bin
+
 makeram:	makeram.c Makefile
 	gcc -g -Wall -o makeram makeram.c
+
+mega65mem.bin:	c65rom.bin mega65ram.bin
+	cat mega65ram.bin c65rom.bin > mega65mem.bin
+
+mega65ram.bin:
+	dd if=/dev/zero of=mega65ram.bin bs=131072 count=1
