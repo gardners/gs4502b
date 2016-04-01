@@ -116,7 +116,14 @@ begin
         if bytes_ready >= 3 then
           -- Work out bytes in instruction, so that we can shift down appropriately.
           -- XXX
-          report "I-FETCH: Pretending to find a 1 byte instruction.";
+          report "I-FETCH: Instruction buffer head contains $"
+            & to_hstring(byte_buffer(7 downto 0))
+            & " $" & to_hstring(byte_buffer(15 downto 8))
+            & " $" & to_hstring(byte_buffer(23 downto 16))
+            & ".";
+
+          
+          
           consumed_bytes := 1;
         end if;
         
