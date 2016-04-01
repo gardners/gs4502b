@@ -221,6 +221,8 @@ begin
         -- If there is no valid instruction, then we keep expecting the same address.
         expected_instruction_address <= expected_instruction_address;
         expected_instruction_pc <= expected_instruction_pc;
+        reg_pch <= instruction_in.pc(15 downto 8);
+        reg_pcl <= instruction_in.pc(7 downto 0);
         report "$" & to_hstring(expected_instruction_address) &
           " EXECUTE : instruction_valid=false -- doing nothing.";        
       else
