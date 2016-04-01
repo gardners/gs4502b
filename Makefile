@@ -17,12 +17,15 @@ icachebits.vhdl: generate_icachebits_package.csh icache_structure.txt
 
 GHDL=/usr/local/ghdl-0.34/bin/ghdl
 
+clean:
+	rm *.o *.cf cpu_test makeram
+
 cpu_test:	$(SIMULATIONFILES) Makefile
 	$(GHDL) -i $(SIMULATIONFILES)
 	$(GHDL) -m cpu_test
 
 simulate:	cpu_test
-	./cpu_test
+	./cpu_test || $(GHDL) -r cpu_test
 
 transfer:
 	cd .. ;	scp -r newcpu/* 192.168.56.102:newcpu/
