@@ -45,3 +45,7 @@ mega65mem.bin:	c65rom.bin mega65ram.bin
 
 mega65ram.bin:
 	dd if=/dev/zero of=mega65ram.bin bs=131072 count=1
+
+c65rom.bin:
+	dd if=/dev/zero of=mega65ram.bin bs=131072 count=1
+
