@@ -4,7 +4,7 @@ SIMULATIONFILES=	cpu_test.vhdl \
 			debugtools.vhdl \
 			icachetypes.vhdl \
 			icachebits.vhdl \
-			ram0.vhdl \
+			ram0.vhdl ram1.vhdl ram2.vhdl ram3.vhdl \
 			address_translator.vhdl \
 			gs4502b.vhdl \
 			gs4502b_instruction_prefetch.vhdl \
