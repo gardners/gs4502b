@@ -15,6 +15,7 @@ char *top=
 "use ieee.std_logic_1164.all;\n"
 "use ieee.numeric_std.all;\n"
 "use Std.TextIO.all;\n"
+"use work.debugtools.all;\n"
 " \n"
 "entity ram0 is\n"
 "  generic (\n"
@@ -56,6 +57,7 @@ char *bottom=
 "            mem(to_integer(unsigned(a_addr))) := a_din;\n"
 "        end if;\n"
 "        a_dout <= mem(to_integer(unsigned(a_addr)));\n"
+"        report \"Reading ram0 $\" & to_hstring(unsigned(a_addr));\n"
 "    end if;\n"
 "end process;\n"
 " \n"
@@ -67,6 +69,7 @@ char *bottom=
 "            mem(to_integer(unsigned(b_addr))) := b_din;\n"
 "        end if;\n"
 "        b_dout <= mem(to_integer(unsigned(b_addr)));\n"
+"        report \"Reading ram0 $\" & to_hstring(unsigned(b_addr));\n"
 "    end if;\n"
 "end process;\n"
 " \n"
@@ -116,7 +119,8 @@ int main(int argc,char **argv)
   for(int i=0;i<256*1024;i++)
     {
       //      printf("$%05x = $%02x\n",i,data[i]);
-      fprintf(ram[i&3],"  \"0%c%c%c%c%c%c%c%c\", -- $%05x\n",
+      fprintf(ram[(i&3)]," %d => \"0%c%c%c%c%c%c%c%c\", -- $%05x = $%02x\n",
+	      i>>2,
 	      data[i]&128?'1':'0',
 	      data[i]&64?'1':'0',
 	      data[i]&32?'1':'0',
@@ -125,7 +129,7 @@ int main(int argc,char **argv)
 	      data[i]&4?'1':'0',
 	      data[i]&2?'1':'0',
 	      data[i]&1?'1':'0',
-	      i);
+	      i,data[i]);
     }
   
   for(int i=0;i<4;i++) {
