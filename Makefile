@@ -15,9 +15,11 @@ SIMULATIONFILES=	cpu_test.vhdl \
 icachebits.vhdl: generate_icachebits_package.csh icache_structure.txt
 	./generate_icachebits_package.csh icache_structure.txt
 
+GHDL=/usr/local/ghdl-0.34/bin/ghdl
+
 cpu_test:	$(SIMULATIONFILES) Makefile
-	ghdl -i $(SIMULATIONFILES)
-	ghdl -m cpu_test
+	$(GHDL) -i $(SIMULATIONFILES)
+	$(GHDL) -m cpu_test
 
 simulate:	cpu_test
 	./cpu_test
