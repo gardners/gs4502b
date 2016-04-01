@@ -85,6 +85,9 @@ begin
     variable store_offset : integer range 0 to 15 := 0;
     variable consumed_bytes : integer range 0 to 3 := 0;
     variable new_bytes_ready : integer range 0 to 16 := 0;
+
+    variable new_byte_buffer : unsigned((8*16)-1 downto 0);
+
   begin
     if rising_edge(cpuclock) then
 
@@ -144,8 +147,8 @@ begin
         end if;
         
         -- Shift buffer down
-        byte_buffer(((16-consumed_bytes)*8-1) downto 0)
-          <= byte_buffer((16*8-1) downto (consumed_bytes*8));
+        new_byte_buffer(((16-consumed_bytes)*8-1) downto 0)
+          := byte_buffer((16*8-1) downto (consumed_bytes*8));
         -- Update where we will store, and the number of valid bytes left in
         -- the buffer.
         store_offset := bytes_ready - consumed_bytes;
@@ -153,7 +156,7 @@ begin
         -- We are reading for the correct address
         report "I-FETCH: RAM READING $" & to_hstring(memory_address_1&"00")
           &" - $" & to_hstring(memory_address_1&"11") &
-          ", " & integer'image(bytes_ready) & " bytes ready, am hoping for $"
+          ", stow offset " & integer'image(store_offset) & ", am hoping for $"
           & to_hstring(desired_address&"00");
         if memory_address_1 = desired_address then
           -- But make sure we don't over flow our read queue
@@ -161,14 +164,14 @@ begin
           if bytes_ready < 12 then
             report "I-FETCH: We have space, so adding to byte_buffer.";
             -- Append to the end
-            byte_buffer((8*(store_offset+3)+7) downto (8*(store_offset+3)))
-              <= unsigned(memory_data3(7 downto 0));
-            byte_buffer((8*(store_offset+2)+7) downto (8*(store_offset+2)))
-              <= unsigned(memory_data2(7 downto 0));
-            byte_buffer((8*(store_offset+1)+7) downto (8*(store_offset+1)))
-              <= unsigned(memory_data1(7 downto 0));
-            byte_buffer((8*(store_offset+0)+7) downto (8*(store_offset+0)))
-              <= unsigned(memory_data0(7 downto 0));
+            new_byte_buffer((8*(store_offset+3)+7) downto (8*(store_offset+3)))
+              := unsigned(memory_data3(7 downto 0));
+            new_byte_buffer((8*(store_offset+2)+7) downto (8*(store_offset+2)))
+              := unsigned(memory_data2(7 downto 0));
+            new_byte_buffer((8*(store_offset+1)+7) downto (8*(store_offset+1)))
+              := unsigned(memory_data1(7 downto 0));
+            new_byte_buffer((8*(store_offset+0)+7) downto (8*(store_offset+0)))
+              := unsigned(memory_data0(7 downto 0));
             new_bytes_ready := bytes_ready - consumed_bytes + 4;
             -- Read next 4 bytes
             desired_address <= desired_address + 1;
@@ -183,6 +186,11 @@ begin
             -- come later. Possibly much later.
             new_bytes_ready := bytes_ready - consumed_bytes;
           end if;
+          byte_buffer <= new_byte_buffer;
+          report "I-FETCH buffer was " & to_hstring(byte_buffer)
+            &", now " & to_hstring(new_byte_buffer)
+            &", with " & integer'image(new_bytes_ready)
+            & " bytes ready.";
         else
           -- Not reading from the right place yet, but we assume it is on its way,
           -- so do nothing right now, apart from wait.
