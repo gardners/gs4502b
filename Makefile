@@ -22,7 +22,7 @@ cpu_test:	$(SIMULATIONFILES) Makefile
 simulate:	cpu_test
 	./cpu_test
 
-transfer: cpu_test
+transfer:
 	cd .. ;	scp -r newcpu/* 192.168.56.102:newcpu/
 
 ram0.vhdl:	makeram	mega65mem.bin
