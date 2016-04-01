@@ -197,6 +197,48 @@ begin  -- behavioural
                b_dout => mc_read_data
                );
   
+  ram1: entity work.ram1
+    port map ( a_clk => cpuclock,
+               a_wr => '0',
+               a_addr => ram_instruction_port_address,
+               a_din => (others => '0'),
+               a_dout => ram_instruction_port_data1,
+
+               b_clk => cpuclock,
+               b_wr => mc_write(1),
+               b_addr => mc_address,
+               b_din => mc_write_data,
+               b_dout => mc_read_data
+               );
+  
+  ram2: entity work.ram2
+    port map ( a_clk => cpuclock,
+               a_wr => '0',
+               a_addr => ram_instruction_port_address,
+               a_din => (others => '0'),
+               a_dout => ram_instruction_port_data2,
+
+               b_clk => cpuclock,
+               b_wr => mc_write(2),
+               b_addr => mc_address,
+               b_din => mc_write_data,
+               b_dout => mc_read_data
+               );
+  
+  ram3: entity work.ram3
+    port map ( a_clk => cpuclock,
+               a_wr => '0',
+               a_addr => ram_instruction_port_address,
+               a_din => (others => '0'),
+               a_dout => ram_instruction_port_data3,
+
+               b_clk => cpuclock,
+               b_wr => mc_write(3),
+               b_addr => mc_address,
+               b_din => mc_write_data,
+               b_dout => mc_read_data
+               );
+  
   instruction_prefetcher: entity work.gs4502b_instruction_prefetch
     port map (
       cpuclock => cpuclock,
