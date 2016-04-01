@@ -72,9 +72,15 @@ architecture behavioural of gs4502b_instruction_prefetch is
   -- in a given cycle
   signal memory_address_0 : unsigned(15 downto 0) := (others => '0');
   signal memory_address_1 : unsigned(15 downto 0) := (others => '0');
+  signal memory_address_2 : unsigned(15 downto 0) := (others => '0');
   -- And which address are we currently looking for to append to the end of our
   -- byte buffer?
   signal desired_address : unsigned(15 downto 0) := (others => '0');
+
+  signal memory_data0_buf : std_logic_vector(8 downto 0);
+  signal memory_data1_buf : std_logic_vector(8 downto 0);
+  signal memory_data2_buf : std_logic_vector(8 downto 0);
+  signal memory_data3_buf : std_logic_vector(8 downto 0);
   
 begin
   process (cpuclock) is
@@ -93,7 +99,13 @@ begin
 
       -- Provide delayed memory address signal, so that we know where the RAM
       -- is reading from each cycle
+      memory_address_2 <= memory_address_1;
       memory_address_1 <= memory_address_0;
+
+      memory_data0_buf <= memory_data0;
+      memory_data1_buf <= memory_data1;
+      memory_data2_buf <= memory_data2;
+      memory_data3_buf <= memory_data3;
       
       if buffer_address /= instruction_address then
         -- Buffer is useless, and must be reloaded
@@ -154,24 +166,24 @@ begin
         store_offset := bytes_ready - consumed_bytes;
         
         -- We are reading for the correct address
-        report "I-FETCH: RAM READING $" & to_hstring(memory_address_1&"00")
-          &" - $" & to_hstring(memory_address_1&"11") &
+        report "I-FETCH: RAM READING $" & to_hstring(memory_address_2&"00")
+          &" - $" & to_hstring(memory_address_2&"11") &
           ", stow offset " & integer'image(store_offset) & ", am hoping for $"
           & to_hstring(desired_address&"00");
-        if memory_address_1 = desired_address then
+        if memory_address_2 = desired_address then
           -- But make sure we don't over flow our read queue
           report "I-FETCH: Found the bytes we were looking for to add to our buffer.";
           if bytes_ready < 12 then
             report "I-FETCH: We have space, so adding to byte_buffer.";
             -- Append to the end
             new_byte_buffer((8*(store_offset+3)+7) downto (8*(store_offset+3)))
-              := unsigned(memory_data3(7 downto 0));
+              := unsigned(memory_data3_buf(7 downto 0));
             new_byte_buffer((8*(store_offset+2)+7) downto (8*(store_offset+2)))
-              := unsigned(memory_data2(7 downto 0));
+              := unsigned(memory_data2_buf(7 downto 0));
             new_byte_buffer((8*(store_offset+1)+7) downto (8*(store_offset+1)))
-              := unsigned(memory_data1(7 downto 0));
+              := unsigned(memory_data1_buf(7 downto 0));
             new_byte_buffer((8*(store_offset+0)+7) downto (8*(store_offset+0)))
-              := unsigned(memory_data0(7 downto 0));
+              := unsigned(memory_data0_buf(7 downto 0));
             new_bytes_ready := bytes_ready - consumed_bytes + 4;
             -- Read next 4 bytes
             desired_address <= desired_address + 1;
