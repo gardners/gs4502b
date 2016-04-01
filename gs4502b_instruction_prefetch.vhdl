@@ -29,6 +29,7 @@ use Std.TextIO.all;
 use work.debugtools.all;
 use work.icachetypes.all;
 use work.icachebits.all;
+use work.instruction_lengths.all;
 
 entity gs4502b_instruction_prefetch is
   port (
@@ -116,15 +117,30 @@ begin
         if bytes_ready >= 3 then
           -- Work out bytes in instruction, so that we can shift down appropriately.
           -- XXX
-          report "I-FETCH: Instruction buffer head contains $"
-            & to_hstring(byte_buffer(7 downto 0))
-            & " $" & to_hstring(byte_buffer(15 downto 8))
-            & " $" & to_hstring(byte_buffer(23 downto 16))
-            & ".";
 
-          
-          
-          consumed_bytes := 1;
+          if current_cpu_personality = CPU6502 then
+            consumed_bytes := instruction_length('0'&byte_buffer(7 downto 0));
+          else
+            consumed_bytes := instruction_length('1'&byte_buffer(7 downto 0));
+          end if;
+
+          case consumed_bytes is
+            when 1 =>
+              report "I-FETCH: Instruction buffer head contains $"
+                & to_hstring(byte_buffer(7 downto 0))
+                & ".";
+            when 2 =>
+              report "I-FETCH: Instruction buffer head contains $"
+                & to_hstring(byte_buffer(7 downto 0))
+                & " $" & to_hstring(byte_buffer(15 downto 8))
+                & ".";
+            when others =>
+              report "I-FETCH: Instruction buffer head contains $"
+                & to_hstring(byte_buffer(7 downto 0))
+                & " $" & to_hstring(byte_buffer(15 downto 8))
+                & " $" & to_hstring(byte_buffer(23 downto 16))
+                & ".";
+          end case;          
         end if;
         
         -- Shift buffer down
