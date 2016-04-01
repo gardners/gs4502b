@@ -164,8 +164,8 @@ int main()
 	}
       }
     for(int i=0;i<512;i++) if ((i&best_m)==best_v) { if (!covered[i]) remaining--; covered[i]=1; }
-    printf("Best match: mask=$%02x, value=$%02x, length=%d, covers %d instructions, %d remaining.\n",
-	   best_m,best_v,best_length,best_matches,remaining);
+    printf("Rule #%d: OPCODE & $%03x = $%03x -> length is %d (covers %d/%d remaining instructions).\n",
+	   rule_count,best_m,best_v,best_length,best_matches,remaining);
     rules[rule_count].m=best_m;
     rules[rule_count].v=best_v;
     rules[rule_count++].len=best_length;
@@ -216,10 +216,10 @@ int main()
 	  "  function instruction_length(opcode : unsigned(8 downto 0)) return integer is\n"
 	  "  begin\n"
 	  );
-  for(int l=1;l<4;l++)
+  for(int l=1;l<3;l++)
     for(int r=0;r<rule_count;r++) {
       if (rules[r].len==l)
-	fprintf(f,"    if opcode & \"%c%c%c%c%c%c%c%c%c\" = \"%c%c%c%c%c%c%c%c%c\" then return %d;\n",
+	fprintf(f,"    if (opcode and \"%c%c%c%c%c%c%c%c%c\") = \"%c%c%c%c%c%c%c%c%c\" then return %d; end if;\n",
 		rules[r].m&256?'1':'0',
 		rules[r].m&128?'1':'0',
 		rules[r].m&64?'1':'0',
@@ -241,6 +241,7 @@ int main()
 		rules[r].len);
     }
   fprintf(f,
+	  "    return 3;\n"
 	  "  end function;\n"
 	  "end package body;\n");
   fclose(f);

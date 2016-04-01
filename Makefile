@@ -59,5 +59,5 @@ c65rom.bin:
 instrlenequations:	instrlenequations.c
 	gcc -g -Wall -o instrlenequations instrlenequations.c
 
-instruction_lengths.vhdl:	instrleneqations
+instruction_lengths.vhdl:	instrlenequations
 	./instrlenequations
