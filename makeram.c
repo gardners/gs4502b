@@ -86,9 +86,10 @@ int main(int argc,char **argv)
   
   unsigned char *data=NULL;
 
-  data = mmap(NULL,256*1024,PROT_READ,MAP_FILE,fileno(f),0);
-  if (!data) {
-    fprintf(stderr,"Failed to MMAP 256KB of file.\n");
+  data = mmap(NULL,256*1024,PROT_READ,MAP_PRIVATE,fileno(f),0);
+  if (data==MAP_FAILED) {
+    fprintf(stderr,"Failed to MMAP 256KB of file (fd=%d).\n",fileno(f));
+    perror("why");
     exit(-1);
   }
 
@@ -111,6 +112,21 @@ int main(int argc,char **argv)
     }
     fprintf(ram[i],"%s",s);
   }
+
+  for(int i=0;i<256*1024;i++)
+    {
+      //      printf("$%05x = $%02x\n",i,data[i]);
+      fprintf(ram[i&3],"  \"0%c%c%c%c%c%c%c%c\", -- $%05x\n",
+	      data[i]&128?'1':'0',
+	      data[i]&64?'1':'0',
+	      data[i]&32?'1':'0',
+	      data[i]&16?'1':'0',
+	      data[i]&8?'1':'0',
+	      data[i]&4?'1':'0',
+	      data[i]&2?'1':'0',
+	      data[i]&1?'1':'0',
+	      i);
+    }
   
   for(int i=0;i<4;i++) {
     // Output top, after substituting entity name
