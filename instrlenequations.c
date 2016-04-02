@@ -23,7 +23,8 @@
 
 int byte_counts[512]={
   // -- 4502 personality first
-    M_impl,  M_InnX,  M_impl,  M_impl,  M_nn,    M_nn,    M_nn,    M_nn,    
+    // -- BRK advances PC by two, not one, so we mark it as immediate mode
+    M_immnn,  M_InnX,  M_impl,  M_impl,  M_nn,    M_nn,    M_nn,    M_nn,    
     M_impl,  M_immnn, M_A,     M_impl,  M_nnnn,  M_nnnn,  M_nnnn,  M_nnrr,  
     M_rr,    M_InnY,  M_InnZ,  M_rrrr,  M_nn,    M_nnX,   M_nnX,   M_nn,    
     M_impl,  M_nnnnY, M_impl,  M_impl,  M_nnnn,  M_nnnnX, M_nnnnX, M_nnrr,  
@@ -60,7 +61,8 @@ int byte_counts[512]={
 
     // -- 6502 personality
     // -- XXX currently just a copy of 4502 personality
-    M_impl,M_InnX,M_impl,M_InnX,M_nn,M_nn,M_nn,M_nn,
+    // -- BRK advances PC by two, not one, so we mark it as immediate mode
+    M_immnn,M_InnX,M_impl,M_InnX,M_nn,M_nn,M_nn,M_nn,
     M_impl,M_immnn,M_impl,M_immnn,M_nnnn,M_nnnn,M_nnnn,M_nnnn,
     M_rr,M_InnY,M_impl,M_InnY,M_nnX,M_nnX,M_nnX,M_nnX,
     M_impl,M_nnnnY,M_impl,M_nnnnY,M_nnnnX,M_nnnnX,M_nnnnX,M_nnnnX,
@@ -134,7 +136,12 @@ int main()
   // that we can use to cover the most unclassified remaining opcodes.
 
   int remaining=512;
-
+  for(int i=0;i<512;i++) {
+    if (byte_counts[i]==3) {
+      covered[i]=1; remaining--;
+    }
+  }
+  
   while(remaining>0) {  
     int best_matches=-1;
     int best_m=-1, best_v=-1;
@@ -154,11 +161,12 @@ int main()
 		if (!covered[i]) matches++;
 	      }
 	    }
-	    if (matches>best_matches) {
-	      best_m=m; best_v=v;
-	      best_matches=matches;
-	      best_length=length;
-	    }
+	    if (length!=3)
+	      if (matches>best_matches) {
+		best_m=m; best_v=v;
+		best_matches=matches;
+		best_length=length;
+	      }
 	    last_mv=mv;
 	  }
 	}
@@ -187,6 +195,7 @@ int main()
 	  }
 	}
       }
+    if (predicted_length==-1) predicted_length=3;
     if (predicted_length!=actual_length) {
       printf("Rules produced wrong value for $%03x: expected %d, but saw %d\n",
 	     i,actual_length,predicted_length);
