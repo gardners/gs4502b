@@ -208,12 +208,12 @@ int main()
 	  "\n"
 	  "package instruction_lengths is\n"
 	  "\n"
-	  "function instruction_length(opcode : unsigned(8 downto 0)) return integer;\n"
+	  "function instruction_length(opcode : std_logic_vector(8 downto 0)) return integer;\n"
 	  "\n"
 	  "end package;\n"
 	  "\n"
 	  "package body instruction_lengths is\n"
-	  "  function instruction_length(opcode : unsigned(8 downto 0)) return integer is\n"
+	  "  function instruction_length(opcode : std_logic_vector(8 downto 0)) return integer is\n"
 	  "  begin\n"
 	  );
   for(int l=1;l<3;l++)

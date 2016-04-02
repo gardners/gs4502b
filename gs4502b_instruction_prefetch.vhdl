@@ -65,6 +65,8 @@ architecture behavioural of gs4502b_instruction_prefetch is
 
   -- 16 byte buffer for fetching instructions from memory
   constant BYTE_BUFFER_WIDTH : integer := 16;
+  type ilens is array (0 to BYTE_BUFFER_WIDTH) of integer;
+  signal ilen_buffer : ilens;
   signal byte_buffer : unsigned((8*BYTE_BUFFER_WIDTH)-1 downto 0);
   signal bytes_ready : integer range 0 to 16 := 0;
   signal buffer_address : translated_address := (others => '0');
@@ -82,6 +84,10 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal memory_data1_buf : std_logic_vector(8 downto 0);
   signal memory_data2_buf : std_logic_vector(8 downto 0);
   signal memory_data3_buf : std_logic_vector(8 downto 0);
+  signal memory_ilen0 : integer range 1 to 3 := 1;
+  signal memory_ilen1 : integer range 1 to 3 := 1;
+  signal memory_ilen2 : integer range 1 to 3 := 1;
+  signal memory_ilen3 : integer range 1 to 3 := 1;
   
 begin
   process (cpuclock) is
@@ -94,7 +100,7 @@ begin
     variable new_bytes_ready : integer range 0 to BYTE_BUFFER_WIDTH := 0;
 
     variable new_byte_buffer : unsigned((8*BYTE_BUFFER_WIDTH)-1 downto 0);
-
+    variable new_ilen_buffer : ilens;
   begin
     if rising_edge(cpuclock) then
 
@@ -107,6 +113,17 @@ begin
       memory_data1_buf <= memory_data1;
       memory_data2_buf <= memory_data2;
       memory_data3_buf <= memory_data3;
+      if current_cpu_personality = CPU6502 then
+        memory_ilen0 <= instruction_length('0'&memory_data0(7 downto 0));
+        memory_ilen1 <= instruction_length('0'&memory_data1(7 downto 0));
+        memory_ilen2 <= instruction_length('0'&memory_data2(7 downto 0));
+        memory_ilen3 <= instruction_length('0'&memory_data3(7 downto 0));
+      else
+        memory_ilen0 <= instruction_length('1'&memory_data0(7 downto 0));
+        memory_ilen1 <= instruction_length('1'&memory_data1(7 downto 0));
+        memory_ilen2 <= instruction_length('1'&memory_data2(7 downto 0));
+        memory_ilen3 <= instruction_length('1'&memory_data3(7 downto 0));
+      end if;
       
       if buffer_address /= instruction_address then
         -- Buffer is useless, and must be reloaded
@@ -134,11 +151,7 @@ begin
           -- Work out bytes in instruction, so that we can shift down appropriately.
           -- XXX
 
-          if current_cpu_personality = CPU6502 then
-            consumed_bytes := instruction_length('0'&byte_buffer(7 downto 0));
-          else
-            consumed_bytes := instruction_length('1'&byte_buffer(7 downto 0));
-          end if;
+          consumed_bytes := ilen_buffer(0);
 
           case consumed_bytes is
             when 1 =>
@@ -162,6 +175,8 @@ begin
         -- Shift buffer down
         new_byte_buffer(((BYTE_BUFFER_WIDTH-consumed_bytes)*8-1) downto 0)
           := byte_buffer((BYTE_BUFFER_WIDTH*8-1) downto (consumed_bytes*8));
+        new_ilen_buffer((BYTE_BUFFER_WIDTH-consumed_bytes) downto 0)
+          := ilen_buffer(BYTE_BUFFER_WIDTH downto consumed_bytes);
         -- Update where we will store, and the number of valid bytes left in
         -- the buffer.
         store_offset := bytes_ready - consumed_bytes;
@@ -179,12 +194,16 @@ begin
             -- Append to the end
             new_byte_buffer((8*(store_offset+3)+7) downto (8*(store_offset+3)))
               := unsigned(memory_data3_buf(7 downto 0));
+            new_ilen_buffer(store_offset+3) := memory_ilen3;
             new_byte_buffer((8*(store_offset+2)+7) downto (8*(store_offset+2)))
               := unsigned(memory_data2_buf(7 downto 0));
+            new_ilen_buffer(store_offset+2) := memory_ilen2;
             new_byte_buffer((8*(store_offset+1)+7) downto (8*(store_offset+1)))
               := unsigned(memory_data1_buf(7 downto 0));
+            new_ilen_buffer(store_offset+1) := memory_ilen1;
             new_byte_buffer((8*(store_offset+0)+7) downto (8*(store_offset+0)))
               := unsigned(memory_data0_buf(7 downto 0));
+            new_ilen_buffer(store_offset+0) := memory_ilen0;
             new_bytes_ready := bytes_ready - consumed_bytes + 4;
             -- Read next 4 bytes
             desired_address <= desired_address + 1;
@@ -200,6 +219,7 @@ begin
             new_bytes_ready := bytes_ready - consumed_bytes;
           end if;
           byte_buffer <= new_byte_buffer;
+          ilen_buffer <= new_ilen_buffer;
           report "I-FETCH buffer was " & to_hstring(byte_buffer)
             &", now " & to_hstring(new_byte_buffer)
             &", with " & integer'image(new_bytes_ready)
