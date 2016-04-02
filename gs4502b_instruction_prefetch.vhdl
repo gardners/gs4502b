@@ -175,8 +175,8 @@ begin
         -- Shift buffer down
         new_byte_buffer(((BYTE_BUFFER_WIDTH-consumed_bytes)*8-1) downto 0)
           := byte_buffer((BYTE_BUFFER_WIDTH*8-1) downto (consumed_bytes*8));
-        new_ilen_buffer((BYTE_BUFFER_WIDTH-consumed_bytes) downto 0)
-          := ilen_buffer(BYTE_BUFFER_WIDTH downto consumed_bytes);
+        new_ilen_buffer(0 to (BYTE_BUFFER_WIDTH-consumed_bytes))
+          := ilen_buffer(consumed_bytes to BYTE_BUFFER_WIDTH);
         -- Update where we will store, and the number of valid bytes left in
         -- the buffer.
         store_offset := bytes_ready - consumed_bytes;
@@ -231,7 +231,6 @@ begin
         bytes_ready <= new_bytes_ready;
         buffer_address <= buffer_address + consumed_bytes;
 
-        -- XXX Dummy incremental advance of instruction address
         instruction_address <= instruction_address + consumed_bytes;
         instruction_pc <= instruction_pc + consumed_bytes;        
       end if;
@@ -257,7 +256,7 @@ begin
 
       report "$" & to_hstring(instruction_address) & " I-FETCH";
 
-      next_pc := to_unsigned(to_integer(instruction_address(15 downto 0)) + 1,16);
+      next_pc := to_unsigned(to_integer(instruction_address(15 downto 0)) + consumed_bytes,16);
       
       instruction.does_load := false;
       instruction.does_store := false;
