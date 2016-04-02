@@ -64,7 +64,8 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal instruction_pc : unsigned(15 downto 0) := x"8100";
 
   -- 16 byte buffer for fetching instructions from memory
-  signal byte_buffer : unsigned((8*16)-1 downto 0);
+  constant BYTE_BUFFER_WIDTH : integer := 16;
+  signal byte_buffer : unsigned((8*BYTE_BUFFER_WIDTH)-1 downto 0);
   signal bytes_ready : integer range 0 to 16 := 0;
   signal buffer_address : translated_address := (others => '0');
 
@@ -90,9 +91,9 @@ begin
 
     variable store_offset : integer range 0 to 15 := 0;
     variable consumed_bytes : integer range 0 to 3 := 0;
-    variable new_bytes_ready : integer range 0 to 16 := 0;
+    variable new_bytes_ready : integer range 0 to BYTE_BUFFER_WIDTH := 0;
 
-    variable new_byte_buffer : unsigned((8*16)-1 downto 0);
+    variable new_byte_buffer : unsigned((8*BYTE_BUFFER_WIDTH)-1 downto 0);
 
   begin
     if rising_edge(cpuclock) then
@@ -159,8 +160,8 @@ begin
         end if;
         
         -- Shift buffer down
-        new_byte_buffer(((16-consumed_bytes)*8-1) downto 0)
-          := byte_buffer((16*8-1) downto (consumed_bytes*8));
+        new_byte_buffer(((BYTE_BUFFER_WIDTH-consumed_bytes)*8-1) downto 0)
+          := byte_buffer((BYTE_BUFFER_WIDTH*8-1) downto (consumed_bytes*8));
         -- Update where we will store, and the number of valid bytes left in
         -- the buffer.
         store_offset := bytes_ready - consumed_bytes;
@@ -173,7 +174,7 @@ begin
         if memory_address_2 = desired_address then
           -- But make sure we don't over flow our read queue
           report "I-FETCH: Found the bytes we were looking for to add to our buffer.";
-          if bytes_ready < 12 then
+          if bytes_ready <= (BYTE_BUFFER_WIDTH-4) then
             report "I-FETCH: We have space, so adding to byte_buffer.";
             -- Append to the end
             new_byte_buffer((8*(store_offset+3)+7) downto (8*(store_offset+3)))
