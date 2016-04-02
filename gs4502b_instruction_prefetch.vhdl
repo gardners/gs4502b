@@ -76,10 +76,15 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal memory_address_0 : unsigned(15 downto 0) := (others => '0');
   signal memory_address_1 : unsigned(15 downto 0) := (others => '0');
   signal memory_address_2 : unsigned(15 downto 0) := (others => '0');
+  signal memory_address_now : unsigned(15 downto 0) := (others => '0');
   -- And which address are we currently looking for to append to the end of our
   -- byte buffer?
   signal desired_address : unsigned(15 downto 0) := (others => '0');
 
+  signal memory_data0_buf1 : std_logic_vector(8 downto 0);
+  signal memory_data1_buf1 : std_logic_vector(8 downto 0);
+  signal memory_data2_buf1 : std_logic_vector(8 downto 0);
+  signal memory_data3_buf1 : std_logic_vector(8 downto 0);
   signal memory_data0_buf : std_logic_vector(8 downto 0);
   signal memory_data1_buf : std_logic_vector(8 downto 0);
   signal memory_data2_buf : std_logic_vector(8 downto 0);
@@ -106,23 +111,31 @@ begin
 
       -- Provide delayed memory address signal, so that we know where the RAM
       -- is reading from each cycle
+      memory_address_now <= memory_address_2;
       memory_address_2 <= memory_address_1;
       memory_address_1 <= memory_address_0;
 
-      memory_data0_buf <= memory_data0;
-      memory_data1_buf <= memory_data1;
-      memory_data2_buf <= memory_data2;
-      memory_data3_buf <= memory_data3;
+      -- We have two buffer stages after we read from the memory, so that we
+      -- can keep timing good, and deliver the instruction length at each
+      -- offset to the real fetch logic.
+      memory_data0_buf1 <= memory_data0;
+      memory_data1_buf1 <= memory_data1;
+      memory_data2_buf1 <= memory_data2;
+      memory_data3_buf1 <= memory_data3;
+      memory_data0_buf <= memory_data0_buf1;
+      memory_data1_buf <= memory_data1_buf1;
+      memory_data2_buf <= memory_data2_buf1;
+      memory_data3_buf <= memory_data3_buf1;
       if current_cpu_personality = CPU6502 then
-        memory_ilen0 <= instruction_length('0'&memory_data0(7 downto 0));
-        memory_ilen1 <= instruction_length('0'&memory_data1(7 downto 0));
-        memory_ilen2 <= instruction_length('0'&memory_data2(7 downto 0));
-        memory_ilen3 <= instruction_length('0'&memory_data3(7 downto 0));
+        memory_ilen0 <= instruction_length('0'&memory_data0_buf1(7 downto 0));
+        memory_ilen1 <= instruction_length('0'&memory_data1_buf1(7 downto 0));
+        memory_ilen2 <= instruction_length('0'&memory_data2_buf1(7 downto 0));
+        memory_ilen3 <= instruction_length('0'&memory_data3_buf1(7 downto 0));
       else
-        memory_ilen0 <= instruction_length('1'&memory_data0(7 downto 0));
-        memory_ilen1 <= instruction_length('1'&memory_data1(7 downto 0));
-        memory_ilen2 <= instruction_length('1'&memory_data2(7 downto 0));
-        memory_ilen3 <= instruction_length('1'&memory_data3(7 downto 0));
+        memory_ilen0 <= instruction_length('1'&memory_data0_buf1(7 downto 0));
+        memory_ilen1 <= instruction_length('1'&memory_data1_buf1(7 downto 0));
+        memory_ilen2 <= instruction_length('1'&memory_data2_buf1(7 downto 0));
+        memory_ilen3 <= instruction_length('1'&memory_data3_buf1(7 downto 0));
       end if;
       
       if buffer_address /= instruction_address then
@@ -182,11 +195,11 @@ begin
         store_offset := bytes_ready - consumed_bytes;
         
         -- We are reading for the correct address
-        report "I-FETCH: RAM READING $" & to_hstring(memory_address_2&"00")
-          &" - $" & to_hstring(memory_address_2&"11") &
+        report "I-FETCH: RAM READING $" & to_hstring(memory_address_now&"00")
+          &" - $" & to_hstring(memory_address_now&"11") &
           ", stow offset " & integer'image(store_offset) & ", am hoping for $"
           & to_hstring(desired_address&"00");
-        if memory_address_2 = desired_address then
+        if memory_address_now = desired_address then
           -- But make sure we don't over flow our read queue
           report "I-FETCH: Found the bytes we were looking for to add to our buffer.";
           if bytes_ready <= (BYTE_BUFFER_WIDTH-4) then
