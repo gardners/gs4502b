@@ -48,6 +48,7 @@ entity gs4502b_instruction_prefetch is
     stall : in boolean;
 
     instruction_out : out instruction_information;
+    instruction_out_valid : out boolean;
 
     -- Interface to 4x 64KB RAMs
     memory_address : out std_logic_vector(15 downto 0);
@@ -109,6 +110,7 @@ begin
     variable new_ilen_buffer : ilens;
   begin
     if rising_edge(cpuclock) then
+      report "RISING EDGE";
 
       -- Provide delayed memory address signal, so that we know where the RAM
       -- is reading from each cycle
@@ -138,116 +140,103 @@ begin
         memory_ilen2 <= instruction_length('1'&memory_data2_buf1(7 downto 0));
         memory_ilen3 <= instruction_length('1'&memory_data3_buf1(7 downto 0));
       end if;
+
+      store_offset := bytes_ready;
+      consumed_bytes := 0;
       
-      if buffer_address /= instruction_address then
-        -- Buffer is useless, and must be reloaded
-        report "I-FETCH: Flushing buffer, because we need $"
-          & to_hstring(instruction_address)
-          & ", but our buffer points to $" & to_hstring(buffer_address);
-        
-        buffer_address <= instruction_address;
-        
-        -- No bytes yet
-        bytes_ready <= 0;
-
-        -- fastram/chipram from CPU side is a single 256KB RAM, composed of 4x
-        -- 64KB interleaved banks. This allows us to read 4 bytes at a time.
-        memory_address <= std_logic_vector(instruction_address(17 downto 2));
-        memory_address_0 <= instruction_address(17 downto 2);
-        desired_address <= instruction_address(17 downto 2);
+      new_bytes_ready := bytes_ready;
+      new_byte_buffer := byte_buffer;
+      new_ilen_buffer := ilen_buffer;
+      
+      report "I-FETCH: Fetching instruction @ $" & to_hstring(instruction_address)
+        & ", with " & integer'image(bytes_ready) & " bytes available.";
+      
+      if bytes_ready < 3 then
+        instruction_out_valid <= false;
       else
-        store_offset := bytes_ready;
-        consumed_bytes := 0;
-        new_bytes_ready := bytes_ready;
-        report "I-FETCH: Fetching instruction @ $" & to_hstring(instruction_address);
+        -- Work out bytes in instruction, so that we can shift down appropriately.
+        -- XXX
+
+        instruction_out_valid <= true;
         
-        if bytes_ready >= 3 then
-          -- Work out bytes in instruction, so that we can shift down appropriately.
-          -- XXX
-
-          consumed_bytes := ilen_buffer(0);
-
-          case consumed_bytes is
-            when 1 =>
-              report "I-FETCH: Instruction buffer head contains $"
-                & to_hstring(byte_buffer(7 downto 0))
-                & ".";
-            when 2 =>
-              report "I-FETCH: Instruction buffer head contains $"
-                & to_hstring(byte_buffer(7 downto 0))
-                & " $" & to_hstring(byte_buffer(15 downto 8))
-                & ".";
-            when others =>
-              report "I-FETCH: Instruction buffer head contains $"
-                & to_hstring(byte_buffer(7 downto 0))
-                & " $" & to_hstring(byte_buffer(15 downto 8))
-                & " $" & to_hstring(byte_buffer(23 downto 16))
-                & ".";
-          end case;          
-        end if;
+        consumed_bytes := ilen_buffer(0);
+        new_bytes_ready := bytes_ready - consumed_bytes;
         
-        -- Shift buffer down
-        new_byte_buffer(((BYTE_BUFFER_WIDTH-consumed_bytes)*8-1) downto 0)
-          := byte_buffer((BYTE_BUFFER_WIDTH*8-1) downto (consumed_bytes*8));
-        new_ilen_buffer(0 to (BYTE_BUFFER_WIDTH-consumed_bytes))
-          := ilen_buffer(consumed_bytes to BYTE_BUFFER_WIDTH);
-        -- Update where we will store, and the number of valid bytes left in
-        -- the buffer.
-        store_offset := bytes_ready - consumed_bytes;
-        
-        -- We are reading for the correct address
-        report "I-FETCH: RAM READING $" & to_hstring(memory_address_now&"00")
-          &" - $" & to_hstring(memory_address_now&"11") &
-          ", stow offset " & integer'image(store_offset) & ", am hoping for $"
-          & to_hstring(desired_address&"00");
-        if memory_address_now = desired_address then
-          -- But make sure we don't over flow our read queue
-          report "I-FETCH: Found the bytes we were looking for to add to our buffer.";
-          if bytes_ready <= (BYTE_BUFFER_WIDTH-4) then
-            report "I-FETCH: We have space, so adding to byte_buffer.";
-            -- Append to the end
-            new_byte_buffer((8*(store_offset+3)+7) downto (8*(store_offset+3)))
-              := unsigned(memory_data3_buf(7 downto 0));
-            new_ilen_buffer(store_offset+3) := memory_ilen3;
-            new_byte_buffer((8*(store_offset+2)+7) downto (8*(store_offset+2)))
-              := unsigned(memory_data2_buf(7 downto 0));
-            new_ilen_buffer(store_offset+2) := memory_ilen2;
-            new_byte_buffer((8*(store_offset+1)+7) downto (8*(store_offset+1)))
-              := unsigned(memory_data1_buf(7 downto 0));
-            new_ilen_buffer(store_offset+1) := memory_ilen1;
-            new_byte_buffer((8*(store_offset+0)+7) downto (8*(store_offset+0)))
-              := unsigned(memory_data0_buf(7 downto 0));
-            new_ilen_buffer(store_offset+0) := memory_ilen0;
-            new_bytes_ready := bytes_ready - consumed_bytes + 4;
-            -- Read next 4 bytes
-            desired_address <= desired_address + 1;
-            memory_address <= std_logic_vector(desired_address + 1);
-            memory_address_0 <= desired_address + 1;
-
-          else
-            -- We already have enough bytes, so we don't need to do anything.
-            -- But we could use this time to perform some other memory action,
-            -- possibly reading the alternate path following a branch, for
-            -- example, so that we have it ready ahead of time. But that can
-            -- come later. Possibly much later.
-            new_bytes_ready := bytes_ready - consumed_bytes;
-          end if;
-          byte_buffer <= new_byte_buffer;
-          ilen_buffer <= new_ilen_buffer;
-          report "I-FETCH buffer was " & to_hstring(byte_buffer)
-            &", now " & to_hstring(new_byte_buffer)
-            &", with " & integer'image(new_bytes_ready)
-            & " bytes ready.";
-        else
-          -- Not reading from the right place yet, but we assume it is on its way,
-          -- so do nothing right now, apart from wait.
-        end if;
-        bytes_ready <= new_bytes_ready;
-        buffer_address <= buffer_address + consumed_bytes;
-
-        instruction_address <= instruction_address + consumed_bytes;
-        instruction_pc <= instruction_pc + consumed_bytes;        
+        case consumed_bytes is
+          when 1 =>
+            report "I-FETCH: Instruction buffer head contains $"
+              & to_hstring(byte_buffer(7 downto 0))
+              & ".";
+          when 2 =>
+            report "I-FETCH: Instruction buffer head contains $"
+              & to_hstring(byte_buffer(7 downto 0))
+              & " $" & to_hstring(byte_buffer(15 downto 8))
+              & ".";
+          when others =>
+            report "I-FETCH: Instruction buffer head contains $"
+              & to_hstring(byte_buffer(7 downto 0))
+              & " $" & to_hstring(byte_buffer(15 downto 8))
+              & " $" & to_hstring(byte_buffer(23 downto 16))
+              & ".";
+        end case;          
       end if;
+      
+      -- Shift buffer down
+      new_byte_buffer(((BYTE_BUFFER_WIDTH-consumed_bytes)*8-1) downto 0)
+        := byte_buffer((BYTE_BUFFER_WIDTH*8-1) downto (consumed_bytes*8));
+      new_ilen_buffer(0 to (BYTE_BUFFER_WIDTH-consumed_bytes))
+        := ilen_buffer(consumed_bytes to BYTE_BUFFER_WIDTH);
+      -- Update where we will store, and the number of valid bytes left in
+      -- the buffer.
+      store_offset := bytes_ready - consumed_bytes;
+      
+      -- We are reading for the correct address
+      report "I-FETCH: RAM READING $" & to_hstring(memory_address_now&"00")
+        &" - $" & to_hstring(memory_address_now&"11") &
+        ", stow offset " & integer'image(store_offset) & ", am hoping for $"
+        & to_hstring(desired_address&"00");
+      if memory_address_now = desired_address then
+        -- But make sure we don't over flow our read queue
+        report "I-FETCH: Found the bytes we were looking for to add to our buffer.";
+        if bytes_ready <= (BYTE_BUFFER_WIDTH-4) then
+          report "I-FETCH: We have space, so adding to byte_buffer.";
+          -- Append to the end
+          new_byte_buffer((8*(store_offset+3)+7) downto (8*(store_offset+3)))
+            := unsigned(memory_data3_buf(7 downto 0));
+          new_ilen_buffer(store_offset+3) := memory_ilen3;
+          new_byte_buffer((8*(store_offset+2)+7) downto (8*(store_offset+2)))
+            := unsigned(memory_data2_buf(7 downto 0));
+          new_ilen_buffer(store_offset+2) := memory_ilen2;
+          new_byte_buffer((8*(store_offset+1)+7) downto (8*(store_offset+1)))
+            := unsigned(memory_data1_buf(7 downto 0));
+          new_ilen_buffer(store_offset+1) := memory_ilen1;
+          new_byte_buffer((8*(store_offset+0)+7) downto (8*(store_offset+0)))
+            := unsigned(memory_data0_buf(7 downto 0));
+          new_ilen_buffer(store_offset+0) := memory_ilen0;
+          new_bytes_ready := bytes_ready - consumed_bytes + 4;
+          report "Adding 4 to (bytes_ready-consumed_bytes) to calculate new_bytes_ready";
+          -- Read next 4 bytes
+          desired_address <= desired_address + 1;
+          memory_address <= std_logic_vector(desired_address + 1);
+          memory_address_0 <= desired_address + 1;
+
+        end if;
+      end if;
+            
+      report "I-FETCH buffer was " & to_hstring(byte_buffer)
+        &", now " & to_hstring(new_byte_buffer)
+        &", with " & integer'image(new_bytes_ready)
+        & " bytes ready, " & integer'image(consumed_bytes) & " bytes consumed.";
+
+      byte_buffer <= new_byte_buffer;
+      ilen_buffer <= new_ilen_buffer;
+      bytes_ready <= new_bytes_ready;
+      buffer_address <= buffer_address + consumed_bytes;
+
+      report "Updated: new_bytes_ready = " & integer'image(new_bytes_ready);
+
+      instruction_address <= instruction_address + consumed_bytes;
+      instruction_pc <= instruction_pc + consumed_bytes;        
       
       if address_redirecting = true then
         report "$" & to_hstring(instruction_address) &
@@ -258,8 +247,19 @@ begin
         instruction_address <= redirected_address;
         instruction_pc(15 downto 8) <= redirected_pch;
         instruction_pc(7 downto 0) <= redirected_address(7 downto 0);
+
+        -- Invalidate current buffer
+        bytes_ready <= 0;
+
+        -- Start reading from this address
+        -- fastram/chipram from CPU side is a single 256KB RAM, composed of 4x
+        -- 64KB interleaved banks. This allows us to read 4 bytes at a time.
+        memory_address <= std_logic_vector(redirected_address(17 downto 2));
+        memory_address_0 <= redirected_address(17 downto 2);
+        desired_address <= redirected_address(17 downto 2);
+
       else
-        -- Otherwise, keep fetching from where we were.
+      -- Otherwise, keep fetching from where we were.
       end if;
 
       report "$" & to_hstring(instruction_address) & " I-FETCH";
@@ -273,7 +273,11 @@ begin
       instruction.bytes.opcode := byte_buffer(7 downto 0);
       instruction.bytes.arg1 := byte_buffer(15 downto 8);
       instruction.bytes.arg2 := byte_buffer(23 downto 16);
-      instruction.translated := instruction_address;
+      if bytes_ready > 2 then
+        instruction.translated := instruction_address;
+      else
+        instruction.translated := (others => '1');
+      end if;
       instruction.pc := instruction_pc;
       instruction.pc_expected := next_pc;
       instruction.pc_mispredict := next_pc;
@@ -282,5 +286,5 @@ begin
       instruction_out <= instruction;
     end if;
   end process;
-  
+
 end behavioural;
