@@ -191,7 +191,7 @@ int main()
 	  "\n"
 	  "package body instruction_lengths is\n"
 	  "  function addressing_modes(opcode : std_logic_vector(8 downto 0)) return addressing_mode is\n"
-	  "    variable mode : addressing_mode := (others => false)\n"
+	  "    variable mode : addressing_mode := (others => false);\n"
 	  "  begin\n"
 	  "    -- XXX Zero out contents of modes?\n"
 	  );
@@ -237,12 +237,12 @@ int main()
 	    }
 	  }
 	}
-      for(int i=0;i<512;i++) if ((i&best_m)==best_v) { if (!covered[i]) remaining--; covered[i]=1; }
       printf("mode.%s, Rule #%d: OPCODE & $%03x = $%03x -> flag is %s (covers %d/%d remaining instructions).\n",
 	     flagname(flag),rule_count,best_m,best_v,flagname(flag),best_matches,remaining);
       rules[rule_count].m=best_m;
       rules[rule_count].v=best_v;
       rule_count++;
+      for(int i=0;i<512;i++) if ((i&best_m)==best_v) { if (!covered[i]) remaining--; covered[i]=1; }
     }
     
     // Now verify rules
@@ -265,31 +265,29 @@ int main()
       }
     }
 
-    for(int l=1;l<3;l++)
-      for(int r=0;r<rule_count;r++) {
-	fprintf(f,"    if (opcode and \"%c%c%c%c%c%c%c%c%c\") = \"%c%c%c%c%c%c%c%c%c\" then mode.%s=true; end if;\n",
-		rules[r].m&256?'1':'0',
-		rules[r].m&128?'1':'0',
-		rules[r].m&64?'1':'0',
-		rules[r].m&32?'1':'0',
-		rules[r].m&16?'1':'0',
-		rules[r].m&8?'1':'0',
-		rules[r].m&4?'1':'0',
-		rules[r].m&2?'1':'0',
-		rules[r].m&1?'1':'0',
-		rules[r].v&256?'1':'0',
-		rules[r].v&128?'1':'0',
-		rules[r].v&64?'1':'0',
-		rules[r].v&32?'1':'0',
-		rules[r].v&16?'1':'0',
-		rules[r].v&8?'1':'0',
-		rules[r].v&4?'1':'0',
-		rules[r].v&2?'1':'0',
-		rules[r].v&1?'1':'0',
-		flagname(flag)
-		);
-      }
-    
+    for(int r=0;r<rule_count;r++) {
+      fprintf(f,"    if (opcode and \"%c%c%c%c%c%c%c%c%c\") = \"%c%c%c%c%c%c%c%c%c\" then mode.%s=true; end if;\n",
+	      rules[r].m&256?'1':'0',
+	      rules[r].m&128?'1':'0',
+	      rules[r].m&64?'1':'0',
+	      rules[r].m&32?'1':'0',
+	      rules[r].m&16?'1':'0',
+	      rules[r].m&8?'1':'0',
+	      rules[r].m&4?'1':'0',
+	      rules[r].m&2?'1':'0',
+	      rules[r].m&1?'1':'0',
+	      rules[r].v&256?'1':'0',
+	      rules[r].v&128?'1':'0',
+	      rules[r].v&64?'1':'0',
+	      rules[r].v&32?'1':'0',
+	      rules[r].v&16?'1':'0',
+	      rules[r].v&8?'1':'0',
+	      rules[r].v&4?'1':'0',
+	      rules[r].v&2?'1':'0',
+	      rules[r].v&1?'1':'0',
+	      flagname(flag)
+	      );
+    }    
   }
   
   fprintf(f,
