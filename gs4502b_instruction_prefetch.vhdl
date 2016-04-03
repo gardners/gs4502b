@@ -227,7 +227,6 @@ begin
           report "Adding 4 to (bytes_ready-consumed_bytes) to calculate new_bytes_ready";
           -- Read next 4 bytes: this happens through next block, which has a
           -- nice new burst fetch process, to keep the buffer filled.
-          burst_sub_one := true;
           desired_address <= desired_address + 1;
 
         end if;
@@ -255,7 +254,7 @@ begin
         else
           report "Holding burst_fetch";
         end if;
-      elsif (burst_add_one = true) and (burst_sub_one = false) then
+      elsif (burst_add_one = true) then
         report "Incrementing burst_fetch";
         burst_fetch <= burst_fetch + 1;
       end if;
