@@ -5,6 +5,7 @@ SIMULATIONFILES=	cpu_test.vhdl \
 			icachetypes.vhdl \
 			icachebits.vhdl \
 			instruction_lengths.vhdl \
+			addressing_modes.vhdl \
 			ram0.vhdl ram1.vhdl ram2.vhdl ram3.vhdl \
 			address_translator.vhdl \
 			gs4502b.vhdl \
@@ -55,9 +56,14 @@ mega65ram.bin:
 c65rom.bin:
 	dd if=/dev/zero of=mega65ram.bin bs=131072 count=1
 
-
 instrlenequations:	instrlenequations.c
 	gcc -g -Wall -o instrlenequations instrlenequations.c
 
 instruction_lengths.vhdl:	instrlenequations
 	./instrlenequations
+
+addressingmodeequations:	addressingmodeequations.c
+	gcc -g -Wall -o addressingmodeequations addressingmodeequations.c
+
+addressing_modes.vhdl:	addressingmodeequations
+	./addressingmodeequations
