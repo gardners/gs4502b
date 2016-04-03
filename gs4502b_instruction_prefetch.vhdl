@@ -72,6 +72,8 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal byte_buffer : unsigned((8*BYTE_BUFFER_WIDTH)-1 downto 0);
   signal bytes_ready : integer range 0 to 16 := 0;
   signal buffer_address : translated_address := (others => '0');
+  signal burst_fetch : integer range 0 to (BYTE_BUFFER_WIDTH/4+1) := 0;
+  signal fetched_bytes : integer range 0 to (BYTE_BUFFER_WIDTH/4+1) := 0;
 
   -- Delayed signals to tell us which address of chip/fast RAM we are reading
   -- in a given cycle
@@ -95,6 +97,7 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal memory_ilen1 : integer range 1 to 3 := 1;
   signal memory_ilen2 : integer range 1 to 3 := 1;
   signal memory_ilen3 : integer range 1 to 3 := 1;
+
   
 begin
   process (cpuclock) is
@@ -108,6 +111,9 @@ begin
 
     variable new_byte_buffer : unsigned((8*BYTE_BUFFER_WIDTH)-1 downto 0);
     variable new_ilen_buffer : ilens;
+
+    variable burst_add_one : boolean := false;    
+    variable burst_sub_one : boolean := false;    
   begin
     if rising_edge(cpuclock) then
       report "RISING EDGE";
@@ -195,9 +201,13 @@ begin
         &" - $" & to_hstring(memory_address_now&"11") &
         ", stow offset " & integer'image(store_offset) & ", am hoping for $"
         & to_hstring(desired_address&"00");
+
+      burst_sub_one := false;
+      burst_add_one := false;
+      
       if memory_address_now = desired_address then
         -- But make sure we don't over flow our read queue
-        report "I-FETCH: Found the bytes we were looking for to add to our buffer.";
+        report "I-FETCH: Found the bytes we were looking for to add to our buffer.";   
         if bytes_ready <= (BYTE_BUFFER_WIDTH-4) then
           report "I-FETCH: We have space, so adding to byte_buffer.";
           -- Append to the end
@@ -215,14 +225,45 @@ begin
           new_ilen_buffer(store_offset+0) := memory_ilen0;
           new_bytes_ready := bytes_ready - consumed_bytes + 4;
           report "Adding 4 to (bytes_ready-consumed_bytes) to calculate new_bytes_ready";
-          -- Read next 4 bytes
+          -- Read next 4 bytes: this happens through next block, which has a
+          -- nice new burst fetch process, to keep the buffer filled.
+          burst_sub_one := true;
           desired_address <= desired_address + 1;
-          memory_address <= std_logic_vector(desired_address + 1);
-          memory_address_0 <= desired_address + 1;
 
         end if;
       end if;
-            
+
+      -- Keep the instruction buffer as full as possible, without overflowing.
+      if fetched_bytes < 4 then
+        fetched_bytes <= fetched_bytes + consumed_bytes;
+      else
+        fetched_bytes <= fetched_bytes + consumed_bytes - 4;
+        burst_add_one := true;
+        report "Ate 4 bytes, queuing next instruction word read.";
+      end if;
+      report "burst_fetch = " & integer'image(burst_fetch)
+        & ", burst_add_one = " & boolean'image(burst_add_one)
+        & ", burst_sub_one = " & boolean'image(burst_sub_one);
+      if (burst_fetch > 0) then
+        report "Requesting next instruction word (" & integer'image(burst_fetch)
+          & " more to go).";
+        memory_address <= std_logic_vector(memory_address_0 + 1);
+        memory_address_0 <= memory_address_0 + 1;
+        if (burst_add_one = false) then
+          report "Decrementing burst_fetch";
+          burst_fetch <= burst_fetch - 1;
+        else
+          report "Holding burst_fetch";
+        end if;
+      elsif (burst_add_one = true) and (burst_sub_one = false) then
+        report "Incrementing burst_fetch";
+        burst_fetch <= burst_fetch + 1;
+      end if;
+      -- Make sure that we don't get stuck forever waiting for bytes
+      if (bytes_ready < 4) and (burst_fetch = 0) then
+        burst_fetch <= (BYTE_BUFFER_WIDTH/4+1);
+      end if;
+      
       report "I-FETCH buffer was " & to_hstring(byte_buffer)
         &", now " & to_hstring(new_byte_buffer)
         &", with " & integer'image(new_bytes_ready)
@@ -250,6 +291,12 @@ begin
 
         -- Invalidate current buffer
         bytes_ready <= 0;
+        -- And remember that we can fetch several words at once.
+        -- Enough to fill, plus one waiting in the wings.
+        burst_fetch <= (BYTE_BUFFER_WIDTH / 4) + 1;
+        -- And reset the bytes eaten counter that we use to decide when to load
+        -- the next word.
+        fetched_bytes <= 0;
 
         -- Start reading from this address
         -- fastram/chipram from CPU side is a single 256KB RAM, composed of 4x
