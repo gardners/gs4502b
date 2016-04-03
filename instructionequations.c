@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+struct flag_name {
+  char *name;
+  long long value;
+};
+
 #include "instruction_flags.h"
 
 #define I_LDA DO_LOAD|ALU_NOP|ALUDST_A|UPDATE_NZ
@@ -148,11 +153,10 @@
 
 
 char *flagname(long long flag) {
-  switch(flag) {
-  default:
-    fprintf(stderr,"unknown flag $%04llx\n",flag);
-    exit(-1);
-  }
+  for(int i=0;flag_names[i].name;i++)
+    if (flag==flag_names[i].value) return flag_names[i].name;
+  fprintf(stderr,"unknown flag $%04llx\n",flag);
+  exit(-1);
 }
 
 long long opcodes[512]={
