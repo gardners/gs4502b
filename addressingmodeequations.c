@@ -200,6 +200,8 @@ int main()
     
     // Try all masks with all possible values, to see what the largest mask is
     // that we can use to cover the most unclassified remaining opcodes for this mode action.
+
+    rule_count=0;
     
     int remaining=512;
     for(int i=0;i<512;i++) {
