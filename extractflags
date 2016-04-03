@@ -1,0 +1,1 @@
+grep "#define I_" instructionequations.c | cut -f3 -d\ | tr "|" "\n" | sort -u | awk '{ printf("#define %s (1LL<<%d)\n",$1,n++); } END { printf("\n#define MAX_FLAG (1LL<<%d)\n",n); }' > instruction_flags.h
