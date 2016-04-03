@@ -30,8 +30,8 @@ char *flagname(int flag) {
   case POSTINDEX_X: return "postx";
   case POSTINDEX_Y: return "posty";
   case POSTINDEX_Z: return "postz";
-  case ZP: return "zp";
-  case ABS: return "abs";
+  case ZP: return "addr8";
+  case ABS: return "addr16";
   case SRC_IMM16: return "imm16";
   case REL_8_3RDBYTE: return "rel8byte3";
   default:
@@ -185,11 +185,18 @@ int main()
 	  "\n"
 	  "package addressing_modes is\n"
 	  "\n"
-	  "function addressing_modes(opcode : std_logic_vector(8 downto 0)) return addressing_mode;\n"
+	  "  type addressing_mode is record\n");	  
+  for(int flag=1;flag<=MAX_FLAG;flag*=2) {
+    fprintf(f,"    %s : boolean;\n",flagname(flag));
+  }
+  fprintf(f,
+          "  end record;\n"
+	  "\n"
+	  "  function addressing_modes(opcode : std_logic_vector(8 downto 0)) return addressing_mode;\n"
 	  "\n"
 	  "end package;\n"
 	  "\n"
-	  "package body instruction_lengths is\n"
+	  "package body addressing_modes is\n"
 	  "  function addressing_modes(opcode : std_logic_vector(8 downto 0)) return addressing_mode is\n"
 	  "    variable mode : addressing_mode := (others => false);\n"
 	  "  begin\n"
@@ -265,8 +272,9 @@ int main()
       }
     }
 
+    fprintf(f,"    -- Equations for mode.%s\n",flagname(flag));
     for(int r=0;r<rule_count;r++) {
-      fprintf(f,"    if (opcode and \"%c%c%c%c%c%c%c%c%c\") = \"%c%c%c%c%c%c%c%c%c\" then mode.%s=true; end if;\n",
+      fprintf(f,"    if (opcode and \"%c%c%c%c%c%c%c%c%c\") = \"%c%c%c%c%c%c%c%c%c\" then mode.%s := true; end if;\n",
 	      rules[r].m&256?'1':'0',
 	      rules[r].m&128?'1':'0',
 	      rules[r].m&64?'1':'0',
