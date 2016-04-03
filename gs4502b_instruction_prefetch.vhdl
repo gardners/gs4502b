@@ -27,8 +27,9 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
-use work.icachetypes.all;
-use work.icachebits.all;
+use work.instructions.all;
+use work.addressing_modes.all;
+use work.instruction_equations.all;
 use work.instruction_lengths.all;
 
 entity gs4502b_instruction_prefetch is
@@ -261,25 +262,17 @@ begin
         -- Otherwise, keep fetching from where we were.
       end if;
 
-      -- XXX Dummy code to prepare simple dummy icache lines to feed to
-      -- processor during early testing. This must be replaced with the
-      -- multi-stage cache fetch pipeline that does the required memory
-      -- requests, and actually prepares the instruction entry for putting into
-      -- the cache.
-
       report "$" & to_hstring(instruction_address) & " I-FETCH";
 
       next_pc := to_unsigned(to_integer(instruction_address(15 downto 0)) + consumed_bytes,16);
       
-      instruction.does_load := false;
-      instruction.does_store := false;
+      instruction.instruction_flags := (others => false);
+      instruction.addressing_mode := (others => false);
       instruction.modifies_cpu_personality := false;
-      instruction.addressing_mode := Implied;
-      instruction.instruction := Nop;
       instruction.cpu_personality := current_cpu_personality;
-      instruction.bytes.opcode := x"EA";
-      instruction.bytes.arg1 := x"EA";
-      instruction.bytes.arg2 := x"EA";
+      instruction.bytes.opcode := byte_buffer(7 downto 0);
+      instruction.bytes.arg1 := byte_buffer(15 downto 8);
+      instruction.bytes.arg2 := byte_buffer(23 downto 16);
       instruction.translated := instruction_address;
       instruction.pc := instruction_pc;
       instruction.pc_expected := next_pc;

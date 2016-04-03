@@ -83,8 +83,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
-use work.icachetypes.all;
-use work.icachebits.all;
+use work.instructions.all;
 
 ENTITY gs4502b IS
   PORT (
@@ -109,15 +108,6 @@ architecture behavioural of gs4502b is
   signal expected_instruction_address : unsigned(31 downto 0)
     := "00001111000011110000111010101010";
   signal expected_instruction_pch : unsigned(15 downto 8) := "00000000";
-
-  -- Inputs to first stage of pipeline (decode stage)
-  signal icache_lookup_line : std_logic_vector(9 downto 0);
-  signal icache_read_data_a : std_logic_vector(107 downto 0);
-  signal icache_read_data_b : std_logic_vector(107 downto 0);
-  signal icache_address_a : std_logic_vector(9 downto 0);
-  signal icache_address_b : std_logic_vector(9 downto 0);
-  signal icache_write_data : std_logic_vector(107 downto 0) := (others => '1');
-  signal icache_write_enable : std_logic_vector(0 downto 0) := "0";
 
   -- Signals output by prefetch stage
   signal stage_prefetch_instruction : instruction_information;
@@ -358,13 +348,5 @@ begin  -- behavioural
       stalling => execute_stalling
       );
   end block;
-
-  process(cpuclock, icache_read_data_b)
-    variable icache_bits : icache_line;
-  begin
-    if(rising_edge(cpuclock)) then
-            
-    end if;
-  end process;
 
 end behavioural;

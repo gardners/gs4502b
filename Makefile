@@ -2,8 +2,7 @@ all:	cpu_test
 
 SIMULATIONFILES=	cpu_test.vhdl \
 			debugtools.vhdl \
-			icachetypes.vhdl \
-			icachebits.vhdl \
+			instructions.vhdl \
 			instruction_lengths.vhdl \
 			addressing_modes.vhdl \
 			instruction_equations.vhdl \
@@ -14,9 +13,6 @@ SIMULATIONFILES=	cpu_test.vhdl \
 			gs4502b_stage_decode.vhdl \
 			gs4502b_stage_validate.vhdl \
 			gs4502b_stage_execute.vhdl \
-
-icachebits.vhdl: generate_icachebits_package.csh icache_structure.txt
-	./generate_icachebits_package.csh icache_structure.txt
 
 GHDL=/usr/local/ghdl-0.34/bin/ghdl
 

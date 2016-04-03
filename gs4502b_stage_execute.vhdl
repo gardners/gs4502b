@@ -33,7 +33,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
-use work.icachetypes.all;
+use work.instructions.all;
 
 entity gs4502b_stage_execute is
   port (

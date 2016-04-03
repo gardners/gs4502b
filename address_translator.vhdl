@@ -5,7 +5,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
-use work.icachetypes.all;
+use work.instructions.all;
 
 package address_translator is
     function resolve_address_to_long(short_address : unsigned(15 downto 0);

@@ -74,7 +74,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
-use work.icachetypes.all;
+use work.instructions.all;
 
 entity gs4502b_stage_validate is
   port (
@@ -357,7 +357,7 @@ begin
         -- instruction is a load (including stack pop) or RMW, then we need to note the
         -- resources as being delayed. In all other cases we have no
         -- delayed resources
-        if instruction.does_load=true then
+        if instruction.instruction_flags.do_load=true then
           -- Set delayed flag for all resources modified by this
           -- instruction.
           -- XXX We can probably optimise this a bit, by not setting SPL

@@ -1,7 +1,0 @@
-PCH:8:Upper byte of PC for this instruction
-CPU_PERSONALITY:2:Hypervisor, 6502 or 4502 CPU personality selector for this instruction
-INSTRUCTION_ADDRESS:22:Upper bits of translated address of this instruction (bottom 10 are in cache line)
-INSTRUCTION_BYTES:24:Opcode and argument bytes for the instruction
-PC_EXPECTED:16:PC for next instruction if the branch prediction is correct
-PC_MISPREDICT:16:PC for next instruction if the branch prediction is incorrect
-BRANCH_PREDICT:1:One if we predict that this branch should be taken.  Used to feed-back into cache pre-fetcher so that it can update a branch which is mispredicted.

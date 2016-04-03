@@ -2,21 +2,11 @@ library ieee;
 use Std.TextIO.all;
 use ieee.STD_LOGIC_1164.all;
 use ieee.numeric_std.all;
+use work.addressing_modes.all;
+use work.instruction_equations.all;
 
-package icachetypes is
-    
-  type icache_line is record
-    src_address : unsigned(31 downto 10);
-    bytes : std_logic_vector(23 downto 0);
-    pch : unsigned(15 downto 8);
-    expected_pc : unsigned(15 downto 0);
-    branch_mispredict_pc : unsigned(15 downto 0);
-    branch_predict : std_logic;
-  end record;
-
-  function std_logic_vector_to_icache_line(bits : in std_logic_vector(105 downto 0))
-  return icache_line;
-  
+package instructions is
+      
   type instruction_resources is record
     reg_a : boolean;
     reg_b : boolean;
@@ -63,40 +53,6 @@ package icachetypes is
     n : boolean;    
   end record;  
 
-  type addressing_mode is (
-    Implied,
-    Immediate8,
-    ZeroPage,
-    ZeroPageX,
-    ZeroPageY,
-    Absolute,
-    AbsoluteX,
-    AbsoluteY,
-    -- For pushing values to the stack (allows PH<X> instructions to be
-    -- considered as simple stores, which is what they are).
-    StackWrite,
-    -- For loading registers, including when pulling something from the stack.
-    StackRead,
-    -- Merges both Relative8 and Relative16 functions
-    ConditionalBranch
-    -- XXX - ZP+Relative8 mode not currently considered.
-    -- XXX Add the rest
-    );
-
-  type instruction is (
-    -- Nop here actually covers a few different things, including JMP and BRA,
-    -- where all we need to do is unconditionally change the program counter.
-    Nop,
-    -- One of various typical ALU-focused operations, such as ADC, SBC, ORA,
-    -- EOR etc.
-    Alu,
-    -- Pull a value off the stack or read a memory location (no matter which register is the destination)
-    Load,
-    -- Store a value, either to the stack or via an addressing mode
-    Store
-    -- XXX add the rest
-    );
-
   type cpu_personality is (
     Hypervisor, CPU6502, CPU4502
     );
@@ -104,30 +60,33 @@ package icachetypes is
   type instruction_information is record
     -- Does this instruction load and/or store memory?
     -- (both are set for a RMW instruction)
-    does_load : boolean;
-    does_store : boolean;
+
+    -- The bytes, CPU personality and address (PC and translated address)
+    -- uniquely identify the instruction
+    bytes : instruction_bytes;
+    cpu_personality : cpu_personality;
+    pc : unsigned(15 downto 0);
+    translated : translated_address;
+
+    -- Data computed from the opcode
+    addressing_mode : addressing_mode;
+    instruction_flags : instruction_flags;
+
+    -- Once we know both the opcode and the arguments, we can work out if the
+    -- instruction can modify the memory map. This means looking for MAP
+    -- instruction, as well as writes to $0000, $0001 (C64 ROM banking) or $D030
+    -- (C65 ROM banking)
     modifies_cpu_personality : boolean;
     
-    addressing_mode : addressing_mode;
-    instruction : instruction;
-
-    cpu_personality : cpu_personality;
-
-    bytes : instruction_bytes;
-    
-    -- Address and PC information
-    translated : translated_address;
-    pc : unsigned(15 downto 0);
-    
+    -- Address and PC information following instruction    
     pc_expected : unsigned(15 downto 0);
     pc_mispredict : unsigned(15 downto 0);
 
     expected_translated : translated_address;
     mispredict_translated : translated_address;
-      
+
+    -- Do we expect this branch to be taken?
     branch_predict : boolean;
-    -- XXX add information for conditional branches
-    -- (i.e., which flag and positive or negative test)
     
   end record;
 
@@ -137,7 +96,7 @@ package icachetypes is
   
 end package;
 
-package body icachetypes is
+package body instructions is
 
   function to_cpu_personality(v : std_logic_vector(1 downto 0)) return cpu_personality is
   begin
@@ -211,22 +170,4 @@ package body icachetypes is
       or a.flag_z or a.flag_n or a.flag_c or a.flag_d or a.flag_v;
   end function;
   
-  function std_logic_vector_to_icache_line(bits : in std_logic_vector(105 downto 0))
-  return icache_line is
-    variable i : icache_line;
-  begin
-    -- The address that this cache line is for.
-    -- We could imply the cache line from the address read, but then we have to
-    -- know the latency of the cache. We can make this optimisation later, but
-    -- for now, we will just keep it simple.
-    i.src_address(31 downto 10) := unsigned(bits(21 downto 0));
-    i.bytes := bits(45 downto 22);
-    i.expected_pc := unsigned(bits(61 downto 46));
-    i.branch_mispredict_pc := unsigned(bits(77 downto 62));
-    i.pch := unsigned(bits(85 downto 78));
-    i.branch_predict := bits(86);
-
-    return i;    
-  end function;
-
-end icachetypes;
+end instructions;

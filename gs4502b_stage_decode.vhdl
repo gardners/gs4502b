@@ -12,7 +12,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
-use work.icachetypes.all;
+use work.instructions.all;
 use work.address_translator.all;
 
 entity gs4502b_stage_decode is
@@ -79,10 +79,6 @@ begin
         -- Decode instruction
         -- XXX Read fields from instruction bytes and work it all out
         -- For now, just lie and make every instruction an NOP
-        instruction.does_load := false;
-        instruction.does_store := false;
-        instruction.addressing_mode := Implied;
-        instruction.instruction := Nop;
 
         -- Work out branch address of instruction, if relevant
         -- instruction.pc_mispredict := pc_mispredict;
