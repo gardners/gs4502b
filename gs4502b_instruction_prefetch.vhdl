@@ -98,7 +98,7 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal memory_ilen2 : integer range 1 to 3 := 1;
   signal memory_ilen3 : integer range 1 to 3 := 1;
 
-  
+  signal opcode_high_bit : std_logic := '1';
 begin
   process (cpuclock) is
     variable instruction : instruction_information;
@@ -135,17 +135,20 @@ begin
       memory_data1_buf <= memory_data1_buf1;
       memory_data2_buf <= memory_data2_buf1;
       memory_data3_buf <= memory_data3_buf1;
+      -- XXX When changing CPU personality, there is a 1 cycle delay before
+      -- instruction lengths will be correctly calculated.  Should be fine, as
+      -- we will hold CPU during personality change, anyway via
+      -- address_redirecting interface, which disacrds all instruction buffer
+      -- contents, and prevents it loading more until released.
       if current_cpu_personality = CPU6502 then
-        memory_ilen0 <= instruction_length('0'&memory_data0_buf1(7 downto 0));
-        memory_ilen1 <= instruction_length('0'&memory_data1_buf1(7 downto 0));
-        memory_ilen2 <= instruction_length('0'&memory_data2_buf1(7 downto 0));
-        memory_ilen3 <= instruction_length('0'&memory_data3_buf1(7 downto 0));
+        opcode_high_bit <= '0';
       else
-        memory_ilen0 <= instruction_length('1'&memory_data0_buf1(7 downto 0));
-        memory_ilen1 <= instruction_length('1'&memory_data1_buf1(7 downto 0));
-        memory_ilen2 <= instruction_length('1'&memory_data2_buf1(7 downto 0));
-        memory_ilen3 <= instruction_length('1'&memory_data3_buf1(7 downto 0));
+        opcode_high_bit <= '1';
       end if;
+      memory_ilen0 <= instruction_length(opcode_high_bit&memory_data0_buf1(7 downto 0));
+      memory_ilen1 <= instruction_length(opcode_high_bit&memory_data1_buf1(7 downto 0));
+      memory_ilen2 <= instruction_length(opcode_high_bit&memory_data2_buf1(7 downto 0));
+      memory_ilen3 <= instruction_length(opcode_high_bit&memory_data3_buf1(7 downto 0));
 
       store_offset := bytes_ready;
       consumed_bytes := 0;
