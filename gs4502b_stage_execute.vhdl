@@ -117,7 +117,11 @@ begin
         "Y:" & to_hstring(regs.y) & " " &
         "Z:" & to_hstring(regs.z) & " " &
         "B:" & to_hstring(regs.b) & " " &
-        "SP:" & to_hstring(regs.sph & regs.spl) & " "
+        "SP:" & to_hstring(regs.sph & regs.spl) & "  :  "
+        & to_hstring(instruction_in.bytes.opcode) & " "
+        & to_hstring(instruction_in.bytes.arg1) & " "
+        & to_hstring(instruction_in.bytes.arg2)
+        
         ;
       
       -- Make copy of registers and register renaming info for mutation.
