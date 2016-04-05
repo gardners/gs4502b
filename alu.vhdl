@@ -278,6 +278,10 @@ package body alu is
       regsout.flags.c := ret.c;
       renamedout.flag_c := false;
     end if;
+    if iflags.update_v then
+      regsout.flags.v := ret.v;
+      renamedout.flag_v := false;
+    end if;
     
     
   end procedure;
@@ -294,6 +298,13 @@ package body alu is
     r.c := false; r.v := false; r.value := i1;
     if i1(7) = '1' then r.n := true; else r.n := false; end if;
     if i1 = x"00" then  r.z := true; else r.z := false; end if;
+
+    if instruction.alu_set then
+      -- Use i2 instead of i1
+      r.c := false; r.v := false; r.value := i2;
+      if i2(7) = '1' then r.n := true; else r.n := false; end if;
+      if i2 = x"00" then  r.z := true; else r.z := false; end if;
+    end if;
 
     if instruction.alu_adc then r:= alu_op_add(cpuflags.c, cpuflags.d, i1, i2); end if;
     if instruction.alu_sbc then r:= alu_op_sub(cpuflags.c, cpuflags.d, i1, i2); end if;
