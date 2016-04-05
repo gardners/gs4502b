@@ -2,4 +2,4 @@ grep "#define I_" instructionequations.c | cut -f3 -d\ | tr "|" "\n" | sort -u |
 
 echo "struct flag_name flag_names[]={" >> instruction_flags.h
 
-grep "#define I_" instructionequations.c | cut -f3 -d\ | tr "|" "\n" | tr "A-Z" "a-z" | sort -u | awk '{ printf("{\"%s\",(1LL<<%d)},\n",$1,n++); } END { printf("{NULL,0}\n};\n",n); }' >> instruction_flags.h
+grep "#define I_" instructionequations.c | cut -f3 -d\ | tr "|" "\n" | sort -u | tr "A-Z" "a-z" | awk '{ printf("{\"%s\",(1LL<<%d)},\n",$1,n++); } END { printf("{NULL,0}\n};\n",n); }' >> instruction_flags.h
