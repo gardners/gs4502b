@@ -4,6 +4,8 @@ library ieee;
 use Std.TextIO.all;
 use ieee.STD_LOGIC_1164.all;
 use ieee.numeric_std.all;
+use work.instruction_equations.all;
+use work.instructions.all;
 
 package alu is
 
@@ -42,10 +44,11 @@ package alu is
     i2 : in unsigned(7 downto 0);
     cpuflags : in cpu_flags) return alu_result;
 
-  function do_alu_op(regs : inout cpu_registers;
-                     iflags : in instruction_flags;
-                     i2 : in unsigned(7 downto 0)
-                     ) return alu_result;
+  procedure do_alu_op(regs : inout cpu_registers;
+                      names : out resource_names;
+                      iflags : in instruction_flags;
+                      i2 : in unsigned(7 downto 0)
+                      );
   
 end package;
 
@@ -64,13 +67,13 @@ package body alu is
     ret.c := false;
     ret.value := result(7 downto 0);
     if result(7 downto 0)=x"00" then
-      ret.z <= true;
+      ret.z := true;
     end if;
     if result(8)='0' then
-      ret.c <= true;
+      ret.c := true;
     end if;
     if result(7)='1' then
-      ret.n <= true;
+      ret.n := true;
     end if;
     return ret;
   end alu_op_cmp;
@@ -84,6 +87,7 @@ package body alu is
     variable tmp : unsigned(11 downto 0);
     variable ret : alu_result;
     variable c : std_logic := '0';
+    variable v : std_logic := '0';
   begin
     ret.n := false; ret.z := false; ret.c := false; ret.v := false;
     if flag_c then
@@ -149,6 +153,7 @@ package body alu is
     variable tmp : unsigned(11 downto 0); -- NVZC+8bit result
     variable tmpd : unsigned(8 downto 0);
     variable c : unsigned(8 downto 0) := (others => '0');
+    variable ret : alu_result;
   begin
     if flag_c then
       c(0) := '1';
@@ -195,26 +200,27 @@ package body alu is
     return ret;
   end function alu_op_sub;
 
-  function do_alu_op(regs : inout cpu_registers;
-                     iflags : in instruction_flags;
-                     i2 : in unsigned(7 downto 0)
-                     ) return alu_result is
+  procedure do_alu_op(regs : inout cpu_registers;
+                      names : out resource_names;
+                      iflags : in instruction_flags;
+                      i2 : in unsigned(7 downto 0)
+                      ) is
     variable ret: alu_result;
     variable r : alu_result;
     variable i1: unsigned(7 downto 0) := (others => '1');
   begin    
     ret.value := (others => '1');
     
-    if flags.alusrc_a then i1 := regs.a; end if;
-    if flags.alusrc_b then i1 := regs.b; end if;
+    if iflags.alusrc_a then i1 := regs.a; end if;
+    if iflags.alusrc_b then i1 := regs.b; end if;
     -- SAX and friends AND A and X to form the input argument to the ALU.
     -- Since we apply the value of A above, and set all inputs to high by
     -- default, we can just AND X with the current value of i1 here.
-    if flags.alusrc_x then i1 := (i1 and regs.x); end if;
-    if flags.alusrc_y then i1 := regs.y; end if;
-    if flags.alusrc_z then i1 := regs.z; end if;
-    if flags.alusrc_b then i1 := regs.b; end if;
-    if flags.alusrc_p then
+    if iflags.alusrc_x then i1 := (i1 and regs.x); end if;
+    if iflags.alusrc_y then i1 := regs.y; end if;
+    if iflags.alusrc_z then i1 := regs.z; end if;
+    if iflags.alusrc_b then i1 := regs.b; end if;
+    if iflags.alusrc_p then
       -- For PHP
       i1 := (others => '0');
       if regs.flags.c then i1(0) := '1'; end if;
@@ -225,14 +231,14 @@ package body alu is
       if regs.flags.c then i1(0) := '1'; end if;
       if regs.flags.c then i1(0) := '1'; end if;
     end if;
-    if flags.alusrc_spl then i1 := regs.spl; end if;
-    if flags.alusrc_sph then i1 := regs.sph; end if;
+    if iflags.alusrc_spl then i1 := regs.spl; end if;
+    if iflags.alusrc_sph then i1 := regs.sph; end if;
 
-    r := alu_op(i1,i2,reg.flags);
+    r := alu_op(iflags,i1,i2,regs.flags);
 
-    if flags.aludst_a then regs.a <= ret.value; end if;
-    if flags.aludst_b then regs.b <= ret.value; end if;
-    if flags.aludst_p then
+    if iflags.aludst_a then regs.a <= ret.value; end if;
+    if iflags.aludst_b then regs.b <= ret.value; end if;
+    if iflags.aludst_p then
       -- Set flags from byte: for PLP
       regs.flags <= (others => false);
       -- PLP doesn't change E flag
@@ -244,13 +250,13 @@ package body alu is
       if ret.value(6)='1' then regs.flags.v <= true; end if;
       if ret.value(7)='1' then regs.flags.n <= true; end if;
     end if;
-    if flags.aludst_sph then regs.sph <= ret.value; end if;
-    if flags.aludst_spl then regs.spl <= ret.value; end if;
-    if flags.aludst_x then regs.x <= ret.value; end if;
-    if flags.aludst_y then regs.y <= ret.value; end if;
-    if flags.aludst_z then regs.z <= ret.value; end if;
+    if iflags.aludst_sph then regs.sph <= ret.value; end if;
+    if iflags.aludst_spl then regs.spl <= ret.value; end if;
+    if iflags.aludst_x then regs.x <= ret.value; end if;
+    if iflags.aludst_y then regs.y <= ret.value; end if;
+    if iflags.aludst_z then regs.z <= ret.value; end if;
     
-  end function;
+  end procedure;
 
   
   function alu_op (

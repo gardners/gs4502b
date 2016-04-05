@@ -6,13 +6,34 @@ use work.addressing_modes.all;
 use work.instruction_equations.all;
 
 package instructions is
-      
+
+  -- Allow upto 7 memory transactions in flight at a time
+  subtype transaction_id is integer range 0 to 7;
+
+  subtype translated_address is unsigned(31 downto 0);
+
+  type resource_names is record
+    a : transaction_id;
+    b : transaction_id;
+    x : transaction_id;
+    y : transaction_id;
+    z : transaction_id;
+    spl : transaction_id;
+    sph : transaction_id;
+    flag_z : transaction_id;
+    flag_c : transaction_id;
+    flag_v : transaction_id;
+    flag_n : transaction_id;
+  end record;
+  
   type instruction_resources is record
-    reg_a : boolean;
-    reg_b : boolean;
-    reg_x : boolean;
-    reg_y : boolean;
-    reg_z : boolean;
+    a : boolean;
+    b : boolean;
+    x : boolean;
+    y : boolean;
+    z : boolean;
+    spl : boolean;
+    sph : boolean;
     flag_z : boolean;
     flag_n : boolean;
     flag_c : boolean;
@@ -36,12 +57,6 @@ package instructions is
   
   function to_instruction_bytes(op : unsigned(7 downto 0); arg1 : unsigned(7 downto 0);
                                 arg2 : unsigned(7 downto 0)) return instruction_bytes;
-  
-  -- Allow upto 7 memory transactions in flight at a time
-  subtype transaction_id is integer range 0 to 7;
-
-  subtype translated_address is unsigned(31 downto 0);
-
   
   type transaction_result is record
     valid : boolean;
@@ -132,11 +147,11 @@ package body instructions is
     return instruction_resources is
     variable r : instruction_resources;
   begin
-    r.reg_a := b;
-    r.reg_b := b;
-    r.reg_x := b;
-    r.reg_y := b;
-    r.reg_z := b;
+    r.a := b;
+    r.b := b;
+    r.x := b;
+    r.y := b;
+    r.z := b;
     r.flag_c := b;
     r.flag_d := b;
     r.flag_n := b;
@@ -150,11 +165,11 @@ package body instructions is
     return instruction_resources is
     variable r : instruction_resources;
   begin
-    r.reg_a := a.reg_a and b.reg_a;
-    r.reg_b := a.reg_b and b.reg_b;
-    r.reg_x := a.reg_x and b.reg_x;
-    r.reg_y := a.reg_y and b.reg_y;
-    r.reg_z := a.reg_z and b.reg_z;
+    r.a := a.a and b.a;
+    r.b := a.b and b.b;
+    r.x := a.x and b.x;
+    r.y := a.y and b.y;
+    r.z := a.z and b.z;
     r.flag_c := a.flag_c and b.flag_c;
     r.flag_d := a.flag_d and b.flag_d;
     r.flag_n := a.flag_n and b.flag_n;
@@ -166,7 +181,7 @@ package body instructions is
 
   function not_empty(a : instruction_resources) return boolean is
   begin
-    return a.reg_a or a.reg_b or a.reg_x or a.reg_y or a.reg_z
+    return a.a or a.b or a.x or a.y or a.z
       or a.flag_z or a.flag_n or a.flag_c or a.flag_d or a.flag_v;
   end function;
   

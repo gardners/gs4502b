@@ -34,6 +34,7 @@ use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
 use work.instructions.all;
+use work.alu.all;
 
 entity gs4502b_stage_execute is
   port (
@@ -78,23 +79,10 @@ end gs4502b_stage_execute;
 architecture behavioural of gs4502b_stage_execute is
 
   -- Primary CPU state
-  signal reg_a : unsigned(7 downto 0) := x"00";
-  signal reg_b : unsigned(7 downto 0) := x"00";
-  signal reg_x : unsigned(7 downto 0) := x"00";
-  signal reg_y : unsigned(7 downto 0) := x"00";
-  signal reg_z : unsigned(7 downto 0) := x"00";
-  signal reg_spl : unsigned(7 downto 0) := x"FF";
-  signal reg_sph : unsigned(7 downto 0) := x"01";
   signal reg_pcl : unsigned(7 downto 0) := x"00";
   signal reg_pch : unsigned(7 downto 0) := x"81";
-  signal flag_i : boolean := true;
-  signal flag_d : boolean := false;
-  signal flag_e : boolean := true;
-  signal flag_z : boolean := false;
-  signal flag_c : boolean := false;
-  signal flag_v : boolean := false;
-  signal flag_n : boolean := false;
-
+  signal regs : cpu_registers;
+  
   -- Memory mapping registers
   signal reg_map_lo : std_logic_vector(3 downto 0) := (others => '0');
   signal reg_map_hi : std_logic_vector(3 downto 0)
@@ -113,17 +101,7 @@ architecture behavioural of gs4502b_stage_execute is
   
   -- Register and flag renaming
   signal renamed_resources : instruction_resources;
-  signal reg_a_name : transaction_id;
-  signal reg_x_name : transaction_id;
-  signal reg_b_name : transaction_id;
-  signal reg_y_name : transaction_id;
-  signal reg_z_name : transaction_id;
-  signal reg_spl_name : transaction_id;
-  signal reg_sph_name : transaction_id;
-  signal flag_z_name : transaction_id;
-  signal flag_c_name : transaction_id;
-  signal flag_v_name : transaction_id;
-  signal flag_n_name : transaction_id;
+  signal resource_names : resource_names;
   
 begin
   process(cpuclock)
@@ -149,7 +127,7 @@ begin
       -- Process any completed memory transaction
       if completed_transaction.valid = true then
         if completed_transaction.id = reg_a_name then
-          reg_a <= completed_transaction.value;
+          regs.a <= completed_transaction.value;
           renamed_resources.reg_a <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : reg_a <= $" & to_hstring(completed_transaction.value) &
@@ -287,20 +265,21 @@ begin
         -- Pipeline stages under reset flush themselves.
         stalling <= true;
 
-        flag_e <= true;
-        flag_d <= false;
-        flag_c <= false;
-        flag_z <= true;
-        flag_n <= false;
-        flag_v <= false;
-        flag_i <= true;
-        reg_a <= x"00";
-        reg_b <= x"00";
-        reg_x <= x"00";
-        reg_y <= x"00";
-        reg_z <= x"00";
-        reg_sph <= x"01";
-        reg_spl <= x"FF";
+        regs.flags.e <= true;
+        regs.flags.d <= false;
+        regs.flags.c <= false;
+        regs.flags.z <= true;
+        regs.flags.n <= false;
+        regs.flags.v <= false;
+        regs.flags.i <= true;
+        regs.a <= x"00";
+        regs.b <= x"00";
+        regs.x <= x"00";
+        regs.y <= x"00";
+        regs.z <= x"00";
+        regs.sph <= x"01";
+        regs.spl <= x"FF";
+        
         port_value <= "111";
         port_ddr <= "111";
 
