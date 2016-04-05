@@ -110,6 +110,16 @@ begin
   begin
     if (rising_edge(cpuclock)) then
 
+      report "PC $" & to_hstring(reg_pch & reg_pcl) &
+        " EXECUTE : " &
+        "A:" & to_hstring(regs.a) & " " &
+        "X:" & to_hstring(regs.x) & " " &
+        "Y:" & to_hstring(regs.y) & " " &
+        "Z:" & to_hstring(regs.z) & " " &
+        "B:" & to_hstring(regs.b) & " " &
+        "SP:" & to_hstring(regs.sph & regs.spl) & " "
+        ;
+      
       -- Make copy of registers and register renaming info for mutation.
       regs_out := regs;
       renamed_out := renamed_resources;
@@ -229,6 +239,7 @@ begin
                     renamed_out,
                     instruction_in.instruction_flags,
                     instruction_in.bytes.arg1);
+          report "EXECUTE: Doing ALU operation.";
           
           -- For now, just advance the PC to the next instruction we expect.
           expected_instruction_address <= instruction_in.expected_translated;
