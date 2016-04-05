@@ -144,26 +144,17 @@ begin
         stalling <= true;
       end if;
       
-      instruction_out.bytes <= instruction.bytes;
-      instruction_out.cpu_personality <= instruction.cpu_personality;
-      instruction_out.pc <= instruction.pc;
-      instruction_out.translated <= instruction.translated;
-      instruction_out.addressing_mode <= instruction.addressing_mode;
-      instruction_out.modifies_cpu_personality <= instruction.modifies_cpu_personality;
-      instruction_out.pc_expected <= instruction.pc_expected;
-      instruction_out.pc_mispredict <= instruction.pc_mispredict;
-      instruction_out.expected_translated <= instruction.expected_translated;
-      instruction_out.mispredict_translated <= instruction.mispredict_translated;
-      instruction_out.branch_predict <= instruction.branch_predict;
-
       -- Set instruction flags based on CPU personality and opcode
       if instruction.cpu_personality = CPU6502 then
-        instruction_out.instruction_flags
-          <= get_instruction_flags("0"&std_logic_vector(instruction.bytes.opcode));
+        instruction.instruction_flags
+          := get_instruction_flags("0"&std_logic_vector(instruction.bytes.opcode));
       else
-        instruction_out.instruction_flags
-          <= get_instruction_flags("1"&std_logic_vector(instruction.bytes.opcode));
+        instruction.instruction_flags
+          := get_instruction_flags("1"&std_logic_vector(instruction.bytes.opcode));
       end if;
+
+      instruction_out <= instruction;
+
     end if;    
   end process;    
     
