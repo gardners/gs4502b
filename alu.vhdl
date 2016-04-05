@@ -15,6 +15,27 @@ package alu is
     v : boolean;
   end record;
 
+  type cpu_flags is record
+    c : boolean;
+    d : boolean;
+    i : boolean;
+    z : boolean;
+    e : boolean;
+    v : boolean;
+    n : boolean;
+  end record;
+  
+  type cpu_registers is record
+    flags : cpu_flags;
+    a : unsigned(7 downto 0);
+    b : unsigned(7 downto 0);
+    x : unsigned(7 downto 0);
+    y : unsigned(7 downto 0);
+    z : unsigned(7 downto 0);
+    spl : unsigned(7 downto 0);
+    sph : unsigned(7 downto 0);
+  end record;
+  
   function alu_op (
     instruction : in instruction_flags;
     i1 : in unsigned(7 downto 0);
@@ -23,13 +44,7 @@ package alu is
 
   function do_alu_op(regs : inout cpu_registers;
                      iflags : in instruction_flags;
-                     reg_a : inout unsigned(7 downto 0);
-                     reg_b : inout unsigned(7 downto 0);
-                     reg_x : inout unsigned(7 downto 0);
-                     reg_y : inout unsigned(7 downto 0);
-                     reg_z : inout unsigned(7 downto 0);
-                     reg_spl : inout unsigned(7 downto 0);
-                     reg_sph : inout unsigned(7 downto 0)
+                     i2 : in unsigned(7 downto 0)
                      ) return alu_result;
   
 end package;
@@ -182,23 +197,20 @@ package body alu is
 
   function do_alu_op(regs : inout cpu_registers;
                      iflags : in instruction_flags;
-                     reg_a : inout unsigned(7 downto 0);
-                     reg_b : inout unsigned(7 downto 0);
-                     reg_x : inout unsigned(7 downto 0);
-                     reg_y : inout unsigned(7 downto 0);
-                     reg_z : inout unsigned(7 downto 0);
-                     reg_spl : inout unsigned(7 downto 0);
-                     reg_sph : inout unsigned(7 downto 0)
+                     i2 : in unsigned(7 downto 0)
                      ) return alu_result is
     variable ret: alu_result;
     variable r : alu_result;
     variable i1: unsigned(7 downto 0) := (others => '1');
-    variable i2: unsigned(7 downto 0) := (others => '1');
   begin    
     ret.value := (others => '1');
-
+    
     if flags.alusrc_a then i1 := regs.a; end if;
-    if flags.alusrc_x then i1 := i1 and regs.x; end if;
+    if flags.alusrc_b then i1 := regs.b; end if;
+    -- SAX and friends AND A and X to form the input argument to the ALU.
+    -- Since we apply the value of A above, and set all inputs to high by
+    -- default, we can just AND X with the current value of i1 here.
+    if flags.alusrc_x then i1 := (i1 and regs.x); end if;
     if flags.alusrc_y then i1 := regs.y; end if;
     if flags.alusrc_z then i1 := regs.z; end if;
     if flags.alusrc_b then i1 := regs.b; end if;
