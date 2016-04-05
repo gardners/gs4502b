@@ -155,6 +155,8 @@ begin
 
       instruction_out <= instruction;
 
+      report "instruction.aludst_a = " & boolean'image(instruction.instruction_flags.aludst_a) & ", opcode=$" & to_hstring(instruction.bytes.opcode);
+
     end if;    
   end process;    
     

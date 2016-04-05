@@ -243,7 +243,7 @@ begin
                     renamed_out,
                     instruction_in.instruction_flags,
                     instruction_in.bytes.arg1);
-          report "EXECUTE: Doing ALU operation.";
+          report "EXECUTE: Doing ALU operation. Aout=$" & to_hstring(regs_out.a);
           
           -- For now, just advance the PC to the next instruction we expect.
           expected_instruction_address <= instruction_in.expected_translated;
