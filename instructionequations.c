@@ -8,11 +8,11 @@ struct flag_name {
 
 #include "instruction_flags.h"
 
-#define I_LDA DO_LOAD|ALUSRC_M|ALUDST_A|UPDATE_NZ
-#define I_LDX DO_LOAD|ALUSRC_M|ALUDST_X|UPDATE_NZ
-#define I_LAX DO_LOAD|ALUSRC_M|ALUDST_A|ALUDST_X|UPDATE_NZ
-#define I_LDY DO_LOAD|ALUSRC_M|ALUDST_Y|UPDATE_NZ
-#define I_LDZ DO_LOAD|ALUSRC_M|ALUDST_Z|UPDATE_NZ
+#define I_LDA DO_LOAD|ALUSRC_M|ALUDST_A|UPDATE_NZ|ALU_SET
+#define I_LDX DO_LOAD|ALUSRC_M|ALUDST_X|UPDATE_NZ|ALU_SET
+#define I_LAX DO_LOAD|ALUSRC_M|ALUDST_A|ALUDST_X|UPDATE_NZ|ALU_SET
+#define I_LDY DO_LOAD|ALUSRC_M|ALUDST_Y|UPDATE_NZ|ALU_SET
+#define I_LDZ DO_LOAD|ALUSRC_M|ALUDST_Z|UPDATE_NZ|ALU_SET
 #define I_STA DO_STORE|ALUSRC_A|UPDATE_NZ
 #define I_STX DO_STORE|ALUSRC_X|UPDATE_NZ
 #define I_SAX DO_STORE|ALUSRC_A|ALUSRC_X|UPDATE_NZ
@@ -78,9 +78,9 @@ struct flag_name {
 #define I_NOP DO_MAP
 
 // Register increment/decrements
-#define I_NEG ALUSRC_A|ALU_NEG|ALUDSY_A|UPDATE_NZ
-#define I_INCA DO_LOAD|DO_STORE|DO_ALUOP|ALU_INC|UPDATE_NZ
-#define I_DECA DO_LOAD|DO_STORE|DO_ALUOP|ALU_INC|UPDATE_NZ
+#define I_NEG ALUSRC_A|ALU_NEG|ALUDST_A|UPDATE_NZ
+#define I_INCA ALUSRC_A|ALU_INC|ALUDST_A|UPDATE_NZ
+#define I_DECA ALUSRC_A|ALU_INC|ALUDST_A|UPDATE_NZ
 #define I_DEX ALUSRC_X|ALU_DEC|ALUDST_X|UPDATE_NZ
 #define I_INX ALUSRC_X|ALU_INC|ALUDST_X|UPDATE_NZ
 #define I_DEY ALUSRC_Y|ALU_DEC|ALUDST_Y|UPDATE_NZ
@@ -159,6 +159,9 @@ char *flagname(long long flag) {
   exit(-1);
 }
 
+// XXX - Mark all Accumulator mode instructions, so that they can be marked non-load
+// XXX - Mark all Immediate mode instructions, so that they can be marked non-load
+// XXX   (like I_INCA and I_DECA for the accumulator mode of INC/DEC)
 long long opcodes[512]={
   // 4502 personality
     I_BRK,I_ORA,I_CLE,I_SEE,I_TSB,I_ORA,I_ASL,I_RMB,I_PHP,I_ORA,I_ASL,I_TSY,I_TSB,I_ORA,I_ASL,I_BBR,
