@@ -44,7 +44,8 @@ package alu is
     i2 : in unsigned(7 downto 0);
     cpuflags : in cpu_flags) return alu_result;
 
-  procedure do_alu_op(regs : inout cpu_registers;
+  procedure do_alu_op(regs : in cpu_registers;
+                      regsout : out cpu_registers;
                       names : out resource_names;
                       iflags : in instruction_flags;
                       i2 : in unsigned(7 downto 0)
@@ -200,7 +201,8 @@ package body alu is
     return ret;
   end function alu_op_sub;
 
-  procedure do_alu_op(regs : inout cpu_registers;
+  procedure do_alu_op(regs : in cpu_registers;
+                      regsout : out cpu_registers;
                       names : out resource_names;
                       iflags : in instruction_flags;
                       i2 : in unsigned(7 downto 0)
@@ -210,6 +212,8 @@ package body alu is
     variable i1: unsigned(7 downto 0) := (others => '1');
   begin    
     ret.value := (others => '1');
+
+    regsout := regs;
     
     if iflags.alusrc_a then i1 := regs.a; end if;
     if iflags.alusrc_b then i1 := regs.b; end if;
@@ -236,25 +240,25 @@ package body alu is
 
     r := alu_op(iflags,i1,i2,regs.flags);
 
-    if iflags.aludst_a then regs.a <= ret.value; end if;
-    if iflags.aludst_b then regs.b <= ret.value; end if;
+    if iflags.aludst_a then regsout.a := ret.value; end if;
+    if iflags.aludst_b then regsout.b := ret.value; end if;
     if iflags.aludst_p then
       -- Set flags from byte: for PLP
-      regs.flags <= (others => false);
+      regsout.flags := (others => false);
       -- PLP doesn't change E flag
-      regs.flags.e <= regs.flags.e;
-      if ret.value(0)='1' then regs.flags.c <= true; end if;
-      if ret.value(1)='1' then regs.flags.z <= true; end if;
-      if ret.value(2)='1' then regs.flags.i <= true; end if;
-      if ret.value(3)='1' then regs.flags.d <= true; end if;
-      if ret.value(6)='1' then regs.flags.v <= true; end if;
-      if ret.value(7)='1' then regs.flags.n <= true; end if;
+      regsout.flags.e := regs.flags.e;
+      if ret.value(0)='1' then regsout.flags.c := true; end if;
+      if ret.value(1)='1' then regsout.flags.z := true; end if;
+      if ret.value(2)='1' then regsout.flags.i := true; end if;
+      if ret.value(3)='1' then regsout.flags.d := true; end if;
+      if ret.value(6)='1' then regsout.flags.v := true; end if;
+      if ret.value(7)='1' then regsout.flags.n := true; end if;
     end if;
-    if iflags.aludst_sph then regs.sph <= ret.value; end if;
-    if iflags.aludst_spl then regs.spl <= ret.value; end if;
-    if iflags.aludst_x then regs.x <= ret.value; end if;
-    if iflags.aludst_y then regs.y <= ret.value; end if;
-    if iflags.aludst_z then regs.z <= ret.value; end if;
+    if iflags.aludst_sph then regsout.sph := ret.value; end if;
+    if iflags.aludst_spl then regsout.spl := ret.value; end if;
+    if iflags.aludst_x then regsout.x := ret.value; end if;
+    if iflags.aludst_y then regsout.y := ret.value; end if;
+    if iflags.aludst_z then regsout.z := ret.value; end if;
     
   end procedure;
 
@@ -264,16 +268,19 @@ package body alu is
     i1 : in unsigned(7 downto 0);
     i2 : in unsigned(7 downto 0);
     cpuflags : in cpu_flags) return alu_result is
+    variable r : alu_result;
   begin
-    if instructions.alu_nop then
-      r.c := false; r.v := false; r.value := i1;
-      if i1(7) = '1' then r.n := true; else r.n := false; end if;
-      if i1 = x"00" then  r.z := true; else r.z := false; end if;
-    end if;
-    if instructions.alu_adc then r:= alu_op_adc(cpuflags.c, cpuflags.d, i1, i2); end if;
-    if instructions.alu_sbc then r:= alu_op_sub(cpuflags.c, cpuflags.d, i1, i2); end if;
+    -- default action is nop, ie output input 1
+    r.c := false; r.v := false; r.value := i1;
+    if i1(7) = '1' then r.n := true; else r.n := false; end if;
+    if i1 = x"00" then  r.z := true; else r.z := false; end if;
+
+    if instruction.alu_adc then r:= alu_op_add(cpuflags.c, cpuflags.d, i1, i2); end if;
+    if instruction.alu_sbc then r:= alu_op_sub(cpuflags.c, cpuflags.d, i1, i2); end if;
+    if instruction.alu_cmp then r:= alu_op_cmp(i1, i2); end if;
     -- XXX Implement missing ALU operations
-    
+
+    return r;
   end function;
 
   

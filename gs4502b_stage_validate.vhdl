@@ -184,23 +184,23 @@ begin
 
         if completed_transaction.id = reg_a_name then
           -- Must happen same cycle in execute: reg_a <= completed_transaction_value;
-          resources_what_will_still_be_outstanding_next_cycle.reg_a <= false;
+          resources_what_will_still_be_outstanding_next_cycle.a <= false;
         end if;
         if completed_transaction.id = reg_b_name then
           -- Must happen same cycle in execute: reg_b <= completed_transaction_value;
-          resources_what_will_still_be_outstanding_next_cycle.reg_b <= false;
+          resources_what_will_still_be_outstanding_next_cycle.b <= false;
         end if;
         if completed_transaction.id = reg_x_name then
           -- Must happen same cycle in execute: reg_x <= completed_transaction_value;
-          resources_what_will_still_be_outstanding_next_cycle.reg_x <= false;
+          resources_what_will_still_be_outstanding_next_cycle.x <= false;
         end if;
         if completed_transaction.id = reg_y_name then
           -- Must happen same cycle in execute: reg_y <= completed_transaction_value;
-          resources_what_will_still_be_outstanding_next_cycle.reg_y <= false;
+          resources_what_will_still_be_outstanding_next_cycle.y <= false;
         end if;
         if completed_transaction.id = reg_z_name then
           -- Must happen same cycle in execute: reg_z <= completed_transaction_value;
-          resources_what_will_still_be_outstanding_next_cycle.reg_z <= false;
+          resources_what_will_still_be_outstanding_next_cycle.z <= false;
         end if;
         if completed_transaction.id = flag_z_name then
           -- Must happen same cycle in execute: flag_z <= completed_transaction_value;
@@ -228,25 +228,25 @@ begin
         report "$" & to_hstring(last_instruction_expected_address) &
           " VALIDATE : Processing resource lock notification from EXECUTE.";
 
-        if resources_freshly_locked_by_execute_stage.reg_a then
+        if resources_freshly_locked_by_execute_stage.a then
           reg_a_name <= resource_lock_transaction_id_in;
-          resources_what_will_still_be_outstanding_next_cycle.reg_a <= true;
+          resources_what_will_still_be_outstanding_next_cycle.a <= true;
         end if;
-        if resources_freshly_locked_by_execute_stage.reg_b then
+        if resources_freshly_locked_by_execute_stage.b then
           reg_b_name <= resource_lock_transaction_id_in;
-          resources_what_will_still_be_outstanding_next_cycle.reg_b <= true;
+          resources_what_will_still_be_outstanding_next_cycle.b <= true;
         end if;
-        if resources_freshly_locked_by_execute_stage.reg_x then
+        if resources_freshly_locked_by_execute_stage.x then
           reg_x_name <= resource_lock_transaction_id_in;
-          resources_what_will_still_be_outstanding_next_cycle.reg_x <= true;
+          resources_what_will_still_be_outstanding_next_cycle.x <= true;
         end if;
-        if resources_freshly_locked_by_execute_stage.reg_y then
+        if resources_freshly_locked_by_execute_stage.y then
           reg_y_name <= resource_lock_transaction_id_in;
-          resources_what_will_still_be_outstanding_next_cycle.reg_y <= true;
+          resources_what_will_still_be_outstanding_next_cycle.y <= true;
         end if;
-        if resources_freshly_locked_by_execute_stage.reg_z then
+        if resources_freshly_locked_by_execute_stage.z then
           reg_z_name <= resource_lock_transaction_id_in;
-          resources_what_will_still_be_outstanding_next_cycle.reg_z <= true;
+          resources_what_will_still_be_outstanding_next_cycle.z <= true;
         end if;
         if resources_freshly_locked_by_execute_stage.flag_z then
           flag_z_name <= resource_lock_transaction_id_in;

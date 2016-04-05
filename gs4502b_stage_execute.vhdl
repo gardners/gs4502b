@@ -101,7 +101,7 @@ architecture behavioural of gs4502b_stage_execute is
   
   -- Register and flag renaming
   signal renamed_resources : instruction_resources;
-  signal resource_names : resource_names;
+  signal res_names : resource_names;
   
 begin
   process(cpuclock)
@@ -126,64 +126,64 @@ begin
       
       -- Process any completed memory transaction
       if completed_transaction.valid = true then
-        if completed_transaction.id = reg_a_name then
+        if completed_transaction.id = res_names.a then
           regs.a <= completed_transaction.value;
-          renamed_resources.reg_a <= false;
+          renamed_resources.a <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : reg_a <= $" & to_hstring(completed_transaction.value) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
-        if completed_transaction.id = reg_b_name then
-          reg_b <= completed_transaction.value;
-          renamed_resources.reg_b <= false;
+        if completed_transaction.id = res_names.b then
+          regs.b <= completed_transaction.value;
+          renamed_resources.b <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : reg_b <= $" & to_hstring(completed_transaction.value) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
-        if completed_transaction.id = reg_x_name then
-          reg_x <= completed_transaction.value;
-          renamed_resources.reg_x <= false;
+        if completed_transaction.id = res_names.x then
+          regs.x <= completed_transaction.value;
+          renamed_resources.x <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : reg_x <= $" & to_hstring(completed_transaction.value) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
-        if completed_transaction.id = reg_y_name then
-          reg_y <= completed_transaction.value;
-          renamed_resources.reg_y <= false;
+        if completed_transaction.id = res_names.y then
+          regs.y <= completed_transaction.value;
+          renamed_resources.y <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : reg_y <= $" & to_hstring(completed_transaction.value) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
-        if completed_transaction.id = reg_z_name then
-          reg_z <= completed_transaction.value;
-          renamed_resources.reg_z <= false;
+        if completed_transaction.id = res_names.z then
+          regs.z <= completed_transaction.value;
+          renamed_resources.z <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : reg_z <= $" & to_hstring(completed_transaction.value) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
-        if completed_transaction.id = flag_z_name then
-          flag_z <= completed_transaction.z;
+        if completed_transaction.id = res_names.flag_z then
+          regs.flags.z <= completed_transaction.z;
           renamed_resources.flag_z <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : flag_z <= " & boolean'image(completed_transaction.z) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
-        if completed_transaction.id = flag_c_name then
-          flag_c <= completed_transaction.c;
+        if completed_transaction.id = res_names.flag_c then
+          regs.flags.c <= completed_transaction.c;
           renamed_resources.flag_c <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : flag_c <= " & boolean'image(completed_transaction.c) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
-        if completed_transaction.id = flag_n_name then
-          flag_n <= completed_transaction.n;
+        if completed_transaction.id = res_names.flag_n then
+          regs.flags.n <= completed_transaction.n;
           renamed_resources.flag_n <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : flag_n <= " & boolean'image(completed_transaction.n) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
-        if completed_transaction.id = flag_v_name then
-          flag_v <= completed_transaction.v;
+        if completed_transaction.id = res_names.flag_v then
+          regs.flags.v <= completed_transaction.v;
           renamed_resources.flag_v <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : flag_v <= " & boolean'image(completed_transaction.v) &
@@ -292,11 +292,11 @@ begin
         reg_pcl <= x"00";
         
         -- Clear any register renaming state
-        renamed_resources.reg_a <= false;
-        renamed_resources.reg_b <= false;
-        renamed_resources.reg_x <= false;
-        renamed_resources.reg_y <= false;
-        renamed_resources.reg_z <= false;
+        renamed_resources.a <= false;
+        renamed_resources.b <= false;
+        renamed_resources.x <= false;
+        renamed_resources.y <= false;
+        renamed_resources.z <= false;
         renamed_resources.flag_z <= false;
         renamed_resources.flag_c <= false;
         renamed_resources.flag_n <= false;
