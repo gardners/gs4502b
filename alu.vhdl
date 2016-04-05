@@ -46,7 +46,8 @@ package alu is
 
   procedure do_alu_op(regs : in cpu_registers;
                       regsout : out cpu_registers;
-                      names : out resource_names;
+                      renamed : in instruction_resources;
+                      renamedout : out instruction_resources;
                       iflags : in instruction_flags;
                       i2 : in unsigned(7 downto 0)
                       );
@@ -203,7 +204,8 @@ package body alu is
 
   procedure do_alu_op(regs : in cpu_registers;
                       regsout : out cpu_registers;
-                      names : out resource_names;
+                      renamed : in instruction_resources;
+                      renamedout : out instruction_resources;
                       iflags : in instruction_flags;
                       i2 : in unsigned(7 downto 0)
                       ) is
@@ -214,6 +216,7 @@ package body alu is
     ret.value := (others => '1');
 
     regsout := regs;
+    renamedout := renamed;
     
     if iflags.alusrc_a then i1 := regs.a; end if;
     if iflags.alusrc_b then i1 := regs.b; end if;
@@ -253,12 +256,29 @@ package body alu is
       if ret.value(3)='1' then regsout.flags.d := true; end if;
       if ret.value(6)='1' then regsout.flags.v := true; end if;
       if ret.value(7)='1' then regsout.flags.n := true; end if;
+      -- Cancel renaming on all renamable flags (I and E are not renamable)
+      renamedout.flag_c := false;
+      renamedout.flag_d := false;
+      renamedout.flag_n := false;
+      renamedout.flag_v := false;
+      renamedout.flag_z := false;
     end if;
     if iflags.aludst_sph then regsout.sph := ret.value; end if;
     if iflags.aludst_spl then regsout.spl := ret.value; end if;
     if iflags.aludst_x then regsout.x := ret.value; end if;
     if iflags.aludst_y then regsout.y := ret.value; end if;
     if iflags.aludst_z then regsout.z := ret.value; end if;
+    if iflags.update_nz then
+      regsout.flags.n := ret.n;
+      regsout.flags.z := ret.z;
+      renamedout.flag_z := false;
+      renamedout.flag_n := false;
+    end if;
+    if iflags.update_c then
+      regsout.flags.c := ret.c;
+      renamedout.flag_c := false;
+    end if;
+    
     
   end procedure;
 

@@ -105,9 +105,15 @@ architecture behavioural of gs4502b_stage_execute is
   
 begin
   process(cpuclock)
+    variable regs_out : cpu_registers;
+    variable renamed_out : instruction_resources;
   begin
     if (rising_edge(cpuclock)) then
 
+      -- Make copy of registers and register renaming info for mutation.
+      regs_out := regs;
+      renamed_out := renamed_resources;
+      
       monitor_pc(15 downto 8) <= reg_pch;
       monitor_pc(7 downto 0) <= reg_pcl;
       
@@ -212,9 +218,18 @@ begin
             " EXECUTE : Executing instruction.";
           -- XXX report details of instruction
 
-
           -- XXX Not yet implemented!
-
+          -- XXX While the below plumbs in the ALU, no special instructions, or
+          -- anything which touches memory (including the stack) are implemented.
+          
+          -- If the instruction is immediate, implied or accumulator mode
+          do_alu_op(regs,
+                    regs_out,
+                    renamed_resources,
+                    renamed_out,
+                    instruction_in.instruction_flags,
+                    instruction_in.bytes.arg1);
+          
           -- For now, just advance the PC to the next instruction we expect.
           expected_instruction_address <= instruction_in.expected_translated;
           expected_instruction_pc <= instruction_in.pc_expected;
@@ -252,6 +267,10 @@ begin
           
       end if;
 
+      -- Commit updates to registers and renaming of resources
+      regs <= regs_out;
+      renamed_resources <= renamed_out;
+      
       -- On reset, force PC to Hypervisor mode and entry point, and reset
       -- register values.
       if reset = '0' then
