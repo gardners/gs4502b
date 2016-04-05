@@ -211,7 +211,6 @@ package body alu is
                       i2 : in unsigned(7 downto 0)
                       ) is
     variable ret: alu_result;
-    variable r : alu_result;
     variable i1: unsigned(7 downto 0) := (others => '1');
   begin    
     ret.value := (others => '1');
@@ -242,7 +241,9 @@ package body alu is
     if iflags.alusrc_spl then i1 := regs.spl; end if;
     if iflags.alusrc_sph then i1 := regs.sph; end if;
 
-    r := alu_op(iflags,i1,i2,regs.flags);
+    ret := alu_op(iflags,i1,i2,regs.flags);
+    report "ALU: i1=$" & to_hstring(i1) & ", i2=$" & to_hstring(i2)
+      & ", result=$" & to_hstring(ret.value);
 
     if iflags.aludst_a then
       regsout.a := ret.value;
