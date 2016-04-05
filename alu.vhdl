@@ -4,6 +4,7 @@ library ieee;
 use Std.TextIO.all;
 use ieee.STD_LOGIC_1164.all;
 use ieee.numeric_std.all;
+use work.debugtools.all;
 use work.instruction_equations.all;
 use work.instructions.all;
 
@@ -243,7 +244,10 @@ package body alu is
 
     r := alu_op(iflags,i1,i2,regs.flags);
 
-    if iflags.aludst_a then regsout.a := ret.value; end if;
+    if iflags.aludst_a then
+      regsout.a := ret.value;
+      report "ALU: Setting A to $" & to_hstring(ret.value);
+    end if;
     if iflags.aludst_b then regsout.b := ret.value; end if;
     if iflags.aludst_p then
       -- Set flags from byte: for PLP

@@ -254,6 +254,7 @@ begin  -- behavioural
   decode_stage: entity work.gs4502b_stage_decode
     port map (
       cpuclock => cpuclock,
+      current_cpu_personality => stage_execute_cpu_personality,
       cpuport_value => cpuport_value,
       cpuport_ddr => cpuport_ddr,
       viciii_iomode => viciii_iomode,

@@ -141,9 +141,9 @@ begin
       -- address_redirecting interface, which disacrds all instruction buffer
       -- contents, and prevents it loading more until released.
       if current_cpu_personality = CPU6502 then
-        opcode_high_bit <= '0';
-      else
         opcode_high_bit <= '1';
+      else
+        opcode_high_bit <= '0';
       end if;
       memory_ilen0 <= instruction_length(opcode_high_bit&memory_data0_buf1(7 downto 0));
       memory_ilen1 <= instruction_length(opcode_high_bit&memory_data1_buf1(7 downto 0));
