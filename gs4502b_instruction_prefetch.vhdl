@@ -145,10 +145,10 @@ begin
       else
         opcode_high_bit <= '0';
       end if;
-      memory_ilen0 <= instruction_length(opcode_high_bit&memory_data0_buf1(7 downto 0));
-      memory_ilen1 <= instruction_length(opcode_high_bit&memory_data1_buf1(7 downto 0));
-      memory_ilen2 <= instruction_length(opcode_high_bit&memory_data2_buf1(7 downto 0));
-      memory_ilen3 <= instruction_length(opcode_high_bit&memory_data3_buf1(7 downto 0));
+      memory_ilen0 <= instruction_length(opcode_high_bit&memory_data0_buf(7 downto 0));
+      memory_ilen1 <= instruction_length(opcode_high_bit&memory_data1_buf(7 downto 0));
+      memory_ilen2 <= instruction_length(opcode_high_bit&memory_data2_buf(7 downto 0));
+      memory_ilen3 <= instruction_length(opcode_high_bit&memory_data3_buf(7 downto 0));
 
       store_offset := bytes_ready;
       consumed_bytes := 0;
