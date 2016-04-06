@@ -350,6 +350,25 @@ package body alu is
     if instruction.alu_adc then r:= alu_op_add(cpuflags.c, cpuflags.d, i1, i2); end if;
     if instruction.alu_sbc then r:= alu_op_sub(cpuflags.c, cpuflags.d, i1, i2); end if;
     if instruction.alu_cmp then r:= alu_op_cmp(i1, i2); end if;
+    if instruction.alu_or then
+      r.value := unsigned(std_logic_vector(i1) or std_logic_vector(i2));
+      r.n := false; r.z := false;
+      if r.value(7) = '1' then r.n := true; end if;
+      if r.value = "000000000" then r.z := true; end if;
+    end if;
+    if instruction.alu_and then
+      r.value := unsigned(std_logic_vector(i1) and std_logic_vector(i2));
+      r.n := false; r.z := false;
+      if r.value(7) = '1' then r.n := true; end if;
+      if r.value = "000000000" then r.z := true; end if;
+    end if;
+    if instruction.alu_xor then
+      r.value := unsigned(std_logic_vector(i1) xor std_logic_vector(i2));
+      r.n := false; r.z := false;
+      if r.value(7) = '1' then r.n := true; end if;
+      if r.value = "000000000" then r.z := true; end if;
+    end if;
+    
     -- XXX Implement missing ALU operations
 
     return r;
