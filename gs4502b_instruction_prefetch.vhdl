@@ -56,6 +56,9 @@ entity gs4502b_instruction_prefetch is
 
     instruction_out : out instruction_information;
     instruction_out_valid : out boolean;
+    branch8_pc : out unsigned(15 downto 0);
+    branch16_pc : out unsigned(15 downto 0);
+    branch8_zp_pc : out unsigned(15 downto 0);
 
     -- Interface to 4x 64KB RAMs
     memory_address : out std_logic_vector(15 downto 0);
@@ -300,9 +303,9 @@ begin
           & "DIVERSION requested to $" & to_hstring(redirected_address)
           & ", next_line = $"
           & to_hstring(redirected_address(9 downto 0));
-        instruction_address <= redirected_address;
+        instruction_address <= redirected_address(31 downto 2)&"00";
         instruction_pc(15 downto 8) <= redirected_pch;
-        instruction_pc(7 downto 0) <= redirected_address(7 downto 0);
+        instruction_pc(7 downto 0) <= redirected_address(7 downto 2)&"00";
 
         -- Invalidate current buffer
         bytes_ready <= 0;
@@ -357,6 +360,9 @@ begin
         instruction.bytes.arg2 := byte_buffer(23 downto 16);
       else
         instruction.translated := (others => '1');
+        -- Set upper byte of address field to B register, so that we can treat
+        -- ZP and ABS addressing modes equivalently. (Also gives us the option
+        -- of having another CPU personality that allows (ABS),Y etc).
         instruction.bytes.arg2 := reg_b;
       end if;
       instruction.pc := instruction_pc;
@@ -366,7 +372,15 @@ begin
 
       -- Work out possible PC values for JMP/JSR, as well as 8 and 16 bit
       -- branch options.
-
+      branch8_pc <=
+        to_unsigned(to_integer(next_pc) - 127 + to_integer(byte_buffer(15 downto 8)),16);
+      branch16_pc <=
+        to_unsigned(to_integer(next_pc) - 32767 + to_integer(byte_buffer(23 downto 8)),16);
+      -- For those bizarre BBR/BBS instructions, where the branch is from the
+      -- 3rd byte of the instruction, not the 2nd
+      branch8_zp_pc <=
+        to_unsigned(to_integer(next_pc) - 126 + to_integer(byte_buffer(23 downto 16)),16);
+      
       instruction_out <= instruction;
     end if;
   end process;
