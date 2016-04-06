@@ -177,12 +177,11 @@ begin
 
         if skip_bytes > 0 then
           instruction_out_valid <= false;
-          consumed_bytes := skip_bytes;
           skip_bytes <= 0;
         else
-          consumed_bytes := ilen_buffer(0);
           instruction_out_valid <= true;
         end if;
+        consumed_bytes := ilen_buffer(0);
         new_bytes_ready := bytes_ready - consumed_bytes;
         
         case consumed_bytes is
@@ -314,8 +313,13 @@ begin
         -- the next word.
         fetched_bytes <= 0;
 
-        -- Indicate how many bytes we need to skip
-        skip_bytes <= to_integer(redirected_address(1 downto 0));
+        -- Indicate how many bytes we need to skip.
+        -- To keep timing, we have to overwrite ilen_buffer(0), as muxing to
+        -- pick that or skip_bytes is too slow.
+        if redirected_address(1 downto 0) /= "00" then
+          skip_bytes <= to_integer(redirected_address(1 downto 0));
+          ilen_buffer(0) <= to_integer(redirected_address(1 downto 0));
+        end if;
 
         -- Start reading from this address
         -- fastram/chipram from CPU side is a single 256KB RAM, composed of 4x
