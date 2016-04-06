@@ -219,27 +219,27 @@ package body alu is
     renamedout := renamed;
     
     if iflags.alusrc_a then i1 := regs.a; end if;
-    if iflags.alusrc_b then i1 := regs.b; end if;
     -- SAX and friends AND A and X to form the input argument to the ALU.
     -- Since we apply the value of A above, and set all inputs to high by
     -- default, we can just AND X with the current value of i1 here.
     if iflags.alusrc_x then i1 := (i1 and regs.x); end if;
-    if iflags.alusrc_y then i1 := regs.y; end if;
-    if iflags.alusrc_z then i1 := regs.z; end if;
-    if iflags.alusrc_b then i1 := regs.b; end if;
-    if iflags.alusrc_p then
-      -- For PHP
-      i1 := (others => '0');
-      if regs.flags.c then i1(0) := '1'; end if;
-      if regs.flags.c then i1(0) := '1'; end if;
-      if regs.flags.c then i1(0) := '1'; end if;
-      if regs.flags.c then i1(0) := '1'; end if;
-      if regs.flags.c then i1(0) := '1'; end if;
-      if regs.flags.c then i1(0) := '1'; end if;
-      if regs.flags.c then i1(0) := '1'; end if;
-    end if;
-    if iflags.alusrc_spl then i1 := regs.spl; end if;
-    if iflags.alusrc_sph then i1 := regs.sph; end if;
+
+    -- if iflags.alusrc_b then i1 := regs.b; end if;
+    -- if iflags.alusrc_y then i1 := regs.y; end if;
+    -- if iflags.alusrc_z then i1 := regs.z; end if;
+    -- if iflags.alusrc_p then
+    --   -- For PHP
+    --   i1 := (others => '0');
+    --   if regs.flags.c then i1(0) := '1'; end if;
+    --   if regs.flags.c then i1(0) := '1'; end if;
+    --   if regs.flags.c then i1(0) := '1'; end if;
+    --   if regs.flags.c then i1(0) := '1'; end if;
+    --   if regs.flags.c then i1(0) := '1'; end if;
+    --   if regs.flags.c then i1(0) := '1'; end if;
+    --   if regs.flags.c then i1(0) := '1'; end if;
+    -- end if;
+    -- if iflags.alusrc_spl then i1 := regs.spl; end if;
+    -- if iflags.alusrc_sph then i1 := regs.sph; end if;
 
     ret := alu_op(iflags,i1,i2,regs.flags);
     report "ALU: i1=$" & to_hstring(i1) & ", i2=$" & to_hstring(i2)
@@ -250,29 +250,29 @@ package body alu is
       report "ALU: Setting A to $" & to_hstring(ret.value);
     end if;
     if iflags.aludst_b then regsout.b := ret.value; end if;
-    if iflags.aludst_p then
-      -- Set flags from byte: for PLP
-      regsout.flags := (others => false);
-      -- PLP doesn't change E flag
-      regsout.flags.e := regs.flags.e;
-      if ret.value(0)='1' then regsout.flags.c := true; end if;
-      if ret.value(1)='1' then regsout.flags.z := true; end if;
-      if ret.value(2)='1' then regsout.flags.i := true; end if;
-      if ret.value(3)='1' then regsout.flags.d := true; end if;
-      if ret.value(6)='1' then regsout.flags.v := true; end if;
-      if ret.value(7)='1' then regsout.flags.n := true; end if;
-      -- Cancel renaming on all renamable flags (I and E are not renamable)
-      renamedout.flag_c := false;
-      renamedout.flag_d := false;
-      renamedout.flag_n := false;
-      renamedout.flag_v := false;
-      renamedout.flag_z := false;
-    end if;
-    if iflags.aludst_sph then regsout.sph := ret.value; end if;
-    if iflags.aludst_spl then regsout.spl := ret.value; end if;
-    if iflags.aludst_x then regsout.x := ret.value; end if;
-    if iflags.aludst_y then regsout.y := ret.value; end if;
-    if iflags.aludst_z then regsout.z := ret.value; end if;
+    -- if iflags.aludst_p then
+    --   -- Set flags from byte: for PLP
+    --   regsout.flags := (others => false);
+    --   -- PLP doesn't change E flag
+    --   regsout.flags.e := regs.flags.e;
+    --   if ret.value(0)='1' then regsout.flags.c := true; end if;
+    --   if ret.value(1)='1' then regsout.flags.z := true; end if;
+    --   if ret.value(2)='1' then regsout.flags.i := true; end if;
+    --   if ret.value(3)='1' then regsout.flags.d := true; end if;
+    --   if ret.value(6)='1' then regsout.flags.v := true; end if;
+    --   if ret.value(7)='1' then regsout.flags.n := true; end if;
+    --   -- Cancel renaming on all renamable flags (I and E are not renamable)
+    --   renamedout.flag_c := false;
+    --   renamedout.flag_d := false;
+    --   renamedout.flag_n := false;
+    --   renamedout.flag_v := false;
+    --   renamedout.flag_z := false;
+    -- end if;
+    -- if iflags.aludst_sph then regsout.sph := ret.value; end if;
+    -- if iflags.aludst_spl then regsout.spl := ret.value; end if;
+    -- if iflags.aludst_x then regsout.x := ret.value; end if;
+    -- if iflags.aludst_y then regsout.y := ret.value; end if;
+    -- if iflags.aludst_z then regsout.z := ret.value; end if;
     if iflags.update_nz then
       regsout.flags.n := ret.n;
       regsout.flags.z := ret.z;
@@ -287,7 +287,20 @@ package body alu is
       regsout.flags.v := ret.v;
       renamedout.flag_v := false;
     end if;
-    
+
+    -- Now do transfers explicity, so that ALU logic is not in the path
+    if iflags.alusrc_a then
+      if iflags.aludst_b then regsout.b := regs.a; end if;
+      if iflags.aludst_x then regsout.x := regs.a; end if;
+      if iflags.aludst_y then regsout.y := regs.a; end if;
+      if iflags.aludst_z then regsout.z := regs.a; end if;
+    end if;
+    if iflags.aludst_a then
+      if iflags.alusrc_a then regsout.a := regs.b; end if;
+      if iflags.alusrc_x then regsout.a := regs.x; end if;
+      if iflags.alusrc_y then regsout.a := regs.y; end if;
+      if iflags.alusrc_z then regsout.a := regs.z; end if;
+    end if;
     
   end procedure;
 
