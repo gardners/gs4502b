@@ -99,6 +99,8 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal memory_ilen3 : integer range 1 to 3 := 1;
 
   signal opcode_high_bit : std_logic := '1';
+
+  signal skip_bytes : integer := 0;
 begin
   process (cpuclock) is
     variable instruction : instruction_information;
@@ -166,9 +168,14 @@ begin
         -- Work out bytes in instruction, so that we can shift down appropriately.
         -- XXX
 
-        instruction_out_valid <= true;
-        
-        consumed_bytes := ilen_buffer(0);
+        if skip_bytes > 0 then
+          instruction_out_valid <= false;
+          consumed_bytes := skip_bytes;
+          skip_bytes <= 0;
+        else
+          consumed_bytes := ilen_buffer(0);
+          instruction_out_valid <= true;
+        end if;
         new_bytes_ready := bytes_ready - consumed_bytes;
         
         case consumed_bytes is
@@ -299,6 +306,9 @@ begin
         -- And reset the bytes eaten counter that we use to decide when to load
         -- the next word.
         fetched_bytes <= 0;
+
+        -- Indicate how many bytes we need to skip
+        skip_bytes <= to_integer(redirected_address(1 downto 0));
 
         -- Start reading from this address
         -- fastram/chipram from CPU side is a single 256KB RAM, composed of 4x
