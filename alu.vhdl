@@ -258,6 +258,8 @@ package body alu is
     if iflags.alusrc_y then ret.value := regs.y; end if;
     if iflags.alusrc_z then ret.value := regs.z; end if;
 
+    -- XXX Also do X/Y SP transfers
+
     -- Finally, we need to handle INC and DEC operations on the index registers.
     -- (and also on the accumulator for 4502 mode)
     if iflags.alu_inc then
@@ -362,7 +364,7 @@ package body alu is
       if r.value(7) = '1' then r.n := true; end if;
       if r.value = "000000000" then r.z := true; end if;
     end if;
-    if instruction.alu_xor then
+    if instruction.alu_eor then
       r.value := unsigned(std_logic_vector(i1) xor std_logic_vector(i2));
       r.n := false; r.z := false;
       if r.value(7) = '1' then r.n := true; end if;
