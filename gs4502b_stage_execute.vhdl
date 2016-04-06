@@ -43,6 +43,8 @@ entity gs4502b_stage_execute is
     reset : in std_logic;
 
     monitor_pc : out unsigned(15 downto 0);
+
+    reg_b : out unsigned(7 downto 0);
     
     instruction_in : in instruction_information;
     instruction_valid : in boolean;
@@ -102,7 +104,11 @@ architecture behavioural of gs4502b_stage_execute is
   -- Register and flag renaming
   signal renamed_resources : instruction_resources;
   signal res_names : resource_names;
-  
+
+  signal flushing_pipeline : boolean := false;
+  constant PIPE_FLUSH_CYCLES : integer := 10;
+  signal flush_cycles : integer range 0 to PIPE_FLUSH_CYCLES := 0;
+
 begin
   process(cpuclock)
     variable regs_out : cpu_registers;
@@ -130,6 +136,9 @@ begin
       
       monitor_pc(15 downto 8) <= reg_pch;
       monitor_pc(7 downto 0) <= reg_pcl;
+
+      -- Export current value of B register to prefetcher
+      reg_b <= regs.b;
       
       -- By default CPU continues sequentially, without redirection.
       address_redirecting <= false;
@@ -214,8 +223,15 @@ begin
       -- Unstall pipeline by default.
       -- Instruction execution will stall it if required
       stalling <= false;
+
+      -- Manage pipeline flushing
+      if flush_cycles > 0 then
+        flush_cycles <= flush_cycles - 1;
+      else
+        flushing_pipeline <= false;
+      end if;
       
-      if instruction_valid = false then
+      if (instruction_valid = false) or (flushing_pipeline = true) then
         -- If there is no valid instruction, then we keep expecting the same address.
         expected_instruction_address <= expected_instruction_address;
         expected_instruction_pc <= expected_instruction_pc;
@@ -227,6 +243,14 @@ begin
         if instruction_address_is_as_expected then
           -- Do the work of the instruction.
           wrong_instruction_count <= 0;
+
+          if instruction_in.modifies_cpu_personality then
+            -- CPU personality or memory map has changed: flush pipeline, and start
+            -- fetching from next instruction afresh.
+            address_redirecting <= true;
+            flushing_pipeline <= true;
+            flush_cycles <= PIPE_FLUSH_CYCLES;
+          end if;
 
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : Executing instruction.";

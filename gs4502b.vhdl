@@ -142,6 +142,7 @@ architecture behavioural of gs4502b is
   signal stage_execute_redirecting : boolean := false;
   signal stage_execute_redirected_address : translated_address;
   signal stage_execute_redirected_pch : unsigned(15 downto 8);
+  signal reg_b : unsigned(7 downto 0) := x"00";
 
   -- Signals output by the memory controller
   signal completed_transaction : transaction_result;
@@ -239,6 +240,8 @@ begin  -- behavioural
       redirected_pch => stage_execute_redirected_pch,
       stall => decode_stalling,
 
+      reg_b => reg_b,
+      
       instruction_out => stage_prefetch_instruction,
 
       memory_address => ram_instruction_port_address,
@@ -330,6 +333,8 @@ begin  -- behavioural
       cpuport_value => cpuport_value,
 
       monitor_pc => monitor_pc,
+
+      reg_b => reg_b,
       
       stall => memory_stalling,
       instruction_in => stage_validate_instruction,

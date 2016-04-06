@@ -38,13 +38,20 @@ entity gs4502b_instruction_prefetch is
 
     current_cpu_personality : in cpu_personality;
     
--- Input: 1-bit flag + cache line ID from execute stage to instruct us to
+-- Input: 1-bit flag + destination address from execute stage to instruct us to
 --        divert (whether due to branch mis-predict, RTS/RTI, interrupt or trap
 --        entry/return).
     address_redirecting : in boolean;
     redirected_address : in translated_address;
     redirected_pch : in unsigned(15 downto 8);
 
+    -- We also need to know the value of the B register, so that we can set the
+    -- upper byte of the argument.  This allows us to treat ZP and ABS modes
+    -- identically, and simplify some of the address calculatin logic later.
+    -- This also means that setting B must flush the pipeline by asserting
+    -- address_redirecting.
+    reg_b : in unsigned(7 downto 0);
+    
     stall : in boolean;
 
     instruction_out : out instruction_information;
@@ -335,22 +342,26 @@ begin
           := get_instruction_flags("0"&std_logic_vector(byte_buffer(7 downto 0)));
         instruction.addressing_mode
           := get_addressing_modes("0"&std_logic_vector(byte_buffer(7 downto 0)));
-      end if;
-      
+      end if;      
       instruction.modifies_cpu_personality := false;
       instruction.cpu_personality := current_cpu_personality;
       instruction.bytes.opcode := byte_buffer(7 downto 0);
       instruction.bytes.arg1 := byte_buffer(15 downto 8);
-      instruction.bytes.arg2 := byte_buffer(23 downto 16);
+      
       if bytes_ready > 2 then
         instruction.translated := instruction_address;
+        instruction.bytes.arg2 := byte_buffer(23 downto 16);
       else
         instruction.translated := (others => '1');
+        instruction.bytes.arg2 := reg_b;
       end if;
       instruction.pc := instruction_pc;
       instruction.pc_expected := next_pc;
       instruction.pc_mispredict := next_pc;
       instruction.branch_predict := false;
+
+      -- Work out possible PC values for JMP/JSR, as well as 8 and 16 bit
+      -- branch options.
 
       instruction_out <= instruction;
     end if;

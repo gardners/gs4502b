@@ -90,7 +90,9 @@ package instructions is
     -- Once we know both the opcode and the arguments, we can work out if the
     -- instruction can modify the memory map. This means looking for MAP
     -- instruction, as well as writes to $0000, $0001 (C64 ROM banking) or $D030
-    -- (C65 ROM banking)
+    -- (C65 ROM banking).  We also throw TAB into this, as it changes the
+    -- behaviour of ZP addressing mode, and so we also need to flush the
+    -- pipeline.
     modifies_cpu_personality : boolean;
     
     -- Address and PC information following instruction    
