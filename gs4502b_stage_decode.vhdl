@@ -144,15 +144,6 @@ begin
         stalling <= true;
       end if;
       
-      -- Set instruction flags based on CPU personality and opcode
-      if instruction.cpu_personality = CPU6502 then
-        instruction.instruction_flags
-          := get_instruction_flags("0"&std_logic_vector(instruction.bytes.opcode));
-      else
-        instruction.instruction_flags
-          := get_instruction_flags("1"&std_logic_vector(instruction.bytes.opcode));
-      end if;
-
       instruction_out <= instruction;
 
       report "instruction.aludst_a = " & boolean'image(instruction.instruction_flags.aludst_a) & ", opcode=$" & to_hstring(instruction.bytes.opcode);

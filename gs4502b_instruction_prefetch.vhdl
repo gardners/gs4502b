@@ -325,8 +325,18 @@ begin
 
       next_pc := to_unsigned(to_integer(instruction_address(15 downto 0)) + consumed_bytes,16);
       
-      instruction.instruction_flags := (others => false);
-      instruction.addressing_mode := (others => false);
+      if current_cpu_personality = CPU6502 then
+        instruction.instruction_flags
+          := get_instruction_flags("1"&std_logic_vector(byte_buffer(7 downto 0)));
+        instruction.addressing_mode
+          := get_addressing_modes("1"&std_logic_vector(byte_buffer(7 downto 0)));
+      else
+        instruction.instruction_flags
+          := get_instruction_flags("0"&std_logic_vector(byte_buffer(7 downto 0)));
+        instruction.addressing_mode
+          := get_addressing_modes("0"&std_logic_vector(byte_buffer(7 downto 0)));
+      end if;
+      
       instruction.modifies_cpu_personality := false;
       instruction.cpu_personality := current_cpu_personality;
       instruction.bytes.opcode := byte_buffer(7 downto 0);
