@@ -257,7 +257,30 @@ package body alu is
     if iflags.alusrc_x then ret.value := regs.x; end if;
     if iflags.alusrc_y then ret.value := regs.y; end if;
     if iflags.alusrc_z then ret.value := regs.z; end if;
-    
+
+    -- Finally, we need to handle INC and DEC operations on the index registers.
+    -- (and also on the accumulator for 4502 mode)
+    if iflags.alu_inc then
+      if iflags.alusrc_a then ret.value := regs.a + 1; end if;
+      if iflags.alusrc_x then ret.value := regs.x + 1; end if;
+      if iflags.alusrc_y then ret.value := regs.y + 1; end if;
+      if iflags.alusrc_z then ret.value := regs.z + 1; end if;
+      if iflags.aludst_a then regsout.a := ret.value; end if;
+      if iflags.aludst_x then regsout.x := ret.value; end if;
+      if iflags.aludst_y then regsout.y := ret.value; end if;
+      if iflags.aludst_z then regsout.z := ret.value; end if;
+    end if;
+    if iflags.alu_dec then
+      if iflags.alusrc_a then ret.value := regs.a - 1; end if;
+      if iflags.alusrc_x then ret.value := regs.x - 1; end if;
+      if iflags.alusrc_y then ret.value := regs.y - 1; end if;
+      if iflags.alusrc_z then ret.value := regs.z - 1; end if;
+      if iflags.aludst_a then regsout.a := ret.value; end if;
+      if iflags.aludst_x then regsout.x := ret.value; end if;
+      if iflags.aludst_y then regsout.y := ret.value; end if;
+      if iflags.aludst_z then regsout.z := ret.value; end if;
+    end if;
+
     if iflags.aludst_a then
       regsout.a := ret.value;
       report "ALU: Setting A to $" & to_hstring(ret.value);
