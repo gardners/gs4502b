@@ -245,11 +245,25 @@ package body alu is
     report "ALU: i1=$" & to_hstring(i1) & ", i2=$" & to_hstring(i2)
       & ", result=$" & to_hstring(ret.value);
 
+    -- Now do transfers explicity, so that ALU logic is not in the path
+    if iflags.alusrc_a then
+      ret.value := regs.a; -- for flags
+      if iflags.aludst_b then regsout.b := regs.a; end if;
+      if iflags.aludst_x then regsout.x := regs.a; end if;
+      if iflags.aludst_y then regsout.y := regs.a; end if;
+      if iflags.aludst_z then regsout.z := regs.a; end if;
+    end if;
+    if iflags.alusrc_b then ret.value := regs.b; end if;
+    if iflags.alusrc_x then ret.value := regs.x; end if;
+    if iflags.alusrc_y then ret.value := regs.y; end if;
+    if iflags.alusrc_z then ret.value := regs.z; end if;
+    
     if iflags.aludst_a then
       regsout.a := ret.value;
       report "ALU: Setting A to $" & to_hstring(ret.value);
     end if;
-    if iflags.aludst_b then regsout.b := ret.value; end if;
+    
+    -- if iflags.aludst_b then regsout.b := ret.value; end if;
     -- if iflags.aludst_p then
     --   -- Set flags from byte: for PLP
     --   regsout.flags := (others => false);
@@ -286,20 +300,6 @@ package body alu is
     if iflags.update_v then
       regsout.flags.v := ret.v;
       renamedout.flag_v := false;
-    end if;
-
-    -- Now do transfers explicity, so that ALU logic is not in the path
-    if iflags.alusrc_a then
-      if iflags.aludst_b then regsout.b := regs.a; end if;
-      if iflags.aludst_x then regsout.x := regs.a; end if;
-      if iflags.aludst_y then regsout.y := regs.a; end if;
-      if iflags.aludst_z then regsout.z := regs.a; end if;
-    end if;
-    if iflags.aludst_a then
-      if iflags.alusrc_a then regsout.a := regs.b; end if;
-      if iflags.alusrc_x then regsout.a := regs.x; end if;
-      if iflags.alusrc_y then regsout.a := regs.y; end if;
-      if iflags.alusrc_z then regsout.a := regs.z; end if;
     end if;
     
   end procedure;
