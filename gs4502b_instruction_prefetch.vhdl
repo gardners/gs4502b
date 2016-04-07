@@ -373,13 +373,13 @@ begin
       -- Work out possible PC values for JMP/JSR, as well as 8 and 16 bit
       -- branch options.
       branch8_pc <=
-        to_unsigned(to_integer(next_pc) - 127 + to_integer(byte_buffer(15 downto 8)),16);
+        unsigned(to_signed(to_integer(next_pc) - 127 + to_integer(byte_buffer(15 downto 8)),16));
       branch16_pc <=
-        to_unsigned(to_integer(next_pc) - 32767 + to_integer(byte_buffer(23 downto 8)),16);
+        unsigned(to_signed(to_integer(next_pc) - 32767 + to_integer(byte_buffer(23 downto 8)),16));
       -- For those bizarre BBR/BBS instructions, where the branch is from the
       -- 3rd byte of the instruction, not the 2nd
       branch8_zp_pc <=
-        to_unsigned(to_integer(next_pc) - 126 + to_integer(byte_buffer(23 downto 16)),16);
+        unsigned(to_signed(to_integer(next_pc) - 126 + to_integer(byte_buffer(23 downto 16)),16));
       
       instruction_out <= instruction;
     end if;
