@@ -31,6 +31,9 @@ package alu is
   type cpu_registers is record
     flags : cpu_flags;
     a : unsigned(7 downto 0);
+    a_dup1 : unsigned(7 downto 0);
+    a_dup2 : unsigned(7 downto 0);
+    a_dup3 : unsigned(7 downto 0);
     b : unsigned(7 downto 0);
     x : unsigned(7 downto 0);
     y : unsigned(7 downto 0);
@@ -222,7 +225,7 @@ package body alu is
     -- SAX and friends AND A and X to form the input argument to the ALU.
     -- Since we apply the value of A above, and set all inputs to high by
     -- default, we can just AND X with the current value of i1 here.
-    if iflags.alusrc_x then i1 := (i1 and regs.x); end if;
+    -- if iflags.alusrc_x then i1 := (i1 and regs.x); end if;
 
     -- if iflags.alusrc_b then i1 := regs.b; end if;
     -- if iflags.alusrc_y then i1 := regs.y; end if;
@@ -241,17 +244,17 @@ package body alu is
     -- if iflags.alusrc_spl then i1 := regs.spl; end if;
     -- if iflags.alusrc_sph then i1 := regs.sph; end if;
 
-    ret := alu_op(iflags,i1,i2,regs.flags);
+    ret := alu_op(iflags,regs.a,i2,regs.flags);
     report "ALU: i1=$" & to_hstring(i1) & ", i2=$" & to_hstring(i2)
       & ", result=$" & to_hstring(ret.value);
 
     -- Now do transfers explicity, so that ALU logic is not in the path
     if iflags.alusrc_a then
-      ret.value := regs.a; -- for flags
-      if iflags.aludst_b then regsout.b := regs.a; end if;
-      if iflags.aludst_x then regsout.x := regs.a; end if;
-      if iflags.aludst_y then regsout.y := regs.a; end if;
-      if iflags.aludst_z then regsout.z := regs.a; end if;
+      ret.value := regs.a_dup1; -- for flags
+      if iflags.aludst_b then regsout.b := regs.a_dup1; end if;
+      if iflags.aludst_x then regsout.x := regs.a_dup1; end if;
+      if iflags.aludst_y then regsout.y := regs.a_dup1; end if;
+      if iflags.aludst_z then regsout.z := regs.a_dup1; end if;
     end if;
     if iflags.alusrc_b then ret.value := regs.b; end if;
     if iflags.alusrc_x then ret.value := regs.x; end if;
@@ -263,28 +266,53 @@ package body alu is
     -- Finally, we need to handle INC and DEC operations on the index registers.
     -- (and also on the accumulator for 4502 mode)
     if iflags.alu_inc then
-      if iflags.alusrc_a then ret.value := regs.a + 1; end if;
-      if iflags.alusrc_x then ret.value := regs.x + 1; end if;
-      if iflags.alusrc_y then ret.value := regs.y + 1; end if;
-      if iflags.alusrc_z then ret.value := regs.z + 1; end if;
-      if iflags.aludst_a then regsout.a := ret.value; end if;
-      if iflags.aludst_x then regsout.x := ret.value; end if;
-      if iflags.aludst_y then regsout.y := ret.value; end if;
-      if iflags.aludst_z then regsout.z := ret.value; end if;
+      ret.value := regs.a_dup2 + 1;
+      if iflags.aludst_a then
+        regsout.a := ret.value;
+        regsout.a_dup1 := ret.value;
+        regsout.a_dup2 := ret.value;
+        regsout.a_dup3 := ret.value;
+      end if;
+      if iflags.aludst_x then
+        ret.value := regs.x + 1;
+        regsout.x := ret.value;
+      end if;
+      if iflags.aludst_y then
+        ret.value := regs.y + 1;
+        regsout.y := ret.value;
+      end if;
+      if iflags.aludst_z then
+        ret.value := regs.z + 1;
+        regsout.z := ret.value;
+      end if;
     end if;
     if iflags.alu_dec then
-      if iflags.alusrc_a then ret.value := regs.a - 1; end if;
-      if iflags.alusrc_x then ret.value := regs.x - 1; end if;
-      if iflags.alusrc_y then ret.value := regs.y - 1; end if;
-      if iflags.alusrc_z then ret.value := regs.z - 1; end if;
-      if iflags.aludst_a then regsout.a := ret.value; end if;
-      if iflags.aludst_x then regsout.x := ret.value; end if;
-      if iflags.aludst_y then regsout.y := ret.value; end if;
-      if iflags.aludst_z then regsout.z := ret.value; end if;
+      ret.value := regs.a_dup2 - 1;
+      if iflags.aludst_a then
+        regsout.a := ret.value;
+        regsout.a_dup1 := ret.value;
+        regsout.a_dup2 := ret.value;
+        regsout.a_dup3 := ret.value;
+      end if;
+      if iflags.aludst_x then
+        ret.value := regs.x - 1;
+        regsout.x := ret.value;
+      end if;
+      if iflags.aludst_y then
+        ret.value := regs.y - 1;
+        regsout.y := ret.value;
+      end if;
+      if iflags.aludst_z then
+        ret.value := regs.z - 1;
+        regsout.z := ret.value;
+      end if;
     end if;
 
     if iflags.aludst_a then
       regsout.a := ret.value;
+      regsout.a_dup1 := ret.value;
+      regsout.a_dup2 := ret.value;
+      regsout.a_dup3 := ret.value;
       report "ALU: Setting A to $" & to_hstring(ret.value);
     end if;
     

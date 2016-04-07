@@ -157,6 +157,9 @@ begin
       if completed_transaction.valid = true then
         if completed_transaction.id = res_names.a then
           regs.a <= completed_transaction.value;
+          regs.a_dup1 <= completed_transaction.value;
+          regs.a_dup2 <= completed_transaction.value;
+          regs.a_dup3 <= completed_transaction.value;
           renamed_resources.a <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : reg_a <= $" & to_hstring(completed_transaction.value) &
@@ -331,6 +334,9 @@ begin
         regs.flags.v <= false;
         regs.flags.i <= true;
         regs.a <= x"00";
+        regs.a_dup1 <= x"00";
+        regs.a_dup2 <= x"00";
+        regs.a_dup3 <= x"00";
         regs.b <= x"00";
         regs.x <= x"00";
         regs.y <= x"00";
