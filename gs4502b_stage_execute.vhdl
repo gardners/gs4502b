@@ -97,7 +97,6 @@ architecture behavioural of gs4502b_stage_execute is
   signal port_value : std_logic_vector(2 downto 0) := "111";
   
   signal expected_instruction_address : translated_address;
-  signal expected_instruction_pc : unsigned(15 downto 0);
 
   signal wrong_instruction_count : integer range 0 to 7 := 0;
   
@@ -236,10 +235,6 @@ begin
       
       if (instruction_valid = false) or (flushing_pipeline = true) then
         -- If there is no valid instruction, then we keep expecting the same address.
-        expected_instruction_address <= expected_instruction_address;
-        expected_instruction_pc <= expected_instruction_pc;
-        reg_pch <= instruction_in.pc(15 downto 8);
-        reg_pcl <= instruction_in.pc(7 downto 0);
         report "$" & to_hstring(expected_instruction_address) &
           " EXECUTE : instruction_valid=false -- doing nothing.";        
       else
@@ -274,7 +269,8 @@ begin
           
           -- For now, just advance the PC to the next instruction we expect.
           expected_instruction_address <= instruction_in.expected_translated;
-          expected_instruction_pc <= instruction_in.pc_expected;
+          reg_pch <= instruction_in.pc_expected(15 downto 8);
+          reg_pcl <= instruction_in.pc_expected(7 downto 0);
 
           -- XXX - Almost certainly not showing the correct PCH here: there
           -- should be a PCH for both expected and mispredict cases.
@@ -302,7 +298,7 @@ begin
             wrong_instruction_count <= 0;
             address_redirecting <= true;
             redirected_address <= expected_instruction_address;
-            redirected_pch <= expected_instruction_pc(15 downto 8);
+            redirected_pch <= reg_pch;
           end if;
           
         end if;
