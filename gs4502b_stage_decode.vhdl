@@ -23,7 +23,10 @@ entity gs4502b_stage_decode is
     current_cpu_personality : in cpu_personality;
 
     instruction_in : in instruction_information;
-    
+    branch8_pc : in unsigned(15 downto 0);
+    branch16_pc : in unsigned(15 downto 0);
+    branch8_zp_pc : in unsigned(15 downto 0);
+
 -- Input: 1-bit flag + cache line ID from execute stage to instruct us to
 --        divert (whether due to branch mis-predict, RTS/RTI, interrupt or trap
 --        entry/return).
@@ -64,6 +67,7 @@ begin
   process(cpuclock)
     variable next_line : unsigned(9 downto 0);
     variable instruction : instruction_information;
+    variable branch_pc : unsigned(15 downto 0);
   begin
     if (rising_edge(cpuclock)) then
 
@@ -101,8 +105,33 @@ begin
                                      rom_at_a000,
                                      rom_at_c000,
                                      rom_at_e000);
+
+        -- Now work out the correct branch address from the options, by
+        -- considering the addressing mode.
+        -- XXX: Doesn't currently cover indirect (or indirect,X) JMP/JSR.
+        if instruction.addressing_mode.rel8 then
+          -- 6502-style 8-bit relative branches
+          branch_pc := branch8_pc;
+          instruction.pc_mispredict := branch8_pc;
+        elsif instruction.addressing_mode.rel8byte3 then
+          -- 8-bit ZP conditional branch, same as 8-bit branch, but the destination
+          -- address comes from the 3rd instruction byte, not the 2nd
+          branch_pc := branch8_zp_pc;
+          instruction.pc_mispredict := branch8_zp_pc;
+        elsif instruction.addressing_mode.rel16 then
+          -- 16-bit relative branches
+          branch_pc := branch16_pc;
+          instruction.pc_mispredict := branch16_pc;
+        else
+          -- 16-bit absolute branch address
+          -- XXX - We don't have the indirect branch addresses here!
+          branch_pc := instruction.bytes.arg2 & instruction.bytes.arg1;
+          instruction.pc_mispredict
+            := instruction.bytes.arg2 & instruction.bytes.arg1;          
+        end if;
+        
         instruction.mispredict_translated
-          := resolve_address_to_long(instruction.pc_mispredict,
+          := resolve_address_to_long(branch_pc,
                                      false,
                                
                                      cpuport_value,cpuport_ddr,
