@@ -111,6 +111,9 @@ architecture behavioural of gs4502b is
 
   -- Signals output by prefetch stage
   signal stage_prefetch_instruction : instruction_information;
+  signal branch8_pc : unsigned(15 downto 0);
+  signal branch8_zp_pc : unsigned(15 downto 0);
+  signal branch16_pc : unsigned(15 downto 0);
   
   -- Signals output by decode stage
   signal stage_decode_instruction : instruction_information;
@@ -243,6 +246,9 @@ begin  -- behavioural
       reg_b => reg_b,
       
       instruction_out => stage_prefetch_instruction,
+      branch8_pc => branch8_pc,
+      branch8_zp_pc => branch8_zp_pc,
+      branch16_pc => branch16_pc,
 
       memory_address => ram_instruction_port_address,
       memory_data0 => ram_instruction_port_data0,
@@ -273,6 +279,10 @@ begin  -- behavioural
       rom_at_a000 => rom_at_a000,
 
       instruction_in => stage_prefetch_instruction,
+      branch8_pc => branch8_pc,
+      branch8_zp_pc => branch8_zp_pc,
+      branch16_pc => branch16_pc,
+
       instruction_out => stage_decode_instruction,
       
       address_redirecting => stage_execute_redirecting,
