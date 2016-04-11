@@ -41,6 +41,8 @@ package alu is
     spl : unsigned(7 downto 0);
     sph : unsigned(7 downto 0);
   end record;
+
+  function to_string(flags : in cpu_flags) return string;
   
   function alu_op (
     instruction : in instruction_flags;
@@ -60,6 +62,21 @@ end package;
 
 package body alu is
 
+  function to_string(flags : in cpu_flags) return string is
+    variable flag_string : string(1 to 8);
+  begin
+    flag_string := "--------";
+    if flags.n then flag_string(1):='N'; end if;
+    if flags.v then flag_string(2):='V'; end if;
+    if flags.e then flag_string(3):='E'; end if;
+    if flags.d then flag_string(5):='D'; end if;
+    if flags.i then flag_string(6):='I'; end if;
+    if flags.z then flag_string(7):='Z'; end if;
+    if flags.c then flag_string(8):='C'; end if;
+  
+    return flag_string;
+  end function;
+  
   function alu_op_cmp (
     i1 : in unsigned(7 downto 0);
     i2 : in unsigned(7 downto 0)) return alu_result is
