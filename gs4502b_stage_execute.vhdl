@@ -266,11 +266,34 @@ begin
                     instruction_in.instruction_flags,
                     instruction_in.bytes.arg1);
           report "EXECUTE: Doing ALU operation. Aout=$" & to_hstring(regs_out.a);
-          
-          -- For now, just advance the PC to the next instruction we expect.
-          expected_instruction_address <= instruction_in.expected_translated;
-          reg_pch <= instruction_in.pc_expected(15 downto 8);
-          reg_pcl <= instruction_in.pc_expected(7 downto 0);
+
+          if instruction_in.instruction_flags.do_branch_conditional
+            and (
+              (instruction_in.instruction_flags.branch_z
+               and (instruction_in.instruction_flags.branch_on_clear
+                    /= regs.flags.z))
+              or
+              (instruction_in.instruction_flags.branch_n
+               and (instruction_in.instruction_flags.branch_on_clear
+                    /= regs.flags.n))
+              or
+              (instruction_in.instruction_flags.branch_v
+               and (instruction_in.instruction_flags.branch_on_clear
+                    /= regs.flags.v))
+              or
+              (instruction_in.instruction_flags.branch_c
+               and (instruction_in.instruction_flags.branch_on_clear
+                    /= regs.flags.c))) then
+            -- Take conditional branch
+            expected_instruction_address <= instruction_in.mispredict_translated;
+            reg_pch <= instruction_in.pc_mispredict(15 downto 8);
+            reg_pcl <= instruction_in.pc_mispredict(7 downto 0);
+          else
+            -- Branch not taken
+            expected_instruction_address <= instruction_in.expected_translated;
+            reg_pch <= instruction_in.pc_expected(15 downto 8);
+            reg_pcl <= instruction_in.pc_expected(7 downto 0);
+          end if;
 
           -- XXX - Almost certainly not showing the correct PCH here: there
           -- should be a PCH for both expected and mispredict cases.
