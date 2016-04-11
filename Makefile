@@ -20,6 +20,9 @@ GHDL=/usr/local/ghdl-0.34/bin/ghdl
 clean:
 	rm *.o *.cf cpu_test makeram
 
+%.bin: %.a65
+	Ophis/bin/ophis -4 $<
+
 cpu_test:	$(SIMULATIONFILES) Makefile
 	$(GHDL) -i $(SIMULATIONFILES)
 	$(GHDL) -m cpu_test
@@ -48,11 +51,8 @@ makeram:	makeram.c Makefile
 mega65mem.bin:	c65rom.bin mega65ram.bin
 	cat mega65ram.bin c65rom.bin > mega65mem.bin
 
-mega65ram.bin:
-	dd if=/dev/zero of=mega65ram.bin bs=131072 count=1
-
 c65rom.bin:
-	dd if=/dev/zero of=mega65ram.bin bs=131072 count=1
+	dd if=/dev/zero of=c65rom.bin bs=131072 count=1
 
 instrlenequations:	instrlenequations.c
 	gcc -g -Wall -o instrlenequations instrlenequations.c
@@ -74,3 +74,7 @@ instruction_flags.h:	Makefile instructionequations.c extractflags
 
 instruction_equations.vhdl:	instructionequations
 	./instructionequations
+
+Ophis/bin/ophis:
+	git submodule init ; git submodule update
+

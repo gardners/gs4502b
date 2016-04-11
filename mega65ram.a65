@@ -1,0 +1,22 @@
+		.outfile "mega65ram.bin"
+
+		.org $0000
+
+		.scope
+
+		.checkpc $8100
+		.advance $8100
+
+		lda #$02
+l1:		inc
+		bne l1
+		inx
+		bne l1
+		iny
+		bne l1
+		jmp l1
+
+		.checkpc $20000
+		.advance $20000
+
+		.scend
