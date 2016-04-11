@@ -84,6 +84,7 @@ use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
 use work.instructions.all;
+use work.alu.all;
 
 ENTITY gs4502b IS
   PORT (
@@ -145,7 +146,7 @@ architecture behavioural of gs4502b is
   signal stage_execute_redirecting : boolean := false;
   signal stage_execute_redirected_address : translated_address;
   signal stage_execute_redirected_pch : unsigned(15 downto 8);
-  signal reg_b : unsigned(7 downto 0) := x"00";
+  signal reg_export : cpu_registers;
 
   -- Signals output by the memory controller
   signal completed_transaction : transaction_result;
@@ -243,7 +244,7 @@ begin  -- behavioural
       redirected_pch => stage_execute_redirected_pch,
       stall => decode_stalling,
 
-      reg_b => reg_b,
+      regs => reg_export,
       
       instruction_out => stage_prefetch_instruction,
       branch8_pc => branch8_pc,
@@ -277,6 +278,8 @@ begin  -- behavioural
       rom_at_e000 => rom_at_e000,
       rom_at_8000 => rom_at_8000,
       rom_at_a000 => rom_at_a000,
+
+      regs => reg_export,
 
       instruction_in => stage_prefetch_instruction,
       branch8_pc => branch8_pc,
@@ -314,6 +317,8 @@ begin  -- behavioural
       resources_required_in => stage_decode_resources_required,
       resources_modified_in => stage_decode_resources_modified,
 
+      regs => reg_export,
+
       instruction_in => stage_decode_instruction,
       instruction_out => stage_validate_instruction,
       instruction_valid => stage_validate_instruction_valid,      
@@ -344,7 +349,7 @@ begin  -- behavioural
 
       monitor_pc => monitor_pc,
 
-      reg_b => reg_b,
+      reg_export => reg_export,
       
       stall => memory_stalling,
       instruction_in => stage_validate_instruction,

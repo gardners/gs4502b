@@ -44,7 +44,7 @@ entity gs4502b_stage_execute is
 
     monitor_pc : out unsigned(15 downto 0);
 
-    reg_b : out unsigned(7 downto 0);
+    reg_export : out cpu_registers;
     
     instruction_in : in instruction_information;
     instruction_valid : in boolean;
@@ -136,8 +136,8 @@ begin
       monitor_pc(15 downto 8) <= reg_pch;
       monitor_pc(7 downto 0) <= reg_pcl;
 
-      -- Export current value of B register to prefetcher
-      reg_b <= regs.b;
+      -- Export current value of registers for other stages that need them
+      reg_export <= regs;
       
       -- By default CPU continues sequentially, without redirection.
       address_redirecting <= false;

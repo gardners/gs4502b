@@ -87,6 +87,10 @@ package instructions is
     addressing_mode : addressing_mode;
     instruction_flags : instruction_flags;
 
+    -- Address of argument
+    argument_address : unsigned(15 downto 0);
+    argument_translated : translated_address;
+    
     -- Once we know both the opcode and the arguments, we can work out if the
     -- instruction can modify the memory map. This means looking for MAP
     -- instruction, as well as writes to $0000, $0001 (C64 ROM banking) or $D030

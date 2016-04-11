@@ -75,6 +75,7 @@ use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
 use work.instructions.all;
+use work.alu.all;
 
 entity gs4502b_stage_validate is
   port (
@@ -103,6 +104,8 @@ entity gs4502b_stage_validate is
 -- What can we see from the memory controller?
     completed_transaction : in transaction_result;
 
+    regs : in cpu_registers;
+    
 -- Tell memory controller about cache misses
     cache_miss : out boolean := false;
     cache_miss_address : out translated_address;

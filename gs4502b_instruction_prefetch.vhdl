@@ -31,6 +31,7 @@ use work.instructions.all;
 use work.addressing_modes.all;
 use work.instruction_equations.all;
 use work.instruction_lengths.all;
+use work.alu.all;
 
 entity gs4502b_instruction_prefetch is
   port (
@@ -50,7 +51,7 @@ entity gs4502b_instruction_prefetch is
     -- identically, and simplify some of the address calculatin logic later.
     -- This also means that setting B must flush the pipeline by asserting
     -- address_redirecting.
-    reg_b : in unsigned(7 downto 0);
+    regs : in cpu_registers;
     
     stall : in boolean;
 
@@ -356,7 +357,7 @@ begin
         -- Set upper byte of address field to B register, so that we can treat
         -- ZP and ABS addressing modes equivalently. (Also gives us the option
         -- of having another CPU personality that allows (ABS),Y etc).
-        instruction.bytes.arg2 := reg_b;
+        instruction.bytes.arg2 := regs.b;
       end if;
       instruction.pc := instruction_pc;
       instruction.pc_expected := next_pc;

@@ -15,6 +15,7 @@ use work.debugtools.all;
 use work.instructions.all;
 use work.instruction_equations.all;
 use work.address_translator.all;
+use work.alu.all;
 
 entity gs4502b_stage_decode is
   port (
@@ -27,6 +28,8 @@ entity gs4502b_stage_decode is
     branch16_pc : in unsigned(15 downto 0);
     branch8_zp_pc : in unsigned(15 downto 0);
 
+    regs : in cpu_registers;
+    
 -- Input: 1-bit flag + cache line ID from execute stage to instruct us to
 --        divert (whether due to branch mis-predict, RTS/RTI, interrupt or trap
 --        entry/return).
@@ -129,6 +132,41 @@ begin
           instruction.pc_mispredict
             := instruction.bytes.arg2 & instruction.bytes.arg1;          
         end if;
+
+        -- Work out address referred to by argument.  For some modes this is simple.
+        -- However, the presence of the indirect modes is a REAL pain.  Worst
+        -- of all are the absolute indirect modes, since we can't even use a ZP
+        -- cache to deal with them. Instead we need some kind of vector lookup
+        -- logic.  But lets start with the simple ones.  At least we don't have
+        -- to worry about the relative addressing modes, because they are dealt
+        -- with above.
+        -- XXX - We have to wait until the required registers are available
+        -- before we can calculate the address.  We'll add that logic in a bit
+        -- later.
+        instruction.argument_address(15 downto 8) := x"00";
+        instruction.argument_address(7 downto 0) := instruction.bytes.arg1;
+        if instruction.addressing_mode.addr16 then
+          instruction.argument_address(15 downto 8) := instruction.bytes.arg2;
+          if instruction.addressing_mode.postx then
+            instruction.argument_address := instruction.argument_address + regs.x;
+          end if;
+          if instruction.addressing_mode.posty then
+            instruction.argument_address := instruction.argument_address + regs.y;
+          end if;
+        end if;
+        if instruction.addressing_mode.prex then
+          -- Only increments lower byte, so doesn't work for JMP ($nnnn,X),
+          -- which will be handled with the branch address calculation above.
+          instruction.argument_address(7 downto 0) :=
+            instruction.argument_address(7 downto 0) + regs.x;
+        end if;
+        if instruction.addressing_mode.presp then
+          instruction.argument_address := (regs.sph & regs.spl)
+            - instruction.bytes.arg1;
+        end if;
+        
+          
+        
         
         instruction.mispredict_translated
           := resolve_address_to_long(branch_pc,
