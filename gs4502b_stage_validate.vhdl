@@ -277,9 +277,9 @@ begin
       -- extra bits).
       if (instruction.translated = last_instruction_expected_address)
           and (instruction.cpu_personality = current_cpu_personality) then
-        report "$" & to_hstring(last_instruction_expected_address) &
+          report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : Instruction is valid.";
-
+          
           last_instruction_expected_address <= instruction.expected_translated;
           last_instruction_expected_pch <= instruction.pc_expected(15 downto 8);
         end if;
@@ -324,8 +324,20 @@ begin
           report "$" & to_hstring(last_instruction_expected_address) &
             " VALIDATE : not stalling upstream";
 
-        end if;
+        end if;          
 
+          -- For unconditional jumps and branches, simply set the new PC
+          if instruction.instruction_flags.do_branch
+            and (not instruction.instruction_flags.do_branch_conditional) then
+            instruction.pc_expected := instruction.pc_mispredict;
+            instruction.expected_translated := instruction.mispredict_translated;
+
+            -- XXX Ideally we should feed back to ourselves and previous stages
+            -- the change in program flow, so that we can reduce the number of
+            -- cycles incurred by taking a branch, especially a non-conditional
+            -- once, where we know immediately that the branch will be taken.
+          end if;
+          
         -- In either case above, the stall buffer becomes empty
         stall_buffer_occupied <= false;
         
