@@ -72,6 +72,7 @@ entity gs4502b_instruction_prefetch is
 end gs4502b_instruction_prefetch;
 
 architecture behavioural of gs4502b_instruction_prefetch is
+  
   signal instruction_address : translated_address := (others => '0');
   signal instruction_pc : unsigned(15 downto 0) := x"8100";
 
@@ -83,30 +84,28 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal bytes_ready : integer range 0 to 16 := 0;
   signal buffer_address : translated_address := (others => '0');
   signal burst_fetch : integer range 0 to (BYTE_BUFFER_WIDTH/4+1) := 0;
-  signal fetched_bytes : integer range 0 to (BYTE_BUFFER_WIDTH/4+1) := 0;
+  signal dispatched_bytes : integer range 0 to 7 := 0;
 
-  -- Delayed signals to tell us which address of chip/fast RAM we are reading
-  -- in a given cycle
-  signal memory_address_0 : unsigned(15 downto 0) := (others => '0');
-  signal memory_address_1 : unsigned(15 downto 0) := (others => '0');
-  signal memory_address_2 : unsigned(15 downto 0) := (others => '0');
-  signal memory_address_now : unsigned(15 downto 0) := (others => '0');
   -- And which address are we currently looking for to append to the end of our
   -- byte buffer?
   signal desired_address : unsigned(15 downto 0) := (others => '0');
 
-  signal memory_data0_buf1 : std_logic_vector(8 downto 0);
-  signal memory_data1_buf1 : std_logic_vector(8 downto 0);
-  signal memory_data2_buf1 : std_logic_vector(8 downto 0);
-  signal memory_data3_buf1 : std_logic_vector(8 downto 0);
-  signal memory_data0_buf : std_logic_vector(8 downto 0);
-  signal memory_data1_buf : std_logic_vector(8 downto 0);
-  signal memory_data2_buf : std_logic_vector(8 downto 0);
-  signal memory_data3_buf : std_logic_vector(8 downto 0);
-  signal memory_ilen0 : integer range 1 to 3 := 1;
-  signal memory_ilen1 : integer range 1 to 3 := 1;
-  signal memory_ilen2 : integer range 1 to 3 := 1;
-  signal memory_ilen3 : integer range 1 to 3 := 1;
+  -- Delayed signals to tell us which address and values of chip/fast RAM we are
+  -- reading in a given cycle
+  type prefetch_byte is record
+    byte : std_logic_vector(8 downto 0);
+    ilen : length_of_instruction;
+  end record;
+  type prefetch_vector is array ( 0 to 3 ) of prefetch_byte;
+  type prefetch_buffer is record
+    v : prefetch_vector;
+    address : unsigned(15 downto 0);
+  end record;
+    
+  signal fetch_buffer_1 : prefetch_buffer;
+  signal fetch_buffer_2 : prefetch_buffer;
+  signal fetch_buffer_3 : prefetch_buffer;
+  signal fetch_buffer_now : prefetch_buffer;
 
   signal opcode_high_bit : std_logic := '1';
 
@@ -130,23 +129,26 @@ begin
     if rising_edge(cpuclock) then
       report "RISING EDGE";
 
-      -- Provide delayed memory address signal, so that we know where the RAM
-      -- is reading from each cycle
-      memory_address_now <= memory_address_2;
-      memory_address_2 <= memory_address_1;
-      memory_address_1 <= memory_address_0;
+      -- Provide delayed memory address and data signals, so that we know where the
+      -- RAM is reading from each cycle
+      fetch_buffer_now.address <= fetch_buffer_3.address;
+      for i in 0 to 3 loop
+        fetch_buffer_now.v(i).byte <= fetch_buffer_3.v(i).byte;
+      end loop;
+      -- Tag bytes with instruction lengths
+      for i in 0 to 3 loop
+        fetch_buffer_now.v(i).ilen
+          <= instruction_length(opcode_high_bit&fetch_buffer_3.v(i).byte(7 downto 0));
+      end loop;
 
-      -- We have two buffer stages after we read from the memory, so that we
-      -- can keep timing good, and deliver the instruction length at each
-      -- offset to the real fetch logic.
-      memory_data0_buf1 <= memory_data0;
-      memory_data1_buf1 <= memory_data1;
-      memory_data2_buf1 <= memory_data2;
-      memory_data3_buf1 <= memory_data3;
-      memory_data0_buf <= memory_data0_buf1;
-      memory_data1_buf <= memory_data1_buf1;
-      memory_data2_buf <= memory_data2_buf1;
-      memory_data3_buf <= memory_data3_buf1;
+      fetch_buffer_3.address <= fetch_buffer_2.address;
+      fetch_buffer_3.v(0).byte <= memory_data0;
+      fetch_buffer_3.v(1).byte <= memory_data1;
+      fetch_buffer_3.v(2).byte <= memory_data2;
+      fetch_buffer_3.v(3).byte <= memory_data3;
+      
+      fetch_buffer_2.address <= fetch_buffer_1.address;
+
       -- XXX When changing CPU personality, there is a 1 cycle delay before
       -- instruction lengths will be correctly calculated.  Should be fine, as
       -- we will hold CPU during personality change, anyway via
@@ -157,10 +159,7 @@ begin
       else
         opcode_high_bit <= '0';
       end if;
-      memory_ilen0 <= instruction_length(opcode_high_bit&memory_data0_buf(7 downto 0));
-      memory_ilen1 <= instruction_length(opcode_high_bit&memory_data1_buf(7 downto 0));
-      memory_ilen2 <= instruction_length(opcode_high_bit&memory_data2_buf(7 downto 0));
-      memory_ilen3 <= instruction_length(opcode_high_bit&memory_data3_buf(7 downto 0));
+
 
       store_offset := bytes_ready;
       consumed_bytes := 0;
@@ -216,32 +215,26 @@ begin
       store_offset := bytes_ready - consumed_bytes;
       
       -- We are reading for the correct address
-      report "I-FETCH: RAM READING $" & to_hstring(memory_address_now&"00")
-        &" - $" & to_hstring(memory_address_now&"11") &
+      report "I-FETCH: RAM READING $" & to_hstring(fetch_buffer_now.address&"00")
+        &" - $" & to_hstring(fetch_buffer_now.address&"11") &
         ", stow offset " & integer'image(store_offset) & ", am hoping for $"
         & to_hstring(desired_address&"00");
 
       burst_sub_one := false;
       burst_add_one := false;
       
-      if memory_address_now = desired_address then
+      if fetch_buffer_now.address = desired_address then
         -- But make sure we don't over flow our read queue
         report "I-FETCH: Found the bytes we were looking for to add to our buffer.";   
         if bytes_ready <= (BYTE_BUFFER_WIDTH-4) then
           report "I-FETCH: We have space, so adding to byte_buffer.";
           -- Append to the end
-          new_byte_buffer((8*(store_offset+3)+7) downto (8*(store_offset+3)))
-            := unsigned(memory_data3_buf(7 downto 0));
-          new_ilen_buffer(store_offset+3) := memory_ilen3;
-          new_byte_buffer((8*(store_offset+2)+7) downto (8*(store_offset+2)))
-            := unsigned(memory_data2_buf(7 downto 0));
-          new_ilen_buffer(store_offset+2) := memory_ilen2;
-          new_byte_buffer((8*(store_offset+1)+7) downto (8*(store_offset+1)))
-            := unsigned(memory_data1_buf(7 downto 0));
-          new_ilen_buffer(store_offset+1) := memory_ilen1;
-          new_byte_buffer((8*(store_offset+0)+7) downto (8*(store_offset+0)))
-            := unsigned(memory_data0_buf(7 downto 0));
-          new_ilen_buffer(store_offset+0) := memory_ilen0;
+          for i in 0 to 3 loop
+            new_byte_buffer((8*(store_offset+i)+7) downto (8*(store_offset+i)))
+              := unsigned(fetch_buffer_now.v(i).byte(7 downto 0));
+            new_ilen_buffer(store_offset+i) := fetch_buffer_now.v(i).ilen;
+          end loop;
+          -- update number of bytes available
           new_bytes_ready := bytes_ready - consumed_bytes + 4;
           report "Adding 4 to (bytes_ready-consumed_bytes) to calculate new_bytes_ready";
           -- Read next 4 bytes: this happens through next block, which has a
@@ -252,10 +245,10 @@ begin
       end if;
 
       -- Keep the instruction buffer as full as possible, without overflowing.
-      if fetched_bytes < 4 then
-        fetched_bytes <= fetched_bytes + consumed_bytes;
+      if dispatched_bytes < 4 then
+        dispatched_bytes <= dispatched_bytes + consumed_bytes;
       else
-        fetched_bytes <= fetched_bytes + consumed_bytes - 4;
+        dispatched_bytes <= dispatched_bytes + consumed_bytes - 4;
         burst_add_one := true;
         report "Ate 4 bytes, queuing next instruction word read.";
       end if;
@@ -265,8 +258,8 @@ begin
       if (burst_fetch > 0) then
         report "Requesting next instruction word (" & integer'image(burst_fetch)
           & " more to go).";
-        memory_address <= std_logic_vector(memory_address_0 + 1);
-        memory_address_0 <= memory_address_0 + 1;
+        memory_address <= std_logic_vector(fetch_buffer_1.address + 1);
+        fetch_buffer_1.address <= fetch_buffer_1.address + 1;
         if (burst_add_one = false) then
           report "Decrementing burst_fetch";
           burst_fetch <= burst_fetch - 1;
@@ -314,7 +307,7 @@ begin
         burst_fetch <= (BYTE_BUFFER_WIDTH / 4) + 1;
         -- And reset the bytes eaten counter that we use to decide when to load
         -- the next word.
-        fetched_bytes <= 0;
+        dispatched_bytes <= 0;
 
         -- Indicate how many bytes we need to skip.
         -- To keep timing, we have to overwrite ilen_buffer(0), as muxing to
@@ -328,7 +321,7 @@ begin
         -- fastram/chipram from CPU side is a single 256KB RAM, composed of 4x
         -- 64KB interleaved banks. This allows us to read 4 bytes at a time.
         memory_address <= std_logic_vector(redirected_address(17 downto 2));
-        memory_address_0 <= redirected_address(17 downto 2);
+        fetch_buffer_1.address <= redirected_address(17 downto 2);
         desired_address <= redirected_address(17 downto 2);
 
       else

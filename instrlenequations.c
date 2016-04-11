@@ -217,12 +217,13 @@ int main()
 	  "\n"
 	  "package instruction_lengths is\n"
 	  "\n"
-	  "function instruction_length(opcode : std_logic_vector(8 downto 0)) return integer;\n"
+	  "  subtype length_of_instruction is integer range 1 to 3;\n"
+	  "  function instruction_length(opcode : std_logic_vector(8 downto 0)) return length_of_instruction;\n"
 	  "\n"
 	  "end package;\n"
 	  "\n"
 	  "package body instruction_lengths is\n"
-	  "  function instruction_length(opcode : std_logic_vector(8 downto 0)) return integer is\n"
+	  "  function instruction_length(opcode : std_logic_vector(8 downto 0)) return length_of_instruction is\n"
 	  "  begin\n"
 	  );
   for(int l=1;l<3;l++)
