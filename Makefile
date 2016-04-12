@@ -10,6 +10,8 @@ SIMULATIONFILES=	cpu_test.vhdl \
 			ram0.vhdl ram1.vhdl ram2.vhdl ram3.vhdl \
 			address_translator.vhdl \
 			gs4502b.vhdl \
+			memory_controller.vhdl \
+			gs4502b_core.vhdl \
 			gs4502b_instruction_prefetch.vhdl \
 			gs4502b_stage_decode.vhdl \
 			gs4502b_stage_validate.vhdl \

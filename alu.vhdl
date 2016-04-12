@@ -10,6 +10,37 @@ use work.instructions.all;
 
 package alu is
 
+  type fetch_port_in is record
+    translated : translated_address;
+    pc : unsigned(15 downto 0);
+    user_flags : std_logic_vector(7 downto 0);
+  end record;
+  type fetch_port_out is record
+    -- Tell user if port is busy
+    blocked : boolean;
+    -- 4 bytes of read value
+    value : unsigned(31 downto 0);
+    -- User specified flags that were presented with the request
+    -- when submitted.
+    user_flags : std_logic_vector(7 downto 0);
+  end record;  
+  type mem_port_in is record
+    -- Tell user if port is busy
+    blocked : boolean;
+  end record;
+  type mem_port_out is record
+    result : transaction_result;
+  end record;
+
+  type ram_interface is record
+    iaddr : std_logic_vector(16 downto 0);
+    irdata : std_logic_vector(8 downto 0);
+    maddr : std_logic_vector(16 downto 0);
+    mwrite : std_logic;
+    mwdata : std_logic_vector(8 downto 0);
+    mrdata : std_logic_vector(8 downto 0);
+  end record;  
+  
   type alu_result is record
     value : unsigned(7 downto 0);
     c : boolean;
