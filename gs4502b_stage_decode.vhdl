@@ -85,7 +85,10 @@ begin
           " DECODE : Not stalled. Decoding. reg_map_high="
           & to_string(reg_map_high)
           & ", reg_mb_high=$" & to_hstring(reg_mb_high);
-      
+
+        report "DECODE : flags.branch_z = "
+          & boolean'image(instruction.instruction_flags.branch_z);
+        
         -- Decode instruction
         -- XXX Read fields from instruction bytes and work it all out
         -- For now, just lie and make every instruction an NOP
@@ -116,21 +119,25 @@ begin
           -- 6502-style 8-bit relative branches
           branch_pc := branch8_pc;
           instruction.pc_mispredict := branch8_pc;
+          report "branch_pc = $" & to_hstring(branch_pc);
         elsif instruction.addressing_mode.rel8byte3 then
           -- 8-bit ZP conditional branch, same as 8-bit branch, but the destination
           -- address comes from the 3rd instruction byte, not the 2nd
           branch_pc := branch8_zp_pc;
           instruction.pc_mispredict := branch8_zp_pc;
+          report "branch_pc = $" & to_hstring(branch_pc);
         elsif instruction.addressing_mode.rel16 then
           -- 16-bit relative branches
           branch_pc := branch16_pc;
           instruction.pc_mispredict := branch16_pc;
+          report "branch_pc = $" & to_hstring(branch_pc);
         else
           -- 16-bit absolute branch address
           -- XXX - We don't have the indirect branch addresses here!
           branch_pc := instruction.bytes.arg2 & instruction.bytes.arg1;
           instruction.pc_mispredict
             := instruction.bytes.arg2 & instruction.bytes.arg1;          
+          report "branch_pc = $" & to_hstring(branch_pc);
         end if;
 
         -- Work out address referred to by argument.  For some modes this is simple.
@@ -186,7 +193,7 @@ begin
                                      rom_at_e000);
         
         -- CPU personality is only modified by writing to $D02F or $D640-$D67F
-        
+        -- XXX - how about a magic value for $01?
         if ((instruction.bytes.arg2 = x"D0") and (instruction.bytes.arg1 = x"2F"))
           or ((instruction.bytes.arg2 = x"D6")
               and (instruction.bytes.arg1(7 downto 6) = "01")) then

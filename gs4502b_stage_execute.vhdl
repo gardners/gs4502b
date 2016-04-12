@@ -114,22 +114,6 @@ begin
     variable renamed_out : instruction_resources;
   begin
     if (rising_edge(cpuclock)) then
-
-      report "PC $" & to_hstring(reg_pch & reg_pcl) &
-        " EXECUTE : " &
-        "A:" & to_hstring(regs.a) & " " &
-        "X:" & to_hstring(regs.x) & " " &
-        "Y:" & to_hstring(regs.y) & " " &
-        "Z:" & to_hstring(regs.z) & " " &
-        "B:" & to_hstring(regs.b) & " " &
-        "SP:" & to_hstring(regs.sph & regs.spl)
-        & " " & to_string(regs.flags) 
-        & "  :  "
-        & to_hstring(instruction_in.bytes.opcode) & " "
-        & to_hstring(instruction_in.bytes.arg1) & " "
-        & to_hstring(instruction_in.bytes.arg2)
-        
-        ;
       
       -- Make copy of registers and register renaming info for mutation.
       regs_out := regs;
@@ -238,7 +222,9 @@ begin
       if (instruction_valid = false) or (flushing_pipeline = true) then
         -- If there is no valid instruction, then we keep expecting the same address.
         report "$" & to_hstring(expected_instruction_address) &
-          " EXECUTE : instruction_valid=false -- doing nothing.";        
+          " EXECUTE : instruction_valid=" & boolean'image(instruction_valid)
+          & " flushing_pipeline=" & boolean'image(flushing_pipeline)
+          & " -- doing nothing.";        
       else
         if instruction_address_is_as_expected then
           -- Do the work of the instruction.
@@ -254,7 +240,21 @@ begin
 
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : Executing instruction.";
-          -- XXX report details of instruction
+          report "PC $" & to_hstring(reg_pch & reg_pcl) &
+            " EXECUTE Inputs : " &
+            "A:" & to_hstring(regs.a) & " " &
+            "X:" & to_hstring(regs.x) & " " &
+            "Y:" & to_hstring(regs.y) & " " &
+            "Z:" & to_hstring(regs.z) & " " &
+            "B:" & to_hstring(regs.b) & " " &
+            "SP:" & to_hstring(regs.sph & regs.spl)
+            & " " & to_string(regs.flags) 
+            & "  :  "
+            & to_hstring(instruction_in.bytes.opcode) & " "
+            & to_hstring(instruction_in.bytes.arg1) & " "
+            & to_hstring(instruction_in.bytes.arg2)        
+            ;
+
 
           -- XXX Not yet implemented!
           -- XXX While the below plumbs in the ALU, no special instructions, or
@@ -285,13 +285,52 @@ begin
               or
               (instruction_in.instruction_flags.branch_c
                and (instruction_in.instruction_flags.branch_on_clear
-                    /= regs.flags.c))) then
+                    /= regs.flags.c))
+              ) then
             -- Take conditional branch
+            report "EXECUTE: Taking conditional branch to $"
+              & to_hstring(instruction_in.pc_mispredict)
+              & " = $" & to_hstring(instruction_in.mispredict_translated);
             expected_instruction_address <= instruction_in.mispredict_translated;
             reg_pch <= instruction_in.pc_mispredict(15 downto 8);
             reg_pcl <= instruction_in.pc_mispredict(7 downto 0);
+
+            address_redirecting <= true;
+            redirected_address <= instruction_in.mispredict_translated;
+            redirected_pch <= instruction_in.pc_mispredict(15 downto 8);
+
+            -- We need only invalidate the very next instruction.  It might
+            -- well be that we are skipping forward.  If so, then there is
+            -- benefit to just trying to proceed.  The instruction fetch
+            -- pipeline will be flushed anyway, in case we are jumping to the
+            -- middle of an instruction as the previous stream would have
+            -- viewed it, but we can at least do a few more instructions
+            -- before the pipeline has to be refilled.
+            flushing_pipeline <= true;
+            flush_cycles <= 1;
+
           else
             -- Branch not taken
+            if instruction_in.instruction_flags.do_branch_conditional = false then
+              report "EXECUTE: Not taking conditional branch, branch_z = "
+                & boolean'image(instruction_in.instruction_flags.branch_z);
+              if instruction_in.instruction_flags.branch_z then
+                report "EXECUTE: Conditional branch is on Z = "
+                  & boolean'image(not instruction_in.instruction_flags.branch_on_clear);
+              end if;              
+              if instruction_in.instruction_flags.branch_c then
+                report "EXECUTE: Conditional branch is on C = "
+                  & boolean'image(not instruction_in.instruction_flags.branch_on_clear);
+              end if;              
+              if instruction_in.instruction_flags.branch_v then
+                report "EXECUTE: Conditional branch is on V = "
+                  & boolean'image(not instruction_in.instruction_flags.branch_on_clear);
+              end if;              
+              if instruction_in.instruction_flags.branch_n then
+                report "EXECUTE: Conditional branch is on N = "
+                  & boolean'image(not instruction_in.instruction_flags.branch_on_clear);
+              end if;              
+            end if;
             expected_instruction_address <= instruction_in.expected_translated;
             reg_pch <= instruction_in.pc_expected(15 downto 8);
             reg_pcl <= instruction_in.pc_expected(7 downto 0);
