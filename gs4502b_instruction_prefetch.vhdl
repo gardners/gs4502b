@@ -106,6 +106,7 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal fetch_buffer_1 : prefetch_buffer;
   signal fetch_buffer_2 : prefetch_buffer;
   signal fetch_buffer_3 : prefetch_buffer;
+  signal fetch_buffer_4 : prefetch_buffer;
   signal fetch_buffer_now : prefetch_buffer;
 
   signal opcode_high_bit : std_logic := '1';
@@ -132,15 +133,17 @@ begin
 
       -- Provide delayed memory address and data signals, so that we know where the
       -- RAM is reading from each cycle
-      fetch_buffer_now.address <= fetch_buffer_3.address;
+      fetch_buffer_now.address <= fetch_buffer_4.address;
       for i in 0 to 3 loop
-        fetch_buffer_now.v(i).byte <= fetch_buffer_3.v(i).byte;
+        fetch_buffer_now.v(i).byte <= fetch_buffer_4.v(i).byte;
       end loop;
       -- Tag bytes with instruction lengths
       for i in 0 to 3 loop
         fetch_buffer_now.v(i).ilen
-          <= instruction_length(opcode_high_bit&fetch_buffer_3.v(i).byte(7 downto 0));
+          <= instruction_length(opcode_high_bit&fetch_buffer_4.v(i).byte(7 downto 0));
       end loop;
+
+      fetch_buffer_4 <= fetch_buffer_3;
 
       fetch_buffer_3.address <= fetch_buffer_2.address;
       fetch_buffer_3.v(0).byte <= memory_data0;
@@ -367,16 +370,16 @@ begin
       -- Work out possible PC values for JMP/JSR, as well as 8 and 16 bit
       -- branch options.
       branch8_pc <=
-        to_unsigned(65536 + to_integer(next_pc) + to_integer(
+        to_unsigned(65538 + to_integer(instruction_pc) + to_integer(
           byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&
           byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&
           byte_buffer(15 downto 8)),16);
       branch16_pc <=
-        to_unsigned(65536 + to_integer(next_pc) + to_integer(byte_buffer(23 downto 8)),16);
+        to_unsigned(65539 + to_integer(instruction_pc) + to_integer(byte_buffer(23 downto 8)),16);
       -- For those bizarre BBR/BBS instructions, where the branch is from the
       -- 3rd byte of the instruction, not the 2nd
       branch8_zp_pc <=
-        to_unsigned(65536 + to_integer(next_pc) + to_integer(
+        to_unsigned(65539 + to_integer(instruction_pc) + to_integer(
           byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&
           byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&
           byte_buffer(23 downto 16)),16);
