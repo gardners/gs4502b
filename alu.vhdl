@@ -302,6 +302,14 @@ package body alu is
         ret.value := regs.z + 1;
         regsout.z := ret.value;
       end if;
+      ret.n := false; ret.z := false;
+      if ret.value(7) = '1' then
+        ret.n := true;
+      end if;
+      if ret.value = x"00" then
+        ret.z := true;
+      end if;
+      
     end if;
     if iflags.alu_dec then
       ret.value := regs.a_dup2 - 1;
@@ -323,6 +331,13 @@ package body alu is
         ret.value := regs.z - 1;
         regsout.z := ret.value;
       end if;
+      ret.n := false; ret.z := false;
+      if ret.value(7) = '1' then
+        ret.n := true;
+      end if;
+      if ret.value = x"00" then
+        ret.z := true;
+      end if;      
     end if;
 
     if iflags.aludst_a then
