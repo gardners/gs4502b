@@ -93,10 +93,10 @@ ENTITY gs4502b_core IS
     reset : in std_logic;
     monitor_PC : out unsigned(15 downto 0);
 
-    fetch_port_read : fetch_port_out;
-    fetch_port_write : fetch_port_in;
-    mem_port_read : mem_port_out;
-    mem_port_write : mem_port_in;
+    fetch_port_read : in fetch_port_out;
+    fetch_port_write : out fetch_port_in;
+    mem_port_read : in mem_port_out;
+    mem_port_write : out mem_port_in;
     
     rom_at_8000 : in std_logic;
     rom_at_a000 : in std_logic;
@@ -188,11 +188,8 @@ begin  -- behavioural
       branch8_zp_pc => branch8_zp_pc,
       branch16_pc => branch16_pc,
 
-      memory_address => ram_instruction_port_address,
-      memory_data0 => ram_instruction_port_data0,
-      memory_data1 => ram_instruction_port_data1,
-      memory_data2 => ram_instruction_port_data2,
-      memory_data3 => ram_instruction_port_data3
+      fetch_port_read => fetch_port_read,
+      fetch_port_write => fetch_port_write
       
       );  
   

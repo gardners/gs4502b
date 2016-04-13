@@ -10,26 +10,33 @@ use work.instructions.all;
 
 package alu is
 
+  subtype instruction_length is integer range 1 to 3;
+  type ilens4 is array (0 to 3) of instruction_length;
+  type bytes4 is array (0 to 3) of std_logic_vector(8 downto 0);
+  
   type fetch_port_in is record
+    valid : boolean;
     translated : translated_address;
-    pc : unsigned(15 downto 0);
     user_flags : std_logic_vector(7 downto 0);
   end record;
   type fetch_port_out is record
     -- Tell user if port is busy
     blocked : boolean;
     -- 4 bytes of read value
-    value : unsigned(31 downto 0);
+    bytes : bytes4;
+    -- Address of request
+    translated : translated_address;
     -- User specified flags that were presented with the request
     -- when submitted.
     user_flags : std_logic_vector(7 downto 0);
   end record;  
   type mem_port_in is record
-    -- Tell user if port is busy
-    blocked : boolean;
+    valid : boolean;
   end record;
   type mem_port_out is record
     result : transaction_result;
+    -- Tell user if port is busy
+    blocked : boolean;
   end record;
 
   type ram_interface is record

@@ -24,8 +24,8 @@ entity gs4502b is
     
     -- Fetch port for VIC-IV (or anything else) to access
     -- main memory.
-    fetch_port_read : fetch_port_out;
-    fetch_port_write : fetch_port_in;
+    fetch_port_read : out fetch_port_out;
+    fetch_port_write : in fetch_port_in;
 
     -- Signals we need from VIC-IV to modify memory mapping
     rom_at_8000 : in std_logic;
@@ -50,11 +50,18 @@ end gs4502b;
 
 architecture behavioural of gs4502b is
 
-  type fetch_ports_in is array(0 to 2) of fetch_port_in;
-  type fetch_ports_out is array(0 to 2) of fetch_port_out;
-  type mem_ports_in is array(0 to 2) of mem_port_in;
-  type mem_ports_out is array(0 to 2) of mem_port_out;
+  type fetch_ports_in_t is array(0 to 2) of fetch_port_in;
+  type fetch_ports_out_t is array(0 to 2) of fetch_port_out;
+  type mem_ports_in_t is array(0 to 2) of mem_port_in;
+  type mem_ports_out_t is array(0 to 2) of mem_port_out;
+  signal fetch_ports_in : fetch_ports_in_t;
+  signal fetch_ports_out : fetch_ports_out_t;
+  signal mem_ports_in : mem_ports_in_t;
+  signal mem_ports_out : mem_ports_out_t;
 
+  type pc3 is array (0 to 2) of unsigned(15 downto 0);
+  signal monitor_pcs : pc3;
+  
   type irqs is array(0 to 2) of std_logic;
   type nmis is array(0 to 2) of std_logic;
 begin
@@ -76,20 +83,20 @@ begin
                -- Port 3 : Core 2
                fetch_port0_in => fetch_ports_in(0),
                fetch_port0_out => fetch_ports_out(0),
-               fetch_port0_in => fetch_port_write,
-               fetch_port0_out => fetch_port_read,
-               fetch_port0_in => fetch_ports_in(1),
-               fetch_port0_out => fetch_ports_out(1),
-               fetch_port0_in => fetch_ports_in(2),
-               fetch_port0_out => fetch_ports_out(2),
+               fetch_port1_in => fetch_port_write,
+               fetch_port1_out => fetch_port_read,
+               fetch_port2_in => fetch_ports_in(1),
+               fetch_port2_out => fetch_ports_out(1),
+               fetch_port3_in => fetch_ports_in(2),
+               fetch_port3_out => fetch_ports_out(2),
 
                -- Now memory ports for the three cores
-               mem_port_0_in => mem_ports_in(0),
-               mem_port_0_out => mem_ports_out(0),
-               mem_port_1_in => mem_ports_in(1),
-               mem_port_1_out => mem_ports_out(1),
-               mem_port_2_in => mem_ports_in(2),
-               mem_port_2_out => mem_ports_out(2)
+               mem_port0_in => mem_ports_in(0),
+               mem_port0_out => mem_ports_out(0),
+               mem_port1_in => mem_ports_in(1),
+               mem_port1_out => mem_ports_out(1),
+               mem_port2_in => mem_ports_in(2),
+               mem_port2_out => mem_ports_out(2)
                );
 
   cpu_cores: for core in 0 to 2 generate

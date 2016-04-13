@@ -61,13 +61,9 @@ entity gs4502b_instruction_prefetch is
     branch16_pc : out unsigned(15 downto 0);
     branch8_zp_pc : out unsigned(15 downto 0);
 
-    -- Interface to 4x 64KB RAMs
-    memory_address : out std_logic_vector(15 downto 0);
-    memory_data0 : in std_logic_vector(8 downto 0);
-    memory_data1 : in std_logic_vector(8 downto 0);
-    memory_data2 : in std_logic_vector(8 downto 0);
-    memory_data3 : in std_logic_vector(8 downto 0)
-
+    -- Interface to memory
+    fetch_port_write : out fetch_port_in;
+    fetch_port_read : in fetch_port_out
     
     );
 end gs4502b_instruction_prefetch;
@@ -84,12 +80,13 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal byte_buffer : unsigned((8*BYTE_BUFFER_WIDTH)-1 downto 0);
   signal bytes_ready : integer range 0 to 16 := 0;
   signal buffer_address : translated_address := (others => '0');
+  signal fetch_address : translated_address := (others => '0');
   signal burst_fetch : integer range 0 to (BYTE_BUFFER_WIDTH/4+1) := 0;
   signal dispatched_bytes : integer range 0 to 7 := 0;
 
   -- And which address are we currently looking for to append to the end of our
   -- byte buffer?
-  signal desired_address : unsigned(15 downto 0) := (others => '0');
+  signal desired_address : translated_address := (others => '0');
 
   -- Delayed signals to tell us which address and values of chip/fast RAM we are
   -- reading in a given cycle
@@ -100,13 +97,10 @@ architecture behavioural of gs4502b_instruction_prefetch is
   type prefetch_vector is array ( 0 to 3 ) of prefetch_byte;
   type prefetch_buffer is record
     v : prefetch_vector;
-    address : unsigned(15 downto 0);
+    address : translated_address;
   end record;
     
   signal fetch_buffer_1 : prefetch_buffer;
-  signal fetch_buffer_2 : prefetch_buffer;
-  signal fetch_buffer_3 : prefetch_buffer;
-  signal fetch_buffer_4 : prefetch_buffer;
   signal fetch_buffer_now : prefetch_buffer;
 
   signal opcode_high_bit : std_logic := '1';
@@ -131,28 +125,27 @@ begin
     if rising_edge(cpuclock) then
       report "RISING EDGE";
 
+      fetch_port_write.valid <= false;
+      fetch_port_write.translated <= (others => '0');
+      
       -- Provide delayed memory address and data signals, so that we know where the
       -- RAM is reading from each cycle
-      fetch_buffer_now.address <= fetch_buffer_4.address;
+      fetch_buffer_now.address <= fetch_buffer_1.address;
       for i in 0 to 3 loop
-        fetch_buffer_now.v(i).byte <= fetch_buffer_4.v(i).byte;
+        fetch_buffer_now.v(i).byte <= fetch_buffer_1.v(i).byte;
       end loop;
       -- Tag bytes with instruction lengths
       for i in 0 to 3 loop
         fetch_buffer_now.v(i).ilen
-          <= instruction_length(opcode_high_bit&fetch_buffer_4.v(i).byte(7 downto 0));
+          <= instruction_lengths
+          .instruction_length(opcode_high_bit&fetch_buffer_1.v(i).byte(7 downto 0));
       end loop;
 
-      fetch_buffer_4 <= fetch_buffer_3;
-
-      fetch_buffer_3.address <= fetch_buffer_2.address;
-      fetch_buffer_3.v(0).byte <= memory_data0;
-      fetch_buffer_3.v(1).byte <= memory_data1;
-      fetch_buffer_3.v(2).byte <= memory_data2;
-      fetch_buffer_3.v(3).byte <= memory_data3;
+      fetch_buffer_1.address <= fetch_port_read.translated;
+      for i in 0 to 3 loop
+        fetch_buffer_1.v(0).byte <= fetch_port_read.bytes(i);
+      end loop;
       
-      fetch_buffer_2.address <= fetch_buffer_1.address;
-
       -- XXX When changing CPU personality, there is a 1 cycle delay before
       -- instruction lengths will be correctly calculated.  Should be fine, as
       -- we will hold CPU during personality change, anyway via
@@ -262,8 +255,9 @@ begin
       if (burst_fetch > 0) then
         report "Requesting next instruction word (" & integer'image(burst_fetch)
           & " more to go).";
-        memory_address <= std_logic_vector(fetch_buffer_1.address + 1);
-        fetch_buffer_1.address <= fetch_buffer_1.address + 1;
+        fetch_port_write.valid <= true;
+        fetch_port_write.translated <= fetch_address + 1;
+        fetch_address <= fetch_address + 1;
         if (burst_add_one = false) then
           report "Decrementing burst_fetch";
           burst_fetch <= burst_fetch - 1;
@@ -324,9 +318,10 @@ begin
         -- Start reading from this address
         -- fastram/chipram from CPU side is a single 256KB RAM, composed of 4x
         -- 64KB interleaved banks. This allows us to read 4 bytes at a time.
-        memory_address <= std_logic_vector(redirected_address(17 downto 2));
-        fetch_buffer_1.address <= redirected_address(17 downto 2);
-        desired_address <= redirected_address(17 downto 2);
+        fetch_port_write.valid <= true;
+        fetch_port_write.translated <= redirected_address;
+        fetch_address <= redirected_address;
+        desired_address <= redirected_address;
 
       else
       -- Otherwise, keep fetching from where we were.

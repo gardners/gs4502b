@@ -22,14 +22,14 @@ char *top=
 "    -- Port A\n"
 "    a_clk   : in  std_logic;\n"
 "    a_wr    : in  std_logic;\n"
-"    a_addr  : in  std_logic_vector(15 downto 0);\n"
+"    a_addr  : in  std_logic_vector(16 downto 0);\n"
 "    a_din   : in  std_logic_vector(8 downto 0);\n"
 "    a_dout  : out std_logic_vector(8 downto 0);\n"
 "     \n"
 "    -- Port B\n"
 "    b_clk   : in  std_logic;\n"
 "    b_wr    : in  std_logic;\n"
-"    b_addr  : in  std_logic_vector(15 downto 0);\n"
+"    b_addr  : in  std_logic_vector(16 downto 0);\n"
 "    b_din   : in  std_logic_vector(8 downto 0);\n"
 "    b_dout  : out std_logic_vector(8 downto 0)\n"
 ");\n"
@@ -37,7 +37,7 @@ char *top=
 " \n"
 "architecture rtl of ram0 is\n"
 "    -- Shared memory\n"
-  "  type mem_type is array ( 65535 downto 0 ) of std_logic_vector(8 downto 0);    shared variable mem : mem_type  := (\n";
+  "  type mem_type is array ( (((256+16)*1024)/4-1) downto 0 ) of std_logic_vector(8 downto 0);    shared variable mem : mem_type  := (\n";
 
 char *bottom=
 "    others => \"000000000\");\n"
