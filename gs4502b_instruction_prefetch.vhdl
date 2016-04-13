@@ -36,6 +36,7 @@ use work.alu.all;
 entity gs4502b_instruction_prefetch is
   port (
     cpuclock : in std_logic;
+    processor_core_id : in integer range 0 to 2;
 
     current_cpu_personality : in cpu_personality;
     
@@ -106,6 +107,8 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal opcode_high_bit : std_logic := '1';
 
   signal skip_bytes : integer := 0;
+
+  signal fetch_port_ready : boolean := true;
 begin
   process (cpuclock) is
     variable instruction : instruction_information;
@@ -120,13 +123,18 @@ begin
     variable new_ilen_buffer : ilens;
 
     variable burst_add_one : boolean := false;    
-    variable burst_sub_one : boolean := false;    
+    variable burst_sub_one : boolean := false;
+
+    variable fetch_port_used : boolean := false;
   begin
     if rising_edge(cpuclock) then
       report "RISING EDGE";
 
+      -- By default not asking for bytes
       fetch_port_write.valid <= false;
-      fetch_port_write.translated <= (others => '0');
+      -- Ask for redirected_address by default, so that we can correctly handle
+      -- redirection when the memory controller blocks.
+      fetch_port_write.translated <= redirected_address;
       
       -- Provide delayed memory address and data signals, so that we know where the
       -- RAM is reading from each cycle
@@ -255,15 +263,21 @@ begin
       if (burst_fetch > 0) then
         report "Requesting next instruction word (" & integer'image(burst_fetch)
           & " more to go).";
-        fetch_port_write.valid <= true;
-        fetch_port_write.translated <= fetch_address + 1;
-        fetch_address <= fetch_address + 1;
-        if (burst_add_one = false) then
-          report "Decrementing burst_fetch";
-          burst_fetch <= burst_fetch - 1;
+        if fetch_port_ready or fetch_port_read.acknowledged then
+          report "FETCH port ready";
+          fetch_port_write.valid <= true;
+          fetch_port_write.translated <= fetch_address + 4;
+          fetch_address <= fetch_address + 4;
+          fetch_port_used := true;
+          if (burst_add_one = false) then
+            report "Decrementing burst_fetch";
+            burst_fetch <= burst_fetch - 1;
+          else
+            report "Holding burst_fetch";
+          end if;
         else
-          report "Holding burst_fetch";
-        end if;
+          report "FETCH port NOT ready, so holding burst_fetch";
+        end if;          
       elsif (burst_add_one = true) then
         report "Incrementing burst_fetch";
         burst_fetch <= burst_fetch + 1;
@@ -315,11 +329,13 @@ begin
           ilen_buffer(0) <= to_integer(redirected_address(1 downto 0));
         end if;
 
-        -- Start reading from this address
-        -- fastram/chipram from CPU side is a single 256KB RAM, composed of 4x
-        -- 64KB interleaved banks. This allows us to read 4 bytes at a time.
+        -- Start reading from this address.
+        -- Clobber any other address we have asked for, as anything else we
+        -- were waiting for is not redundant.
         fetch_port_write.valid <= true;
         fetch_port_write.translated <= redirected_address;
+        fetch_port_used := true;
+
         fetch_address <= redirected_address;
         desired_address <= redirected_address;
 
@@ -327,6 +343,34 @@ begin
       -- Otherwise, keep fetching from where we were.
       end if;
 
+      -- Work out whether we can request more instructions next cycle?
+      -- This approach avoids the need for any buffers, but it does mean that
+      -- we can only fetch an instruction every other cycle.  However, for Core0,
+      -- we know that we have the highest priority access to the memory controller,
+      -- so we can always fetch.
+      -- For the other cores, this means that we are limited to fetching at
+      -- most 2 instruction bytes per cycle on average (4 per 2 cycles), so
+      -- there will be some pipeline stalling due to fetch delays on those
+      -- cores if they use too many 3-byte instructions in rapid succession.
+      -- This could be avoided by buffering the fetch ports 1 - 3, so that we
+      -- get a one-cycle warning, and can stop fetching when we know that it is
+      -- busy.  The trade-off would then be one extra cycle of instruction
+      -- fetch latency on ports 1-3.  We can work out the best trade-off there
+      -- later.
+      if processor_core_id = 0 then
+        fetch_port_ready <= true;
+      else
+        if fetch_port_used then
+          fetch_port_ready <= false;
+        else
+          if fetch_port_read.acknowledged then
+            fetch_port_ready <= true;
+            -- Now that the access has been acknowledged, clear the pending request
+            fetch_port_write.valid <= false;
+          end if;
+        end if;
+      end if;
+      
       report "$" & to_hstring(instruction_address) & " I-FETCH";
 
       next_pc := to_unsigned(to_integer(instruction_address(15 downto 0)) + consumed_bytes,16);

@@ -20,8 +20,8 @@ package alu is
     user_flags : std_logic_vector(7 downto 0);
   end record;
   type fetch_port_out is record
-    -- Tell user if port is busy
-    blocked : boolean;
+    -- Tell user if previous value has been accepted
+    acknowledged : boolean;
     -- 4 bytes of read value
     bytes : bytes4;
     -- Address of request
@@ -35,8 +35,8 @@ package alu is
   end record;
   type mem_port_out is record
     result : transaction_result;
-    -- Tell user if port is busy
-    blocked : boolean;
+    -- Tell user if previous value has been accepted
+    acknowledged : boolean;
   end record;
 
   type ram_interface is record
