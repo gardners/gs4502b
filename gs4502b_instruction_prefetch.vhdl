@@ -224,10 +224,10 @@ begin
       
       -- We are reading for the correct address
       report "I-FETCH" & integer'image(coreid)
-        & " : RAM READING $" & to_hstring(fetch_buffer_now.address&"00")
+        & " : RAM READING $" & to_hstring(fetch_buffer_now.address)
         &" - $" & to_hstring(fetch_buffer_now.address&"11") &
         ", stow offset " & integer'image(store_offset) & ", am hoping for $"
-        & to_hstring(desired_address&"00");
+        & to_hstring(desired_address);
 
       burst_sub_one := false;
       burst_add_one := false;
