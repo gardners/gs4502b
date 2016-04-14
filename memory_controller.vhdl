@@ -80,8 +80,11 @@ architecture behavioural of memory_controller is
     );
   type all_ram_interfaces is array (0 to 3) of ram_interface;
   signal ram_interfaces : all_ram_interfaces := ( others => IDLE_RAM_INTERFACE);
-   begin
 
+  signal port2_ist_dran : boolean := false;
+  
+begin    
+  
   ram: entity work.ram0
     port map ( a_clk => cpuclock,
                a_wr => '0',
@@ -137,7 +140,7 @@ architecture behavioural of memory_controller is
                b_din => ram_interfaces(3).mwdata,
                b_dout => ram_interfaces(3).mrdata
                );
-
+  
   process (cpuclock, ioclock) is
     variable fetch_address : translated_address;
     variable fetch_port_number : integer range 0 to 3;
@@ -145,13 +148,17 @@ architecture behavioural of memory_controller is
     variable fetching : boolean := true;
   begin
     if rising_edge(cpuclock) then
+      -- Toggle between ports 2 and 3 having priority, so that they share
+      -- available bandwidth more fairly
+      port2_ist_dran <= not port2_ist_dran;
+      
       -- Check for activity on the fetch ports
       report "Fetch port valids = ("
         & boolean'image(fetch_port0_in.valid) & ","
         & boolean'image(fetch_port1_in.valid) & ","
         & boolean'image(fetch_port2_in.valid) & ","
         & boolean'image(fetch_port3_in.valid) & ").";
-        
+      
       if fetch_port0_in.valid then
         fetching := true;
         fetch_address := fetch_port0_in.translated;
@@ -170,7 +177,7 @@ architecture behavioural of memory_controller is
         fetch_port0_out.acknowledged <= false;
         fetch_port2_out.acknowledged <= false;
         fetch_port3_out.acknowledged <= false;
-      elsif fetch_port2_in.valid then
+      elsif fetch_port2_in.valid and ((not fetch_port3_in.valid) or port2_ist_dran) then
         fetching := true;
         fetch_address := fetch_port2_in.translated;
         fetch_flags := fetch_port2_in.user_flags;
