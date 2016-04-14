@@ -21,7 +21,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
-
+use work.alu.all;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
@@ -67,9 +67,14 @@ architecture Behavioral of container is
   
   signal pixelclock : std_logic;
   signal pixelclock2x : std_logic;
-  signal cpuclock : std_logic;
+  signal ioclock : std_logic;
   signal clock100mhz : std_logic;
 
+  signal fetch_port_write : fetch_port_in;
+  signal fetch_port_read : fetch_port_out;
+
+  signal fastio_rdata : unsigned(7 downto 0);
+  
   signal monitor_pc : unsigned(15 downto 0);
   
   signal segled_counter : unsigned(31 downto 0) := (others => '0');
@@ -80,7 +85,7 @@ begin
     port map ( clk_in1 => CLK_IN,
                clk_out1 => clock100mhz,
                clk_out2 => pixelclock,
-               clk_out3 => cpuclock, -- 48MHz
+               clk_out3 => ioclock, -- 48MHz
                PIX2CLOCK => pixelclock2x
 --               clk_out3 => ioclock -- also 48MHz
                );
@@ -88,9 +93,20 @@ begin
   core0: entity work.gs4502b
     port map (
       cpuclock      => pixelclock,
-      monitor_pc    => monitor_pc,
+      ioclock       => ioclock,
       reset         => reset,
 
+      monitor_core_id => (others => '0'),
+      monitor_pc    => monitor_pc,
+
+      -- Fetch interface from VIC-IV to 4502's internal memory controller
+      -- (which controls access to the BRAM)
+      fetch_port_write => fetch_port_write,
+      fetch_port_read => fetch_port_read,      
+
+      -- CPU fast IO interface
+      fastio_rdata => fastio_rdata,
+      
       rom_at_8000 => '0',
       rom_at_a000 => '0',
       rom_at_c000 => '0',
