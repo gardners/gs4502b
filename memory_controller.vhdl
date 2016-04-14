@@ -72,14 +72,20 @@ architecture behavioural of memory_controller is
   -- information.)
   constant IDLE_RAM_INTERFACE : ram_interface := (
     iaddr => (others => '0'),
-    irdata => (others => '0'),
     maddr => (others => '0'),
     mwrite => '0',
-    mwdata => (others => '0'),
-    mrdata => (others => '0')
+    mwdata => (others => '0')
     );
   type all_ram_interfaces is array (0 to 3) of ram_interface;
-  signal ram_interfaces : all_ram_interfaces := ( others => IDLE_RAM_INTERFACE);
+  signal ram_interfaces : all_ram_interfaces;
+  signal irdata0 : std_logic_vector(8 downto 0);
+  signal irdata1 : std_logic_vector(8 downto 0);
+  signal irdata2 : std_logic_vector(8 downto 0);
+  signal irdata3 : std_logic_vector(8 downto 0);
+  signal mrdata0 : std_logic_vector(8 downto 0);
+  signal mrdata1 : std_logic_vector(8 downto 0);
+  signal mrdata2 : std_logic_vector(8 downto 0);
+  signal mrdata3 : std_logic_vector(8 downto 0);
 
   signal next_fetch_address : translated_address;
   signal next_fetch_flags : std_logic_vector(7 downto 0);
@@ -97,6 +103,7 @@ architecture behavioural of memory_controller is
 
   
   signal port2_ist_dran : boolean := false;
+
   
 begin    
   
@@ -105,13 +112,13 @@ begin
                a_wr => '0',
                a_addr => ram_interfaces(0).iaddr,
                a_din => (others => '0'),
-               a_dout => ram_interfaces(0).irdata,
+               a_dout => irdata0,
 
                b_clk => cpuclock,
                b_wr => ram_interfaces(0).mwrite,
                b_addr => ram_interfaces(0).maddr,
                b_din => ram_interfaces(0).mwdata,
-               b_dout => ram_interfaces(0).mrdata
+               b_dout => mrdata0
                );
   
   ram1: entity work.ram1
@@ -119,13 +126,13 @@ begin
                a_wr => '0',
                a_addr => ram_interfaces(1).iaddr,
                a_din => (others => '0'),
-               a_dout => ram_interfaces(1).irdata,
+               a_dout => irdata1,
 
                b_clk => cpuclock,
                b_wr => ram_interfaces(1).mwrite,
                b_addr => ram_interfaces(1).maddr,
                b_din => ram_interfaces(1).mwdata,
-               b_dout => ram_interfaces(1).mrdata
+               b_dout => mrdata1
                );
   
   ram2: entity work.ram2
@@ -133,13 +140,13 @@ begin
                a_wr => '0',
                a_addr => ram_interfaces(2).iaddr,
                a_din => (others => '0'),
-               a_dout => ram_interfaces(2).irdata,
+               a_dout => irdata2,
 
                b_clk => cpuclock,
                b_wr => ram_interfaces(2).mwrite,
                b_addr => ram_interfaces(2).maddr,
                b_din => ram_interfaces(2).mwdata,
-               b_dout => ram_interfaces(2).mrdata
+               b_dout => mrdata2
                );
   
   ram3: entity work.ram3
@@ -147,13 +154,13 @@ begin
                a_wr => '0',
                a_addr => ram_interfaces(3).iaddr,
                a_din => (others => '0'),
-               a_dout => ram_interfaces(3).irdata,
+               a_dout => irdata3,
 
                b_clk => cpuclock,
                b_wr => ram_interfaces(3).mwrite,
                b_addr => ram_interfaces(3).maddr,
                b_din => ram_interfaces(3).mwdata,
-               b_dout => ram_interfaces(3).mrdata
+               b_dout => mrdata3
                );
   
   process (cpuclock, ioclock) is
@@ -246,9 +253,12 @@ begin
       bram_fetch_address_out <= bram_fetch_address_1;
       bram_fetch_flags_out <= bram_fetch_flags_1;
       bram_fetch_port_out <= bram_fetch_port_1;
-      for i in 0 to 3 loop
-        bram_bytes_out(i) <= ram_interfaces(i).irdata;
-      end loop;
+
+      bram_bytes_out(0) <= irdata0;
+      bram_bytes_out(1) <= irdata1;
+      bram_bytes_out(2) <= irdata2;
+      bram_bytes_out(3) <= irdata3;
+      
 
       report "MEM_CONTROLLER : Presenting address $"
         & to_hstring(bram_fetch_address_out)

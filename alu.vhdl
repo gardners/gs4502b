@@ -41,11 +41,9 @@ package alu is
 
   type ram_interface is record
     iaddr : std_logic_vector(16 downto 0);
-    irdata : std_logic_vector(8 downto 0);
     maddr : std_logic_vector(16 downto 0);
     mwrite : std_logic;
     mwdata : std_logic_vector(8 downto 0);
-    mrdata : std_logic_vector(8 downto 0);
   end record;  
   
   type alu_result is record
