@@ -52,7 +52,7 @@ char *bottom=
 "            mem(to_integer(unsigned(a_addr))) := a_din;\n"
 "        end if;\n"
 "        a_dout <= mem(to_integer(unsigned(a_addr)));\n"
-"        report \"Reading ram0 $\" & to_hstring(unsigned(a_addr));\n"
+"        report \"Reading ram0 $\" & to_hstring(unsigned(a_addr)) & \" = $\" & to_hstring(mem(to_integer(unsigned(a_addr))));\n"
 "    end if;\n"
 "end process;\n"
 " \n"
