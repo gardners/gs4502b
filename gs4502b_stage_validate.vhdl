@@ -80,6 +80,7 @@ use work.alu.all;
 entity gs4502b_stage_validate is
   port (
     cpuclock : in std_logic;
+    coreid : in integer range 0 to 2;
     
 -- Input: translated address of instruction in memory
     instruction_in : in instruction_information;
@@ -87,7 +88,7 @@ entity gs4502b_stage_validate is
 -- Input: What resources does this instruction require and modify?
     resources_required_in : in instruction_resources;
     resources_modified_in : in instruction_resources;
-        
+    
 -- Is the instruction pipeline stalled?
     stall : in boolean;
 -- What resources have just been locked by the execute stage?
@@ -183,7 +184,8 @@ begin
       -- stage this cycle.
       if completed_transaction.valid = true then
         report "$" & to_hstring(last_instruction_expected_address) &
-            " VALIDATE : Processing completed memory transaction.";
+          " VALIDATE" & integer'image(coreid)
+          & " : Processing completed memory transaction.";
 
         if completed_transaction.id = reg_a_name then
           -- Must happen same cycle in execute: reg_a <= completed_transaction_value;
@@ -229,7 +231,8 @@ begin
       -- retiring old instructions.
       if resource_lock_transaction_valid_in = true then
         report "$" & to_hstring(last_instruction_expected_address) &
-          " VALIDATE : Processing resource lock notification from EXECUTE.";
+          " VALIDATE" & integer'image(coreid)
+          & " : Processing resource lock notification from EXECUTE.";
 
         if resources_freshly_locked_by_execute_stage.a then
           reg_a_name <= resource_lock_transaction_id_in;
@@ -279,194 +282,201 @@ begin
       -- cache address space is concerned, effectively represents a couple of
       -- extra bits).
       if (instruction.translated = last_instruction_expected_address)
-          and (instruction.cpu_personality = current_cpu_personality) then
-          report "$" & to_hstring(last_instruction_expected_address) &
-            " VALIDATE : Instruction is valid.";
-          
-          last_instruction_expected_address <= instruction.expected_translated;
-          last_instruction_expected_pch <= instruction.pc_expected(15 downto 8);
-        end if;
-      else
+        and (instruction.cpu_personality = current_cpu_personality) then
         report "$" & to_hstring(last_instruction_expected_address) &
-          " VALIDATE : Instruction is not valid $"
-          & to_hstring(instruction.translated);
+          " VALIDATE" & integer'image(coreid)
+          & " : Instruction is valid.";
+        
+        last_instruction_expected_address <= instruction.expected_translated;
+        last_instruction_expected_pch <= instruction.pc_expected(15 downto 8);
       end if;
-      if address_redirecting then
-        -- Remember the address we are redirecting to.
-        last_instruction_expected_address <= redirected_address;
-        last_instruction_expected_pch <= redirected_pch;
-        report "$" & to_hstring(redirected_address) &
-          " VALIDATE : Redirecting PC at request of EXECUTE stage.";
+    else
+      report "$" & to_hstring(last_instruction_expected_address) &
+        " VALIDATE" & integer'image(coreid)
+        & " : Instruction is not valid $"
+        & to_hstring(instruction.translated);
+    end if;
+    if address_redirecting then
+      -- Remember the address we are redirecting to.
+      last_instruction_expected_address <= redirected_address;
+      last_instruction_expected_pch <= redirected_pch;
+      report "$" & to_hstring(redirected_address) &
+        " VALIDATE" & integer'image(coreid)
+        & " : Redirecting PC at request of EXECUTE stage.";
+    end if;
+    
+    -- We are stalled unless we are processing something we are reading in,
+    -- and we are not being asked to stall ourselves.
+    stalling <= true;
+    
+    if stall = false then
+      -- Downstream stage is willing to accept an instruction
+      report "$" & to_hstring(last_instruction_expected_address) &
+        " VALIDATE" & integer'image(coreid)
+        & " : not stalled";
+
+      
+      if stall_buffer_occupied then
+        -- Pass instruction from our stall buffer
+        instruction := stalled_instruction;
+        resources_modified := stalled_resources_modified;
+        resources_required := stalled_resources_required;
+      else
+        instruction := instruction_in;
+        resources_modified := resources_modified_in;
+        resources_required := resources_required_in;
+        
+        -- Reading from pipeline input, and we are not stalled, so we can tell
+        -- the upstream pipeline stage to resume
+        stalling <= false;
+        stall_out_current <= false;
+
+        report "$" & to_hstring(last_instruction_expected_address) &
+          " VALIDATE" & integer'image(coreid)
+          & " : not stalling upstream";
+
+      end if;          
+
+      -- For unconditional jumps and branches, simply set the new PC
+      if instruction.instruction_flags.do_branch
+        and (not instruction.instruction_flags.do_branch_conditional) then
+        instruction.pc_expected := instruction.pc_mispredict;
+        instruction.expected_translated := instruction.mispredict_translated;
+
+      -- XXX Ideally we should feed back to ourselves and previous stages
+      -- the change in program flow, so that we can reduce the number of
+      -- cycles incurred by taking a branch, especially a non-conditional
+      -- once, where we know immediately that the branch will be taken.
       end if;
       
-      -- We are stalled unless we are processing something we are reading in,
-      -- and we are not being asked to stall ourselves.
-      stalling <= true;
-     
-      if stall = false then
-        -- Downstream stage is willing to accept an instruction
-          report "$" & to_hstring(last_instruction_expected_address) &
-            " VALIDATE : not stalled";
+      -- In either case above, the stall buffer becomes empty
+      stall_buffer_occupied <= false;
+      
+      -- Pass signals through
+      instruction_out <= instruction;
+      resources_modified_out <= resources_modified;
+      resources_required_out <= resources_required;
 
-        
-        if stall_buffer_occupied then
-          -- Pass instruction from our stall buffer
-          instruction := stalled_instruction;
-          resources_modified := stalled_resources_modified;
-          resources_required := stalled_resources_required;
-        else
-          instruction := instruction_in;
-          resources_modified := resources_modified_in;
-          resources_required := resources_required_in;
-          
-          -- Reading from pipeline input, and we are not stalled, so we can tell
-          -- the upstream pipeline stage to resume
-          stalling <= false;
-          stall_out_current <= false;
+      if instruction.translated = last_instruction_expected_address then
+        instruction_address_is_as_expected <= true;
+      else
+        report "$" & to_hstring(last_instruction_expected_address)
+          & " VALIDATE" & integer'image(coreid)
+          & " : Marking instruction as incorrect address (saw $"
+          & to_hstring(instruction.translated) & ").";
+        instruction_address_is_as_expected <= false;
+      end if;
+      
+      -- Remember resources that will be potentially modified by any
+      -- instructions that have not yet passed the execute stage.
+      -- At the moment, the execute stage is the stage immediately
+      -- following this one, so we need only remember the one instruction.
+      -- XXX This memory needs to expand to multiple instructions if the
+      -- pipeline becomes deeper.
+      -- More specifically, we only care about resources which will be
+      -- modified by this instruction following a memory access, as immediate
+      -- mode, register indexing etc will all happen during the execute
+      -- cycle, and so be available.  Therefore only memory load or
+      -- read-modify-write instructions are a problem here.  Thus, if the
+      -- instruction is a load (including stack pop) or RMW, then we need to note the
+      -- resources as being delayed. In all other cases we have no
+      -- delayed resources
+      if instruction.instruction_flags.do_load=true then
+        -- Set delayed flag for all resources modified by this
+        -- instruction.
+        -- XXX We can probably optimise this a bit, by not setting SPL
+        -- delayed for a stack operation, for example, because the value
+        -- of SP will be resolved. But we can worry about that later.
+        resources_about_to_be_locked_by_execute_stage <= resources_modified;
+      else
+        -- Set delayed flag for all resources to false
+        resources_about_to_be_locked_by_execute_stage <= (others => false);
+      end if;
+      
+      if
+        -- Are all the resources we need here?
+        --
+        -- All that we care about are those resources which will not be available
+        -- next cycle because they are either currently locked, or are about
+        -- to be locked because the most recent instruction requires a memory
+        -- access to resolve them, e.g, following a non-immediate mode ALU
+        -- operation. e.g., EOR $1234 / STA $2345 would require the STA to
+        -- stall until the EOR operation completes. 
+        -- 
+        -- (We also want to implement short-cutting register access when
+        -- registers are pending being loaded from memory. This basically consists
+        -- of using the memory transaction ID for a load as the source for
+        -- the store operation, instead of the register, when the operation is
+        -- passed to the memory controller (stores don't affect CPU flags),
+        -- so we can ignore that for now.)
+        --
+        -- Therefore what we need to test now is whether we decided that the
+        -- previous instruction will block on a memory access. If yes, then
+        -- we need to hold this instruction.
+        --
+        -- We also have to check outstanding_resources, which is the list of
+        -- resources for which we are currently waiting for finalisation from
+        -- the memory controller, i.e., due to resolution of renamed
+        -- registers or flags.  Outstanding resources is computed by seeing
+        -- what transaction information the execute stage informs us of (it
+        -- is the stage that allocates transaction IDs to memory
+        -- transactions, and hence does the resource re-writing.
 
-          report "$" & to_hstring(last_instruction_expected_address) &
-            " VALIDATE : not stalling upstream";
+        -- Currently locked instructions are easy to test
+        not_empty(resources_required and resources_about_to_be_locked_by_execute_stage)
+        or not_empty(resources_required and resources_what_will_still_be_outstanding_next_cycle)
+        or not_empty(resources_required and resources_freshly_locked_by_execute_stage)
+        -- Make sure instruction personality will be valid
+        or (instruction.cpu_personality /= current_cpu_personality)
+        or (instruction.modifies_cpu_personality)
+      then
+        -- Instructions resource requirements not currently met.
+        -- XXX - HOLD INPUT *and* OUTPUT values
+        -- What would be really nice is if we can insert bubbles in the
+        -- pipeline to be closed up when we get here, so that we can avoid
+        -- the need for any extra buffer registers and muxes.
 
-        end if;          
+        -- Tell downstream stage the instruction is not valid for execution.
+        instruction_valid <= false;
 
-          -- For unconditional jumps and branches, simply set the new PC
-          if instruction.instruction_flags.do_branch
-            and (not instruction.instruction_flags.do_branch_conditional) then
-            instruction.pc_expected := instruction.pc_mispredict;
-            instruction.expected_translated := instruction.mispredict_translated;
+        -- Tell upstream stage that we are stalled
+        stalling <= true;
+        stall_out_current <= true;
 
-            -- XXX Ideally we should feed back to ourselves and previous stages
-            -- the change in program flow, so that we can reduce the number of
-            -- cycles incurred by taking a branch, especially a non-conditional
-            -- once, where we know immediately that the branch will be taken.
-          end if;
-          
-        -- In either case above, the stall buffer becomes empty
-        stall_buffer_occupied <= false;
-        
-        -- Pass signals through
-        instruction_out <= instruction;
-        resources_modified_out <= resources_modified;
-        resources_required_out <= resources_required;
-
-        if instruction.translated = last_instruction_expected_address then
-          instruction_address_is_as_expected <= true;
-        else
-          report "$" & to_hstring(last_instruction_expected_address)
-            & " VALIDATE : Marking instruction as incorrect address (saw $"
-            & to_hstring(instruction.translated) & ").";
-          instruction_address_is_as_expected <= false;
-        end if;
-        
-        -- Remember resources that will be potentially modified by any
-        -- instructions that have not yet passed the execute stage.
-        -- At the moment, the execute stage is the stage immediately
-        -- following this one, so we need only remember the one instruction.
-        -- XXX This memory needs to expand to multiple instructions if the
-        -- pipeline becomes deeper.
-        -- More specifically, we only care about resources which will be
-        -- modified by this instruction following a memory access, as immediate
-        -- mode, register indexing etc will all happen during the execute
-        -- cycle, and so be available.  Therefore only memory load or
-        -- read-modify-write instructions are a problem here.  Thus, if the
-        -- instruction is a load (including stack pop) or RMW, then we need to note the
-        -- resources as being delayed. In all other cases we have no
-        -- delayed resources
-        if instruction.instruction_flags.do_load=true then
-          -- Set delayed flag for all resources modified by this
-          -- instruction.
-          -- XXX We can probably optimise this a bit, by not setting SPL
-          -- delayed for a stack operation, for example, because the value
-          -- of SP will be resolved. But we can worry about that later.
-          resources_about_to_be_locked_by_execute_stage <= resources_modified;
-        else
-          -- Set delayed flag for all resources to false
-          resources_about_to_be_locked_by_execute_stage <= (others => false);
-        end if;
-        
-        if
-          -- Are all the resources we need here?
-          --
-          -- All that we care about are those resources which will not be available
-          -- next cycle because they are either currently locked, or are about
-          -- to be locked because the most recent instruction requires a memory
-          -- access to resolve them, e.g, following a non-immediate mode ALU
-          -- operation. e.g., EOR $1234 / STA $2345 would require the STA to
-          -- stall until the EOR operation completes. 
-          -- 
-          -- (We also want to implement short-cutting register access when
-          -- registers are pending being loaded from memory. This basically consists
-          -- of using the memory transaction ID for a load as the source for
-          -- the store operation, instead of the register, when the operation is
-          -- passed to the memory controller (stores don't affect CPU flags),
-          -- so we can ignore that for now.)
-          --
-          -- Therefore what we need to test now is whether we decided that the
-          -- previous instruction will block on a memory access. If yes, then
-          -- we need to hold this instruction.
-          --
-          -- We also have to check outstanding_resources, which is the list of
-          -- resources for which we are currently waiting for finalisation from
-          -- the memory controller, i.e., due to resolution of renamed
-          -- registers or flags.  Outstanding resources is computed by seeing
-          -- what transaction information the execute stage informs us of (it
-          -- is the stage that allocates transaction IDs to memory
-          -- transactions, and hence does the resource re-writing.
-
-          -- Currently locked instructions are easy to test
-          not_empty(resources_required and resources_about_to_be_locked_by_execute_stage)
-          or not_empty(resources_required and resources_what_will_still_be_outstanding_next_cycle)
-          or not_empty(resources_required and resources_freshly_locked_by_execute_stage)
-          -- Make sure instruction personality will be valid
-          or (instruction.cpu_personality /= current_cpu_personality)
-          or (instruction.modifies_cpu_personality)
-        then
-          -- Instructions resource requirements not currently met.
-          -- XXX - HOLD INPUT *and* OUTPUT values
-          -- What would be really nice is if we can insert bubbles in the
-          -- pipeline to be closed up when we get here, so that we can avoid
-          -- the need for any extra buffer registers and muxes.
-
-          -- Tell downstream stage the instruction is not valid for execution.
-          instruction_valid <= false;
-
-          -- Tell upstream stage that we are stalled
-          stalling <= true;
-          stall_out_current <= true;
-
-          -- If we weren't already stalling the upstream, then we need to
-          -- copy the current inputs to the stall buffer, and mark the stall
-          -- buffer as occupied.
-          if stall_out_current=false then
-            stalled_instruction <= instruction;
-            stalled_resources_modified <= resources_modified;
-            stalled_resources_required <= resources_required;
-            stall_buffer_occupied <= true;
-          end if;
-        else
-          -- Instruction meets all requirements
-          -- Release and pass forward
-          -- NOTE: This only means that the instruction COULD execute.
-          -- The execute stage will check if the instruction WILL in fact execute,
-          -- i.e., that the instruction address and CPU personality
-          -- (4502, 6502 or Hypervisor mode)
-          -- XXX - We should check CPU personality here, to save the execute
-          -- stage checking it, as comparing a 32-bit PC will be deep enough logic.
-          -- This does mean that we might mistakenly think that some resource
-          -- will be busy next cycle based on the last instruction we let through.
-          -- Thus we might not dispatch instructions sometimes when we should
-          -- be able to do so, but the delay will only be 1 cycle, as the
-          -- actual resource locks will are read back from the execute stage.
-          instruction_valid <= true;
+        -- If we weren't already stalling the upstream, then we need to
+        -- copy the current inputs to the stall buffer, and mark the stall
+        -- buffer as occupied.
+        if stall_out_current=false then
+          stalled_instruction <= instruction;
+          stalled_resources_modified <= resources_modified;
+          stalled_resources_required <= resources_required;
+          stall_buffer_occupied <= true;
         end if;
       else
-        -- Pipeline stalled: hold existing values.
-        report "$" & to_hstring(last_instruction_expected_address) &
-          " VALIDATE : Stalled";
-        
-        -- XXX: We should assign them so that we avoid having flip-flops.        
-        instruction_valid <= false;        
+        -- Instruction meets all requirements
+        -- Release and pass forward
+        -- NOTE: This only means that the instruction COULD execute.
+        -- The execute stage will check if the instruction WILL in fact execute,
+        -- i.e., that the instruction address and CPU personality
+        -- (4502, 6502 or Hypervisor mode)
+        -- XXX - We should check CPU personality here, to save the execute
+        -- stage checking it, as comparing a 32-bit PC will be deep enough logic.
+        -- This does mean that we might mistakenly think that some resource
+        -- will be busy next cycle based on the last instruction we let through.
+        -- Thus we might not dispatch instructions sometimes when we should
+        -- be able to do so, but the delay will only be 1 cycle, as the
+        -- actual resource locks will are read back from the execute stage.
+        instruction_valid <= true;
       end if;
+    else
+      -- Pipeline stalled: hold existing values.
+      report "$" & to_hstring(last_instruction_expected_address) &
+        " VALIDATE" & integer'image(coreid)
+        & " : Stalled";
+      
+      -- XXX: We should assign them so that we avoid having flip-flops.        
+      instruction_valid <= false;        
+    end if;
   end process;    
-      
+  
 end behavioural;

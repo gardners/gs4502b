@@ -36,7 +36,7 @@ use work.alu.all;
 entity gs4502b_instruction_prefetch is
   port (
     cpuclock : in std_logic;
-    processor_core_id : in integer range 0 to 2;
+    coreid : in integer range 0 to 2;
 
     current_cpu_personality : in cpu_personality;
     
@@ -100,7 +100,7 @@ architecture behavioural of gs4502b_instruction_prefetch is
     v : prefetch_vector;
     address : translated_address;
   end record;
-    
+  
   signal fetch_buffer_1 : prefetch_buffer;
   signal fetch_buffer_now : prefetch_buffer;
 
@@ -128,7 +128,6 @@ begin
     variable fetch_port_used : boolean := false;
   begin
     if rising_edge(cpuclock) then
-      report "RISING EDGE";
 
       -- By default not asking for bytes
       fetch_port_write.valid <= false;
@@ -173,7 +172,8 @@ begin
       new_byte_buffer := byte_buffer;
       new_ilen_buffer := ilen_buffer;
       
-      report "I-FETCH: Fetching instruction @ $" & to_hstring(instruction_address)
+      report "I-FETCH" & integer'image(coreid)
+        & " : Fetching instruction @ $" & to_hstring(instruction_address)
         & ", with " & integer'image(bytes_ready) & " bytes available.";
       
       if bytes_ready < 3 then
@@ -193,16 +193,19 @@ begin
         
         case consumed_bytes is
           when 1 =>
-            report "I-FETCH: Instruction buffer head contains $"
+            report "I-FETCH" & integer'image(coreid)
+              & " : Instruction buffer head contains $"
               & to_hstring(byte_buffer(7 downto 0))
               & ".";
           when 2 =>
-            report "I-FETCH: Instruction buffer head contains $"
+            report "I-FETCH" & integer'image(coreid)
+              & " : Instruction buffer head contains $"
               & to_hstring(byte_buffer(7 downto 0))
               & " $" & to_hstring(byte_buffer(15 downto 8))
               & ".";
           when others =>
-            report "I-FETCH: Instruction buffer head contains $"
+            report "I-FETCH" & integer'image(coreid)
+              & " : Instruction buffer head contains $"
               & to_hstring(byte_buffer(7 downto 0))
               & " $" & to_hstring(byte_buffer(15 downto 8))
               & " $" & to_hstring(byte_buffer(23 downto 16))
@@ -220,7 +223,8 @@ begin
       store_offset := bytes_ready - consumed_bytes;
       
       -- We are reading for the correct address
-      report "I-FETCH: RAM READING $" & to_hstring(fetch_buffer_now.address&"00")
+      report "I-FETCH" & integer'image(coreid)
+        & " : RAM READING $" & to_hstring(fetch_buffer_now.address&"00")
         &" - $" & to_hstring(fetch_buffer_now.address&"11") &
         ", stow offset " & integer'image(store_offset) & ", am hoping for $"
         & to_hstring(desired_address&"00");
@@ -232,7 +236,8 @@ begin
         -- But make sure we don't over flow our read queue
         report "I-FETCH: Found the bytes we were looking for to add to our buffer.";   
         if bytes_ready <= (BYTE_BUFFER_WIDTH-4) then
-          report "I-FETCH: We have space, so adding to byte_buffer.";
+          report "I-FETCH" & integer'image(coreid)
+            & " : We have space, so adding to byte_buffer.";
           -- Append to the end
           for i in 0 to 3 loop
             new_byte_buffer((8*(store_offset+i)+7) downto (8*(store_offset+i)))
@@ -241,7 +246,8 @@ begin
           end loop;
           -- update number of bytes available
           new_bytes_ready := bytes_ready - consumed_bytes + 4;
-          report "Adding 4 to (bytes_ready-consumed_bytes) to calculate new_bytes_ready";
+          report "I-FETCH" & integer'image(coreid)
+            & " : Adding 4 to (bytes_ready-consumed_bytes) to calculate new_bytes_ready";
           -- Read next 4 bytes: this happens through next block, which has a
           -- nice new burst fetch process, to keep the buffer filled.
           desired_address <= desired_address + 1;
@@ -255,31 +261,39 @@ begin
       else
         dispatched_bytes <= dispatched_bytes + consumed_bytes - 4;
         burst_add_one := true;
-        report "Ate 4 bytes, queuing next instruction word read.";
+        report "I-FETCH" & integer'image(coreid)
+          & " : Ate 4 bytes, queuing next instruction word read.";
       end if;
-      report "burst_fetch = " & integer'image(burst_fetch)
+      report "I-FETCH" & integer'image(coreid)
+        & " : burst_fetch = " & integer'image(burst_fetch)
         & ", burst_add_one = " & boolean'image(burst_add_one)
         & ", burst_sub_one = " & boolean'image(burst_sub_one);
       if (burst_fetch > 0) then
-        report "Requesting next instruction word (" & integer'image(burst_fetch)
+        report "I-FETCH" & integer'image(coreid)
+          & " : Requesting next instruction word (" & integer'image(burst_fetch)
           & " more to go).";
         if fetch_port_ready or fetch_port_read.acknowledged then
-          report "FETCH port ready";
+          report "FETCH" & integer'image(coreid)
+            & " port ready";
           fetch_port_write.valid <= true;
           fetch_port_write.translated <= fetch_address + 4;
           fetch_address <= fetch_address + 4;
           fetch_port_used := true;
           if (burst_add_one = false) then
-            report "Decrementing burst_fetch";
+            report "I-FETCH" & integer'image(coreid)
+              & " : Decrementing burst_fetch";
             burst_fetch <= burst_fetch - 1;
           else
-            report "Holding burst_fetch";
+            report "I-FETCH" & integer'image(coreid)
+              & " : Holding burst_fetch";
           end if;
         else
-          report "FETCH port NOT ready, so holding burst_fetch";
+          report "I-FETCH" & integer'image(coreid)
+            & " : FETCH port NOT ready, so holding burst_fetch";
         end if;          
       elsif (burst_add_one = true) then
-        report "Incrementing burst_fetch";
+        report "I-FETCH" & integer'image(coreid)
+          & " : Incrementing burst_fetch";
         burst_fetch <= burst_fetch + 1;
       end if;
       -- Make sure that we don't get stuck forever waiting for bytes
@@ -287,7 +301,8 @@ begin
         burst_fetch <= (BYTE_BUFFER_WIDTH/4+1);
       end if;
       
-      report "I-FETCH buffer was " & to_hstring(byte_buffer)
+      report "I-FETCH" & integer'image(coreid)
+        & " buffer was " & to_hstring(byte_buffer)
         &", now " & to_hstring(new_byte_buffer)
         &", with " & integer'image(new_bytes_ready)
         & " bytes ready, " & integer'image(consumed_bytes) & " bytes consumed.";
@@ -297,14 +312,16 @@ begin
       bytes_ready <= new_bytes_ready;
       buffer_address <= buffer_address + consumed_bytes;
 
-      report "Updated: new_bytes_ready = " & integer'image(new_bytes_ready);
+      report "I-FETCH" & integer'image(coreid)
+        & " : Updated: new_bytes_ready = " & integer'image(new_bytes_ready);
 
       instruction_address <= instruction_address + consumed_bytes;
       instruction_pc <= instruction_pc + consumed_bytes;        
       
       if address_redirecting = true then
         report "$" & to_hstring(instruction_address) &
-          " PREFETCH : "
+          " PREFETCH" & integer'image(coreid)
+          & " : "
           & "DIVERSION requested to $" & to_hstring(redirected_address)
           & ", next_line = $"
           & to_hstring(redirected_address(9 downto 0));
@@ -357,7 +374,7 @@ begin
       -- busy.  The trade-off would then be one extra cycle of instruction
       -- fetch latency on ports 1-3.  We can work out the best trade-off there
       -- later.
-      if processor_core_id = 0 then
+      if coreid = 0 then
         fetch_port_ready <= true;
       else
         if fetch_port_used then
@@ -371,7 +388,7 @@ begin
         end if;
       end if;
       
-      report "$" & to_hstring(instruction_address) & " I-FETCH";
+      report "$" & to_hstring(instruction_address) & " I-FETCH" & integer'image(coreid);
 
       next_pc := to_unsigned(to_integer(instruction_address(15 downto 0)) + consumed_bytes,16);
       

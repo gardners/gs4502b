@@ -174,7 +174,7 @@ begin  -- behavioural
   instruction_prefetcher: entity work.gs4502b_instruction_prefetch
     port map (
       cpuclock => cpuclock,
-      processor_core_id => coreid,
+      coreid => coreid,
       current_cpu_personality => stage_execute_cpu_personality,
 
       address_redirecting => stage_execute_redirecting,
@@ -199,6 +199,7 @@ begin  -- behavioural
   decode_stage: entity work.gs4502b_stage_decode
     port map (
       cpuclock => cpuclock,
+      coreid => coreid,
       current_cpu_personality => stage_execute_cpu_personality,
       cpuport_value => cpuport_value,
       cpuport_ddr => cpuport_ddr,
@@ -236,6 +237,7 @@ begin  -- behavioural
   validate_stage: entity work.gs4502b_stage_validate
     port map (
       cpuclock => cpuclock,
+      coreid => coreid,
 
       stall => execute_stalling,
       resources_freshly_locked_by_execute_stage
@@ -272,6 +274,7 @@ begin  -- behavioural
     port map (
       cpuclock => cpuclock,
       reset => reset,
+      coreid => coreid,
 
       reg_map_low => reg_map_low,
       reg_mb_low => reg_mb_low,

@@ -41,6 +41,7 @@ entity gs4502b_stage_execute is
     cpuclock : in std_logic;
     stall : in boolean;
     reset : in std_logic;
+    coreid : in integer range 0 to 2;
 
     monitor_pc : out unsigned(15 downto 0);
 
@@ -147,63 +148,72 @@ begin
           regs.a_dup3 <= completed_transaction.value;
           renamed_resources.a <= false;
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : reg_a <= $" & to_hstring(completed_transaction.value) &
+            " EXECUTE" & integer'image(coreid)
+            & " : reg_a <= $" & to_hstring(completed_transaction.value) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = res_names.b then
           regs.b <= completed_transaction.value;
           renamed_resources.b <= false;
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : reg_b <= $" & to_hstring(completed_transaction.value) &
+            " EXECUTE" & integer'image(coreid)
+            & " : reg_b <= $" & to_hstring(completed_transaction.value) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = res_names.x then
           regs.x <= completed_transaction.value;
           renamed_resources.x <= false;
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : reg_x <= $" & to_hstring(completed_transaction.value) &
+            " EXECUTE" & integer'image(coreid)
+            & " : reg_x <= $" & to_hstring(completed_transaction.value) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = res_names.y then
           regs.y <= completed_transaction.value;
           renamed_resources.y <= false;
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : reg_y <= $" & to_hstring(completed_transaction.value) &
+            " EXECUTE" & integer'image(coreid)
+            & " : reg_y <= $" & to_hstring(completed_transaction.value) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = res_names.z then
           regs.z <= completed_transaction.value;
           renamed_resources.z <= false;
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : reg_z <= $" & to_hstring(completed_transaction.value) &
+            " EXECUTE" & integer'image(coreid)
+            & " : reg_z <= $" & to_hstring(completed_transaction.value) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = res_names.flag_z then
           regs.flags.z <= completed_transaction.z;
           renamed_resources.flag_z <= false;
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : flag_z <= " & boolean'image(completed_transaction.z) &
+            " EXECUTE" & integer'image(coreid)
+            & " : flag_z <= " & boolean'image(completed_transaction.z) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = res_names.flag_c then
           regs.flags.c <= completed_transaction.c;
           renamed_resources.flag_c <= false;
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : flag_c <= " & boolean'image(completed_transaction.c) &
+            " EXECUTE" & integer'image(coreid)
+            & " : flag_c <= " & boolean'image(completed_transaction.c) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = res_names.flag_n then
           regs.flags.n <= completed_transaction.n;
           renamed_resources.flag_n <= false;
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : flag_n <= " & boolean'image(completed_transaction.n) &
+            " EXECUTE" & integer'image(coreid)
+            & " : flag_n <= " & boolean'image(completed_transaction.n) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
         if completed_transaction.id = res_names.flag_v then
           regs.flags.v <= completed_transaction.v;
           renamed_resources.flag_v <= false;
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : flag_v <= " & boolean'image(completed_transaction.v) &
+            " EXECUTE" & integer'image(coreid)
+            & " : flag_v <= " & boolean'image(completed_transaction.v) &
             " from transaction #" & integer'image(completed_transaction.id);
         end if;
       end if;
@@ -222,7 +232,8 @@ begin
       if (instruction_valid = false) or (flushing_pipeline = true) then
         -- If there is no valid instruction, then we keep expecting the same address.
         report "$" & to_hstring(expected_instruction_address) &
-          " EXECUTE : instruction_valid=" & boolean'image(instruction_valid)
+          " EXECUTE" & integer'image(coreid)
+          & " : instruction_valid=" & boolean'image(instruction_valid)
           & " flushing_pipeline=" & boolean'image(flushing_pipeline)
           & " -- doing nothing.";        
       else
@@ -239,9 +250,11 @@ begin
           end if;
 
           report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : Executing instruction.";
+            " EXECUTE" & integer'image(coreid)
+            & " : Executing instruction.";
           report "PC $" & to_hstring(reg_pch & reg_pcl) &
-            " EXECUTE Inputs : " &
+            " EXECUTE" & integer'image(coreid)
+            & " Inputs : " &
             "A:" & to_hstring(regs.a) & " " &
             "X:" & to_hstring(regs.x) & " " &
             "Y:" & to_hstring(regs.y) & " " &
@@ -267,7 +280,8 @@ begin
                     renamed_out,
                     instruction_in.instruction_flags,
                     instruction_in.bytes.arg1);
-          report "EXECUTE: Doing ALU operation. Aout=$" & to_hstring(regs_out.a);
+          report "EXECUTE" & integer'image(coreid)
+            & ": Doing ALU operation. Aout=$" & to_hstring(regs_out.a);
 
           if instruction_in.instruction_flags.do_branch_conditional
             and (
@@ -288,7 +302,8 @@ begin
                     /= regs.flags.c))
               ) then
             -- Take conditional branch
-            report "EXECUTE: Taking conditional branch to $"
+            report "EXECUTE" & integer'image(coreid)
+              & ": Taking conditional branch to $"
               & to_hstring(instruction_in.pc_mispredict)
               & " = $" & to_hstring(instruction_in.mispredict_translated);
             expected_instruction_address <= instruction_in.mispredict_translated;
@@ -312,7 +327,8 @@ begin
           else
             -- Branch not taken
             if instruction_in.instruction_flags.do_branch_conditional = false then
-              report "EXECUTE: Not taking conditional branch, branch_z = "
+              report "EXECUTE" & integer'image(coreid)
+                & ": Not taking conditional branch, branch_z = "
                 & boolean'image(instruction_in.instruction_flags.branch_z);
               if instruction_in.instruction_flags.branch_z then
                 report "EXECUTE: Conditional branch is on Z = "
@@ -366,7 +382,7 @@ begin
           end if;
           
         end if;
-          
+        
       end if;
 
       -- Commit updates to registers and renaming of resources
@@ -378,7 +394,8 @@ begin
       if reset = '0' then
 
         report "$" & to_hstring(expected_instruction_address) &
-          " EXECUTE : /RESET asserted ";
+          " EXECUTE" & integer'image(coreid)
+          & " : /RESET asserted ";
 
         current_cpu_personality <= Hypervisor;
 
@@ -436,4 +453,4 @@ begin
   end process;
 end behavioural;
 
-    
+

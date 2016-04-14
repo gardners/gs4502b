@@ -20,6 +20,7 @@ use work.alu.all;
 entity gs4502b_stage_decode is
   port (
     cpuclock : in std_logic;
+    coreid : in integer range 0 to 2;
 
     current_cpu_personality : in cpu_personality;
 
@@ -56,7 +57,7 @@ entity gs4502b_stage_decode is
     rom_at_c000 : in std_logic;
     rom_at_e000 : in std_logic;
     viciii_iomode : in std_logic_vector(1 downto 0)
-   
+    
     );
 end gs4502b_stage_decode;
 
@@ -82,11 +83,13 @@ begin
       
       if stall = false then
         report "$" & to_hstring(instruction.translated) &
-          " DECODE : Not stalled. Decoding. reg_map_high="
+          " DECODE" & integer'image(coreid)
+          & " : Not stalled. Decoding. reg_map_high="
           & to_string(reg_map_high)
           & ", reg_mb_high=$" & to_hstring(reg_mb_high);
 
-        report "DECODE : flags.branch_z = "
+        report "DECODE" & integer'image(coreid)
+          & " : flags.branch_z = "
           & boolean'image(instruction.instruction_flags.branch_z);
         
         -- Decode instruction
@@ -119,25 +122,29 @@ begin
           -- 6502-style 8-bit relative branches
           branch_pc := branch8_pc;
           instruction.pc_mispredict := branch8_pc;
-          report "branch_pc = $" & to_hstring(branch_pc);
+          report "DECODE" & integer'image(coreid)
+            & " : branch_pc = $" & to_hstring(branch_pc);
         elsif instruction.addressing_mode.rel8byte3 then
           -- 8-bit ZP conditional branch, same as 8-bit branch, but the destination
           -- address comes from the 3rd instruction byte, not the 2nd
           branch_pc := branch8_zp_pc;
           instruction.pc_mispredict := branch8_zp_pc;
-          report "branch_pc = $" & to_hstring(branch_pc);
+          report "DECODE" & integer'image(coreid)
+            & " : branch_pc = $" & to_hstring(branch_pc);
         elsif instruction.addressing_mode.rel16 then
           -- 16-bit relative branches
           branch_pc := branch16_pc;
           instruction.pc_mispredict := branch16_pc;
-          report "branch_pc = $" & to_hstring(branch_pc);
+          report "DECODE" & integer'image(coreid)
+            & " : branch_pc = $" & to_hstring(branch_pc);
         else
           -- 16-bit absolute branch address
           -- XXX - We don't have the indirect branch addresses here!
           branch_pc := instruction.bytes.arg2 & instruction.bytes.arg1;
           instruction.pc_mispredict
             := instruction.bytes.arg2 & instruction.bytes.arg1;          
-          report "branch_pc = $" & to_hstring(branch_pc);
+          report "DECODE" & integer'image(coreid)
+            & " : branch_pc = $" & to_hstring(branch_pc);
         end if;
 
         -- Work out address referred to by argument.  For some modes this is simple.
@@ -169,16 +176,16 @@ begin
         end if;
         if instruction.addressing_mode.presp then
           instruction.argument_address := (regs.sph & regs.spl)
-            - instruction.bytes.arg1;
+                                          - instruction.bytes.arg1;
         end if;
         
-          
+        
         
         
         instruction.mispredict_translated
           := resolve_address_to_long(branch_pc,
                                      false,
-                               
+                                     
                                      cpuport_value,cpuport_ddr,
                                      viciii_iomode,
                                      reg_map_low,
@@ -212,7 +219,8 @@ begin
       else
         -- Pipeline stalled: hold existing values.
         report "$" & to_hstring(instruction.translated) &
-          " DECODE : Stalled -- holding values.";
+          " DECODE" & integer'image(coreid)
+          & " : Stalled -- holding values.";
         stall_buffer_occupied <= true;
         stalled_instruction <= instruction;
         stalling <= true;
@@ -220,9 +228,7 @@ begin
       
       instruction_out <= instruction;
 
-      report "instruction.aludst_a = " & boolean'image(instruction.instruction_flags.aludst_a) & ", opcode=$" & to_hstring(instruction.bytes.opcode);
-
     end if;    
   end process;    
-    
+  
 end behavioural;
