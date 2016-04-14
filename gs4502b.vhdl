@@ -59,6 +59,11 @@ architecture behavioural of gs4502b is
   signal mem_ports_in : mem_ports_in_t;
   signal mem_ports_out : mem_ports_out_t;
 
+  -- When true, this allows the primary CPU core (core 0) to monopolise the
+  -- instruction fetch memory bus, potentially starving the other cores of
+  -- instruction fetch cycles.  
+  signal primary_core_boost : boolean := false;
+
   type pc3 is array (0 to 2) of unsigned(15 downto 0);
   signal monitor_pcs : pc3;
   
@@ -72,6 +77,7 @@ begin
   mem_control: entity work.memory_controller
     port map ( cpuclock => cpuclock,
                ioclock => ioclock,
+               primary_core_boost => primary_core_boost,
 
                -- FastIO interface
                fastio_address => fastio_address,
@@ -106,8 +112,10 @@ begin
   cpu_cores: for core in 0 to 2 generate
     thecore: entity work.gs4502b_core
       port map ( coreid => core,
-                 cpuclock => cpuclock,
+                 cpuclock => cpuclock,                 
                  reset => reset,
+                 primary_core_boost => primary_core_boost,
+                 
                  monitor_pc => monitor_pcs(core),
 
                  fetch_port_read => fetch_ports_out(core),

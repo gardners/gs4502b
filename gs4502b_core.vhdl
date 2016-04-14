@@ -91,6 +91,9 @@ ENTITY gs4502b_core IS
     coreid : in integer;
     cpuclock : IN STD_LOGIC;
     reset : in std_logic;
+    
+    primary_core_boost : in boolean;
+  
     monitor_PC : out unsigned(15 downto 0);
 
     fetch_port_read : in fetch_port_out;
@@ -167,14 +170,6 @@ architecture behavioural of gs4502b_core is
   signal reg_offset_high : unsigned(19 downto 8);
   signal cpuport_value : std_logic_vector(2 downto 0);
   signal cpuport_ddr : std_logic_vector(2 downto 0);
-
-  -- When true, this allows the primary CPU core (core 0) to monopolise the
-  -- instruction fetch memory bus, potentially starving the other cores of
-  -- instruction fetch cycles.  The trade-off is that it can then fetch 4
-  -- instruction bytes every cycle, instead of only every other cycle.  For
-  -- some work-loads this may make a significant difference in the performance
-  -- of the primary core.
-  signal primary_core_boost : boolean := false;
   
 begin  -- behavioural
   

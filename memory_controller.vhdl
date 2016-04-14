@@ -31,6 +31,7 @@ entity memory_controller is
   port (
     cpuclock : in std_logic;
     ioclock : in std_logic;
+    primary_core_boost : in boolean;
 
     -- Fastio interface
     fastio_address : out unsigned(19 downto 0) := (others => '0');
@@ -103,7 +104,7 @@ architecture behavioural of memory_controller is
 
   
   signal port2_ist_dran : boolean := false;
-
+  signal port0_wasnt_last : boolean := true;
   
 begin    
   
@@ -184,7 +185,8 @@ begin
         & boolean'image(fetch_port2_in.valid) & ","
         & boolean'image(fetch_port3_in.valid) & ").";
       
-      if fetch_port0_in.valid then
+      if fetch_port0_in.valid and (port0_wasnt_last or primary_core_boost) then
+        port0_wasnt_last <= false;
         fetching := true;
         fetch_address := fetch_port0_in.translated;
         fetch_flags := fetch_port0_in.user_flags;
@@ -194,6 +196,7 @@ begin
         fetch_port2_out.acknowledged <= false;
         fetch_port3_out.acknowledged <= false;
       elsif fetch_port1_in.valid then
+        port0_wasnt_last <= true;
         fetching := true;
         fetch_address := fetch_port1_in.translated;
         fetch_flags := fetch_port1_in.user_flags;
@@ -203,6 +206,7 @@ begin
         fetch_port2_out.acknowledged <= false;
         fetch_port3_out.acknowledged <= false;
       elsif fetch_port2_in.valid and ((not fetch_port3_in.valid) or port2_ist_dran) then
+        port0_wasnt_last <= true;
         fetching := true;
         fetch_address := fetch_port2_in.translated;
         fetch_flags := fetch_port2_in.user_flags;
@@ -213,6 +217,7 @@ begin
         fetch_port3_out.acknowledged <= false;
         port2_ist_dran <= false;
       elsif fetch_port3_in.valid then
+        port0_wasnt_last <= true;
         fetching := true;
         fetch_address := fetch_port3_in.translated;
         fetch_flags := fetch_port3_in.user_flags;
@@ -223,6 +228,7 @@ begin
         fetch_port2_out.acknowledged <= false;
         port2_ist_dran <= true;
       else
+        port0_wasnt_last <= true;
         fetching := false;
         fetch_port0_out.acknowledged <= false;
         fetch_port1_out.acknowledged <= false;
