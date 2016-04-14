@@ -81,6 +81,21 @@ architecture behavioural of memory_controller is
   type all_ram_interfaces is array (0 to 3) of ram_interface;
   signal ram_interfaces : all_ram_interfaces := ( others => IDLE_RAM_INTERFACE);
 
+  signal next_fetch_address : translated_address;
+  signal next_fetch_flags : std_logic_vector(7 downto 0);
+  signal next_fetch_port : integer range 0 to 3;
+  signal bram_fetch_address_in : translated_address;
+  signal bram_fetch_flags_in : std_logic_vector(7 downto 0);
+  signal bram_fetch_port_in : integer range 0 to 3;
+  signal bram_fetch_address_1 : translated_address;
+  signal bram_fetch_flags_1 : std_logic_vector(7 downto 0);
+  signal bram_fetch_port_1 : integer range 0 to 3;
+  signal bram_fetch_address_out : translated_address;
+  signal bram_fetch_flags_out : std_logic_vector(7 downto 0);
+  signal bram_fetch_port_out : integer range 0 to 3;
+  signal bram_bytes_out : bytes4;
+
+  
   signal port2_ist_dran : boolean := false;
   
 begin    
@@ -205,9 +220,52 @@ begin
       if fetching then
         report "MEM_CONTROLLER : Fetch port " & integer'image(fetch_port_number)
           & " is asking for address $" & to_hstring(fetch_address);
+
+        -- Feed request into memory
+        -- XXX - Add support for unaligned requests
+        -- XXX - Add support for non-BRAM requests (i.e., IO, and later, DDR RAM)
+        next_fetch_address <= fetch_address;
+        next_fetch_port <= fetch_port_number;
+        next_fetch_flags <= fetch_flags;        
       else
         report "MEM_CONTROLLER : Not fetching.";
+        next_fetch_address <= (others => '0');
       end if;
+
+      -- Push request to RAM
+      for i in 0 to 3 loop
+        ram_interfaces(i).iaddr <= std_logic_vector(next_fetch_address(18 downto 2));
+      end loop;
+      bram_fetch_address_in <= next_fetch_address;
+      bram_fetch_flags_in <= next_fetch_flags;
+      bram_fetch_port_in <= next_fetch_port;
+
+      -- Progress BRAM requests through (BRAM takes two cycles to service a read)
+      bram_fetch_address_1 <= bram_fetch_address_in;
+      bram_fetch_flags_1 <= bram_fetch_flags_in;
+      bram_fetch_port_1 <= bram_fetch_port_in;
+      bram_fetch_address_out <= bram_fetch_address_1;
+      bram_fetch_flags_out <= bram_fetch_flags_1;
+      bram_fetch_port_out <= bram_fetch_port_1;
+      for i in 0 to 3 loop
+        bram_bytes_out(i) <= ram_interfaces(i).irdata;
+      end loop;
+
+      case bram_fetch_port_out is
+        when 0 =>
+          fetch_port0_out.bytes <= bram_bytes_out;
+          fetch_port0_out.user_flags <= bram_fetch_flags_out;
+        when 1 =>
+          fetch_port1_out.bytes <= bram_bytes_out;
+          fetch_port1_out.user_flags <= bram_fetch_flags_out;
+        when 2 =>
+          fetch_port2_out.bytes <= bram_bytes_out;
+          fetch_port2_out.user_flags <= bram_fetch_flags_out;
+        when 3 =>
+          fetch_port3_out.bytes <= bram_bytes_out;
+          fetch_port3_out.user_flags <= bram_fetch_flags_out;
+      end case;
+      
     end if;
   end process;
   
