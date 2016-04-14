@@ -170,6 +170,12 @@ begin
     variable fetching : boolean := true;
   begin
     if rising_edge(cpuclock) then
+
+      -- XXX Make second ports idle until we implement memory access
+      for i in 0 to 3 loop
+        ram_interfaces(i).maddr <= (others => '0');
+        ram_interfaces(i).mwrite <= '0';
+      end loop;
       
       -- Check for activity on the fetch ports
       report "Fetch port valids = ("

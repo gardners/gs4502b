@@ -98,8 +98,6 @@ architecture behavioural of gs4502b_stage_execute is
   signal port_value : std_logic_vector(2 downto 0) := "111";
   
   signal expected_instruction_address : translated_address;
-
-  signal wrong_instruction_count : integer range 0 to 7 := 0;
   
   -- Register and flag renaming
   signal renamed_resources : instruction_resources;
@@ -239,12 +237,13 @@ begin
       else
         if instruction_address_is_as_expected then
           -- Do the work of the instruction.
-          wrong_instruction_count <= 0;
 
           if instruction_in.modifies_cpu_personality then
             -- CPU personality or memory map has changed: flush pipeline, and start
             -- fetching from next instruction afresh.
             address_redirecting <= true;
+            report "EXECUTE" & integer'image(coreid) & " : "
+              & " Flushing pipeline due to cpu personality change.";
             flushing_pipeline <= true;
             flush_cycles <= PIPE_FLUSH_CYCLES;
           end if;
@@ -309,8 +308,11 @@ begin
             expected_instruction_address <= instruction_in.mispredict_translated;
             reg_pch <= instruction_in.pc_mispredict(15 downto 8);
             reg_pcl <= instruction_in.pc_mispredict(7 downto 0);
-
+            
             address_redirecting <= true;
+            report "EXECUTE" & integer'image(coreid)
+              & " : redirecting to $"
+              & to_hstring(instruction_in.mispredict_translated);
             redirected_address <= instruction_in.mispredict_translated;
             redirected_pch <= instruction_in.pc_mispredict(15 downto 8);
 
@@ -347,6 +349,17 @@ begin
                   & boolean'image(not instruction_in.instruction_flags.branch_on_clear);
               end if;              
             end if;
+            if instruction_in.instruction_flags.do_branch
+              and (not instruction_in.instruction_flags.do_branch_conditional) then
+              -- If we have taken a non-conditional branch, then we also need
+              -- to tell the pre-fetcher what is going on.
+              address_redirecting <= true;
+              report "EXECUTE" & integer'image(coreid)
+                & " : redirecting on unconditional branch to $"
+                & to_hstring(instruction_in.expected_translated);
+              redirected_address <= instruction_in.expected_translated;
+              redirected_pch <= instruction_in.pc_expected(15 downto 8);
+            end if;
             expected_instruction_address <= instruction_in.expected_translated;
             reg_pch <= instruction_in.pc_expected(15 downto 8);
             reg_pcl <= instruction_in.pc_expected(7 downto 0);
@@ -362,24 +375,9 @@ begin
           -- Instruction address is wrong, but instruction is marked valid.
           -- XXX Need to work out the conditions under which this can occur.
           -- Is it only branch mis-predicts? If so, we can flag the mispredict
-          -- when the mis-predict occurs.
-          -- Can it also also happen when there is an instruction cache miss?
-          -- Well, it certainly seems like that is the most likely case for how
-          -- we could end up in this situation.  In which case, hopefully the
-          -- instruction validate stage has already told the memory controller
-          -- to fetch the correct data, so we can just do nothing here, while
-          -- we wait for the data to arrive.
+          -- when the mis-predict occurs.  This should be the case.
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : Ignoring validated instruction (wrong instruction address or CPU personality).";
-
-          if wrong_instruction_count < 7 then
-            wrong_instruction_count <= wrong_instruction_count + 1;
-          else
-            wrong_instruction_count <= 0;
-            address_redirecting <= true;
-            redirected_address <= expected_instruction_address;
-            redirected_pch <= reg_pch;
-          end if;
           
         end if;
         
