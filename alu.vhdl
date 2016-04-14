@@ -109,7 +109,7 @@ package body alu is
     if flags.i then flag_string(6):='I'; end if;
     if flags.z then flag_string(7):='Z'; end if;
     if flags.c then flag_string(8):='C'; end if;
-  
+    
     return flag_string;
   end function;
   
@@ -200,7 +200,7 @@ package body alu is
       end if;
     end if;
     ret.value := tmp(7 downto 0);
-  
+    
     return ret;
   end function alu_op_add;
   
@@ -345,9 +345,7 @@ package body alu is
       if ret.value = x"00" then
         ret.z := true;
       end if;
-      
-    end if;
-    if iflags.alu_dec then
+    elsif iflags.alu_dec then
       ret.value := regs.a_dup2 - 1;
       if iflags.aludst_a then
         regsout.a := ret.value;
@@ -373,7 +371,12 @@ package body alu is
       end if;
       if ret.value = x"00" then
         ret.z := true;
-      end if;      
+      end if;
+    else
+      -- For immediate loads of registers
+      if iflags.aludst_x then regsout.x := ret.value; end if;
+      if iflags.aludst_y then regsout.y := ret.value; end if;
+      if iflags.aludst_z then regsout.z := ret.value; end if;
     end if;
 
     if iflags.aludst_a then
@@ -384,30 +387,30 @@ package body alu is
       report "ALU: Setting A to $" & to_hstring(ret.value);
     end if;
     
-    -- if iflags.aludst_b then regsout.b := ret.value; end if;
-    -- if iflags.aludst_p then
-    --   -- Set flags from byte: for PLP
-    --   regsout.flags := (others => false);
-    --   -- PLP doesn't change E flag
-    --   regsout.flags.e := regs.flags.e;
-    --   if ret.value(0)='1' then regsout.flags.c := true; end if;
-    --   if ret.value(1)='1' then regsout.flags.z := true; end if;
-    --   if ret.value(2)='1' then regsout.flags.i := true; end if;
-    --   if ret.value(3)='1' then regsout.flags.d := true; end if;
-    --   if ret.value(6)='1' then regsout.flags.v := true; end if;
-    --   if ret.value(7)='1' then regsout.flags.n := true; end if;
-    --   -- Cancel renaming on all renamable flags (I and E are not renamable)
-    --   renamedout.flag_c := false;
-    --   renamedout.flag_d := false;
-    --   renamedout.flag_n := false;
-    --   renamedout.flag_v := false;
-    --   renamedout.flag_z := false;
-    -- end if;
-    -- if iflags.aludst_sph then regsout.sph := ret.value; end if;
-    -- if iflags.aludst_spl then regsout.spl := ret.value; end if;
-    -- if iflags.aludst_x then regsout.x := ret.value; end if;
-    -- if iflags.aludst_y then regsout.y := ret.value; end if;
-    -- if iflags.aludst_z then regsout.z := ret.value; end if;
+                                        -- if iflags.aludst_b then regsout.b := ret.value; end if;
+                                        -- if iflags.aludst_p then
+                                        --   -- Set flags from byte: for PLP
+                                        --   regsout.flags := (others => false);
+                                        --   -- PLP doesn't change E flag
+                                        --   regsout.flags.e := regs.flags.e;
+                                        --   if ret.value(0)='1' then regsout.flags.c := true; end if;
+                                        --   if ret.value(1)='1' then regsout.flags.z := true; end if;
+                                        --   if ret.value(2)='1' then regsout.flags.i := true; end if;
+                                        --   if ret.value(3)='1' then regsout.flags.d := true; end if;
+                                        --   if ret.value(6)='1' then regsout.flags.v := true; end if;
+                                        --   if ret.value(7)='1' then regsout.flags.n := true; end if;
+                                        --   -- Cancel renaming on all renamable flags (I and E are not renamable)
+                                        --   renamedout.flag_c := false;
+                                        --   renamedout.flag_d := false;
+                                        --   renamedout.flag_n := false;
+                                        --   renamedout.flag_v := false;
+                                        --   renamedout.flag_z := false;
+                                        -- end if;
+                                        -- if iflags.aludst_sph then regsout.sph := ret.value; end if;
+                                        -- if iflags.aludst_spl then regsout.spl := ret.value; end if;
+                                        -- if iflags.aludst_x then regsout.x := ret.value; end if;
+                                        -- if iflags.aludst_y then regsout.y := ret.value; end if;
+                                        -- if iflags.aludst_z then regsout.z := ret.value; end if;
     if iflags.update_nz then
       regsout.flags.n := ret.n;
       regsout.flags.z := ret.z;
@@ -433,13 +436,13 @@ package body alu is
     cpuflags : in cpu_flags) return alu_result is
     variable r : alu_result;
   begin
-    -- default action is nop, ie output input 1
+                                        -- default action is nop, ie output input 1
     r.c := false; r.v := false; r.value := i1;
     if i1(7) = '1' then r.n := true; else r.n := false; end if;
     if i1 = x"00" then  r.z := true; else r.z := false; end if;
 
     if instruction.alu_set then
-      -- Use i2 instead of i1
+                                        -- Use i2 instead of i1
       r.c := false; r.v := false; r.value := i2;
       if i2(7) = '1' then r.n := true; else r.n := false; end if;
       if i2 = x"00" then  r.z := true; else r.z := false; end if;
@@ -467,7 +470,7 @@ package body alu is
       if r.value = "000000000" then r.z := true; end if;
     end if;
     
-    -- XXX Implement missing ALU operations
+                                        -- XXX Implement missing ALU operations
 
     return r;
   end function;
