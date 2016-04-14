@@ -96,7 +96,7 @@ begin
       ioclock       => ioclock,
       reset         => reset,
 
-      monitor_core_id => sw(1 downto 0),
+      monitor_core_id => unsigned(sw(1 downto 0)),
       monitor_pc    => monitor_pc,
 
       -- Fetch interface from VIC-IV to 4502's internal memory controller
