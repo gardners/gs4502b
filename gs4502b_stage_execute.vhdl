@@ -426,11 +426,33 @@ begin
 
         -- Set address of first instruction
         address_redirecting <= true;
-        redirected_address <= x"0FF88100";
-        expected_instruction_address <= x"0FF88100";
-        redirected_pch <= x"81";                             
-        reg_pch <= x"81";
-        reg_pcl <= x"00";
+        case coreid is
+          when 0 =>
+            -- Main core.
+            redirected_address <= x"0FF88100";
+            expected_instruction_address <= x"0FF88100";
+            redirected_pch <= x"81";                             
+            reg_pch <= x"81";
+            reg_pcl <= x"00";
+            -- XXX Should start in hypervisor mode
+          when 1 =>
+            -- Auxiliary core 1
+            redirected_address <= x"0FF88200";
+            expected_instruction_address <= x"0FF88200";
+            redirected_pch <= x"82";                             
+            reg_pch <= x"82";
+            reg_pcl <= x"00";
+            -- XXX No hypervisor on auxiliary cores
+          when 2 =>
+            -- Auxiliary core 2
+            redirected_address <= x"0FF88300";
+            expected_instruction_address <= x"0FF88300";
+            redirected_pch <= x"83";                             
+            reg_pch <= x"83";
+            reg_pcl <= x"00";
+            -- XXX No hypervisor on auxiliary cores
+        end case;
+
         
         -- Clear any register renaming state
         renamed_resources.a <= false;

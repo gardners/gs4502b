@@ -5,16 +5,37 @@
 		.scope
 
 		.checkpc $8100
-		.advance $8100
+		.advance $8100,$00
 
-		lda #$02
-l1:		inc
-		bne l1
+		ldx #$00
+l1:		lda $1000,x
+		sta $2000,x
 		inx
 		bne l1
-		iny
-		bne l1
 		jmp l1
+
+		.checkpc $8200
+		.advance $8200,$00
+
+		ldx #$00
+l2:		lda $3000,x
+		sta $4000,x
+		inx
+		bne l2
+		jmp l2
+
+
+		.checkpc $8300
+		.advance $8300,$00
+
+		ldx #$00
+l3:		lda $5000,x
+		sta $6000,x
+		inx
+		bne l3
+		jmp l3
+
+
 
 		.checkpc $20000
 		.advance $20000
