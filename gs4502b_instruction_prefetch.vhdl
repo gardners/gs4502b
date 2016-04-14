@@ -281,7 +281,7 @@ begin
             & " more to go, ready="
             & boolean'image(fetch_port_read.ready) &
             ").";
-          if fetch_port_read.ready then
+          if fetch_port_read.ready or (primary_core_boost and (coreid=0)) then
             report "FETCH" & integer'image(coreid)
               & " port ready";
             fetch_port_write.valid <= true;
