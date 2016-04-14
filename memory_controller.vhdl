@@ -163,9 +163,6 @@ begin
     variable fetching : boolean := true;
   begin
     if rising_edge(cpuclock) then
-      -- Toggle between ports 2 and 3 having priority, so that they share
-      -- available bandwidth more fairly
-      port2_ist_dran <= not port2_ist_dran;
       
       -- Check for activity on the fetch ports
       report "Fetch port valids = ("
@@ -201,6 +198,7 @@ begin
         fetch_port0_out.acknowledged <= false;
         fetch_port1_out.acknowledged <= false;
         fetch_port3_out.acknowledged <= false;
+        port2_ist_dran <= false;
       elsif fetch_port3_in.valid then
         fetching := true;
         fetch_address := fetch_port3_in.translated;
@@ -210,6 +208,7 @@ begin
         fetch_port0_out.acknowledged <= false;
         fetch_port1_out.acknowledged <= false;
         fetch_port2_out.acknowledged <= false;
+        port2_ist_dran <= true;
       else
         fetching := false;
         fetch_port0_out.acknowledged <= false;
