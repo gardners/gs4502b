@@ -7,7 +7,7 @@
 		.checkpc $8100
 		.advance $8100,$00
 
-		lda #$00
+		ldy #$00
 		ldx #$fd
 l1:		lda $1000,x
 		sta $2000,x
@@ -18,7 +18,7 @@ l1:		lda $1000,x
 		.checkpc $8200
 		.advance $8200,$00
 
-		lda #$01
+		ldy #$01
 		ldx #$fd
 l2:		lda $3000,x
 		sta $4000,x
@@ -30,7 +30,7 @@ l2:		lda $3000,x
 		.checkpc $8300
 		.advance $8300,$00
 
-		lda #$02
+		ldy #$02
 		ldx #$fd
 l3:		lda $5000,x
 		sta $6000,x
