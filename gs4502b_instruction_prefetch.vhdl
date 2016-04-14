@@ -132,6 +132,8 @@ begin
       -- Ask for redirected_address by default, so that we can correctly handle
       -- redirection when the memory controller blocks.
       fetch_port_write.translated <= redirected_address;
+      -- Only mark fetch port in use when we push something new to it.
+      fetch_port_used := false;
       
       -- Provide delayed memory address and data signals, so that we know where the
       -- RAM is reading from each cycle
@@ -374,6 +376,9 @@ begin
       -- later.
       if coreid = 0 then
         fetch_port_ready <= true;
+        if not fetch_port_used then
+          fetch_port_write.valid <= false;
+        end if;
       else
         if fetch_port_used then
           fetch_port_ready <= false;
