@@ -112,6 +112,8 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal fetched_last_cycle : boolean := false;
 
   signal end_of_trace : boolean := false;
+
+  signal space_for_bytes : boolean := true;
 begin
   process (cpuclock) is
     variable instruction : instruction_information;
@@ -236,7 +238,7 @@ begin
         if fetch_buffer_now.address = desired_address then
           -- But make sure we don't over flow our read queue
           report "I-FETCH: Found the bytes we were looking for to add to our buffer.";   
-          if bytes_ready <= (BYTE_BUFFER_WIDTH-4) then
+          if space_for_bytes then
             report "I-FETCH" & integer'image(coreid)
               & " : We have space, so adding to byte_buffer.";
             -- Append to the end
@@ -321,6 +323,11 @@ begin
         byte_buffer <= new_byte_buffer;
         ilen_buffer <= new_ilen_buffer;
         bytes_ready <= new_bytes_ready;
+        if new_bytes_ready < (BYTE_BUFFER_WIDTH-4) then
+          space_for_bytes <= true;
+        else
+          space_for_bytes <= false;
+        end if;
         buffer_address <= buffer_address + consumed_bytes;
 
         report "I-FETCH" & integer'image(coreid)
@@ -347,6 +354,7 @@ begin
 
         -- Invalidate current buffer
         bytes_ready <= 0;
+        space_for_bytes <= true;
         -- And remember that we can fetch several words at once.
         -- Enough to fill, plus one waiting in the wings.
         burst_fetch <= (BYTE_BUFFER_WIDTH / 4) + 1;
