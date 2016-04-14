@@ -250,20 +250,29 @@ begin
         bram_bytes_out(i) <= ram_interfaces(i).irdata;
       end loop;
 
-      case bram_fetch_port_out is
-        when 0 =>
-          fetch_port0_out.bytes <= bram_bytes_out;
-          fetch_port0_out.user_flags <= bram_fetch_flags_out;
-        when 1 =>
-          fetch_port1_out.bytes <= bram_bytes_out;
-          fetch_port1_out.user_flags <= bram_fetch_flags_out;
-        when 2 =>
-          fetch_port2_out.bytes <= bram_bytes_out;
-          fetch_port2_out.user_flags <= bram_fetch_flags_out;
-        when 3 =>
-          fetch_port3_out.bytes <= bram_bytes_out;
-          fetch_port3_out.user_flags <= bram_fetch_flags_out;
-      end case;
+      report "MEM_CONTROLLER : Presenting address $"
+        & to_hstring(bram_fetch_address_out)
+        & " ($" & to_hstring(bram_bytes_out(0))
+        & ",$" & to_hstring(bram_bytes_out(1))
+        & ",$" & to_hstring(bram_bytes_out(2))
+        & ",$" & to_hstring(bram_bytes_out(3))
+        & ") to port " & integer'image(bram_fetch_port_out);
+
+      -- By default, present BRAM read result to everyone, in case they want it,
+      -- and also to minimise logic depth.  Where non-BRAM reads occur, they will
+      -- be used to overwrite these value.
+      fetch_port0_out.translated <= bram_fetch_address_out;
+      fetch_port0_out.bytes <= bram_bytes_out;
+      fetch_port0_out.user_flags <= bram_fetch_flags_out;
+      fetch_port1_out.translated <= bram_fetch_address_out;
+      fetch_port1_out.bytes <= bram_bytes_out;
+      fetch_port1_out.user_flags <= bram_fetch_flags_out;
+      fetch_port2_out.translated <= bram_fetch_address_out;
+      fetch_port2_out.bytes <= bram_bytes_out;
+      fetch_port2_out.user_flags <= bram_fetch_flags_out;
+      fetch_port3_out.translated <= bram_fetch_address_out;
+      fetch_port3_out.bytes <= bram_bytes_out;
+      fetch_port3_out.user_flags <= bram_fetch_flags_out;
       
     end if;
   end process;
