@@ -130,9 +130,6 @@ begin
   begin
     if rising_edge(cpuclock) then
 
-      -- Ask for redirected_address by default, so that we can correctly handle
-      -- redirection when the memory controller blocks.
-      fetch_port_write.translated <= redirected_address(31 downto 2)&"00";
       -- Only mark fetch port in use when we push something new to it.
       fetch_port_used := false;
       
@@ -256,6 +253,10 @@ begin
             report "I-FETCH" & integer'image(coreid)
               & " : desired_address <= $" & to_hstring(desired_address + 4);
           end if;
+        else
+          report "I-FETCH" & integer'image(coreid)
+            & " : Wrong bytes presented : desired_address = $" & to_hstring(desired_address)
+            & ", fetch_buffer_now.address=$" & to_hstring(fetch_buffer_now.address);
         end if;
 
         -- Keep the instruction buffer as full as possible, without overflowing.
@@ -284,7 +285,9 @@ begin
             fetch_port_used := true;
             if (burst_add_one = false) then
               report "I-FETCH" & integer'image(coreid)
-                & " : Decrementing burst_fetch";
+                & " : Decrementing burst_fetch, fetching $"
+                & to_hstring(fetch_address + 4) & ", desired_address=$"
+                & to_hstring(desired_address);
               burst_fetch <= burst_fetch - 1;
             else
               report "I-FETCH" & integer'image(coreid)
@@ -379,6 +382,9 @@ begin
       -- busy.  The trade-off would then be one extra cycle of instruction
       -- fetch latency on ports 1-3.  We can work out the best trade-off there
       -- later.
+      report "FETCH" & integer'image(coreid)
+        &" : fetch_port_read.acknowledged = "
+        & boolean'image(fetch_port_read.acknowledged);
       if (coreid = 0) and primary_core_boost then
         fetch_port_ready <= true;
         if not fetch_port_used then
