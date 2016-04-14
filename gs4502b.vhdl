@@ -65,6 +65,10 @@ architecture behavioural of gs4502b is
   type irqs is array(0 to 2) of std_logic;
   type nmis is array(0 to 2) of std_logic;
 begin
+
+  -- Tell outside world what is happening
+  monitor_pc <= monitor_pcs(to_integer(monitor_core_id));
+  
   mem_control: entity work.memory_controller
     port map ( cpuclock => cpuclock,
                ioclock => ioclock,
