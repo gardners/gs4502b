@@ -105,6 +105,16 @@ architecture behavioural of memory_controller is
   
   signal port2_ist_dran : boolean := false;
   signal port0_wasnt_last : boolean := true;
+
+  -- Buffer all request ports so that we don't lose any requests
+  signal fetch_port0_buffer : fetch_port_in;
+  signal fetch_port1_buffer : fetch_port_in;
+  signal fetch_port2_buffer : fetch_port_in;
+  signal fetch_port3_buffer : fetch_port_in;
+  signal fetch_port0_buffering : boolean := false;
+  signal fetch_port1_buffering : boolean := false;
+  signal fetch_port2_buffering : boolean := false;
+  signal fetch_port3_buffering : boolean := false;  
   
 begin    
   
@@ -169,6 +179,10 @@ begin
     variable fetch_port_number : integer range 0 to 3;
     variable fetch_flags : std_logic_vector(7 downto 0);
     variable fetching : boolean := true;
+    variable fetch_port0 : fetch_port_in;
+    variable fetch_port1 : fetch_port_in;
+    variable fetch_port2 : fetch_port_in;
+    variable fetch_port3 : fetch_port_in;
   begin
     if rising_edge(cpuclock) then
 
@@ -184,57 +198,107 @@ begin
         & boolean'image(fetch_port1_in.valid) & ","
         & boolean'image(fetch_port2_in.valid) & ","
         & boolean'image(fetch_port3_in.valid) & ").";
+      report "MEM_CONTROL: Port0 valid="
+        & boolean'image(fetch_port0_in.valid)
+        & ", address $" & to_hstring(fetch_port0_in.translated); 
+      report "MEM_CONTROL: Port0 buffer valid="
+        & boolean'image(fetch_port0_buffer.valid)
+        & ", address $" & to_hstring(fetch_port0_buffer.translated)
+        & " (buffering=" & boolean'imagE(fetch_port0_buffering);
+      report "MEM_CONTROL: Port1 valid="
+        & boolean'image(fetch_port1_in.valid)
+        & ", address $" & to_hstring(fetch_port1_in.translated); 
+      report "MEM_CONTROL: Port2 valid="
+        & boolean'image(fetch_port2_in.valid)
+        & ", address $" & to_hstring(fetch_port2_in.translated); 
+      report "MEM_CONTROL: Port3 valid="
+        & boolean'image(fetch_port3_in.valid)
+        & ", address $" & to_hstring(fetch_port3_in.translated); 
+      report "MEM_CONTROL: Port3 buffer valid="
+        & boolean'image(fetch_port3_buffer.valid)
+        & ", address $" & to_hstring(fetch_port3_buffer.translated)
+        & " (buffering=" & boolean'imagE(fetch_port3_buffering);
+
+      if fetch_port0_buffering then
+        fetch_port0 := fetch_port0_buffer;
+      else
+        fetch_port0 := fetch_port0_in;
+      end if;
+      if fetch_port1_buffering then
+        fetch_port1 := fetch_port1_buffer;
+      else
+        fetch_port1 := fetch_port1_in;
+      end if;
+      if fetch_port2_buffering then
+        fetch_port2 := fetch_port2_buffer;
+      else
+        fetch_port2 := fetch_port2_in;
+      end if;
+      if fetch_port3_buffering then
+        fetch_port3 := fetch_port3_buffer;
+      else
+        fetch_port3 := fetch_port3_in;
+      end if;
+      if fetch_port0_in.valid and (not fetch_port0_buffering) then
+        fetch_port0_buffer <= fetch_port0_in;
+        fetch_port0_buffering <= true;
+        fetch_port0_out.ready <= false;
+      end if;
+      if fetch_port1_in.valid and (not fetch_port1_buffering) then
+        fetch_port1_buffer <= fetch_port1_in;
+        fetch_port1_buffering <= true;
+        fetch_port1_out.ready <= false;
+      end if;
+      if fetch_port2_in.valid and (not fetch_port2_buffering) then
+        fetch_port2_buffer <= fetch_port2_in;
+        fetch_port2_buffering <= true;
+        fetch_port2_out.ready <= false;
+      end if;
+      if fetch_port3_in.valid and (not fetch_port3_buffering) then
+        fetch_port3_buffer <= fetch_port3_in;
+        fetch_port3_buffering <= true;
+        fetch_port3_out.ready <= false;
+      end if;
       
-      if fetch_port0_in.valid and (port0_wasnt_last or primary_core_boost) then
+      if fetch_port0.valid and (port0_wasnt_last or primary_core_boost) then
         port0_wasnt_last <= false;
         fetching := true;
-        fetch_address := fetch_port0_in.translated;
-        fetch_flags := fetch_port0_in.user_flags;
+        fetch_address := fetch_port0.translated;
+        fetch_flags := fetch_port0.user_flags;
         fetch_port_number := 0;
-        fetch_port0_out.acknowledged <= true;
-        fetch_port1_out.acknowledged <= false;
-        fetch_port2_out.acknowledged <= false;
-        fetch_port3_out.acknowledged <= false;
-      elsif fetch_port1_in.valid then
+        fetch_port0_buffering <= false;
+        fetch_port0_out.ready <= fetch_port0_buffering;
+      elsif fetch_port1.valid then
         port0_wasnt_last <= true;
         fetching := true;
-        fetch_address := fetch_port1_in.translated;
-        fetch_flags := fetch_port1_in.user_flags;
+        fetch_address := fetch_port1.translated;
+        fetch_flags := fetch_port1.user_flags;
         fetch_port_number := 1;
-        fetch_port1_out.acknowledged <= true;
-        fetch_port0_out.acknowledged <= false;
-        fetch_port2_out.acknowledged <= false;
-        fetch_port3_out.acknowledged <= false;
-      elsif fetch_port2_in.valid and ((not fetch_port3_in.valid) or port2_ist_dran) then
+        fetch_port1_buffering <= false;
+        fetch_port1_out.ready <= fetch_port1_buffering;
+      elsif fetch_port2.valid and ((not fetch_port3.valid) or port2_ist_dran) then
         port0_wasnt_last <= true;
         fetching := true;
-        fetch_address := fetch_port2_in.translated;
-        fetch_flags := fetch_port2_in.user_flags;
+        fetch_address := fetch_port2.translated;
+        fetch_flags := fetch_port2.user_flags;
         fetch_port_number := 2;
-        fetch_port2_out.acknowledged <= true;
-        fetch_port0_out.acknowledged <= false;
-        fetch_port1_out.acknowledged <= false;
-        fetch_port3_out.acknowledged <= false;
         port2_ist_dran <= false;
-      elsif fetch_port3_in.valid then
+        fetch_port2_buffering <= false;
+        fetch_port2_out.ready <= fetch_port2_buffering;
+      elsif fetch_port3.valid then
         port0_wasnt_last <= true;
         fetching := true;
-        fetch_address := fetch_port3_in.translated;
-        fetch_flags := fetch_port3_in.user_flags;
+        fetch_address := fetch_port3.translated;
+        fetch_flags := fetch_port3.user_flags;
         fetch_port_number := 3;
-        fetch_port3_out.acknowledged <= true;
-        fetch_port0_out.acknowledged <= false;
-        fetch_port1_out.acknowledged <= false;
-        fetch_port2_out.acknowledged <= false;
         port2_ist_dran <= true;
+        fetch_port3_buffering <= false;
+        fetch_port3_out.ready <= fetch_port3_buffering;
       else
         port0_wasnt_last <= true;
         fetching := false;
-        fetch_port0_out.acknowledged <= false;
-        fetch_port1_out.acknowledged <= false;
-        fetch_port2_out.acknowledged <= false;
-        fetch_port3_out.acknowledged <= false;
-      end if;
+      end if;      
+      
       if fetching then
         report "MEM_CONTROLLER : Fetch port " & integer'image(fetch_port_number)
           & " is asking for address $" & to_hstring(fetch_address);

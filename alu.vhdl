@@ -20,8 +20,8 @@ package alu is
     user_flags : std_logic_vector(7 downto 0);
   end record;
   type fetch_port_out is record
-    -- Tell user if previous value has been accepted
-    acknowledged : boolean;
+    -- Announce when we can accept more input.
+    ready : boolean;
     -- 4 bytes of read value
     bytes : bytes4;
     -- Address of request

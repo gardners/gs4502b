@@ -109,7 +109,6 @@ architecture behavioural of gs4502b_instruction_prefetch is
 
   signal skip_bytes : integer := 0;
 
-  signal fetch_port_ready : boolean := true;
   signal fetched_last_cycle : boolean := false;
 
   signal end_of_trace : boolean := false;
@@ -279,8 +278,10 @@ begin
            and (not address_redirecting) then
           report "I-FETCH" & integer'image(coreid)
             & " : Requesting next instruction word (" & integer'image(burst_fetch)
-            & " more to go).";
-          if fetch_port_ready or fetch_port_read.acknowledged then
+            & " more to go, ready="
+            & boolean'image(fetch_port_read.ready) &
+            ").";
+          if fetch_port_read.ready then
             report "FETCH" & integer'image(coreid)
               & " port ready";
             fetch_port_write.valid <= true;
@@ -391,26 +392,10 @@ begin
       -- busy.  The trade-off would then be one extra cycle of instruction
       -- fetch latency on ports 1-3.  We can work out the best trade-off there
       -- later.
-      report "FETCH" & integer'image(coreid)
-        &" : fetch_port_read.acknowledged = "
-        & boolean'image(fetch_port_read.acknowledged);
       fetched_last_cycle <= fetch_port_used;
       if (coreid = 0) and primary_core_boost then
-        fetch_port_ready <= true;
         if not fetch_port_used then
           fetch_port_write.valid <= false;
-        end if;
-      else
-        if fetch_port_used then
-          fetch_port_ready <= false;
-        else
-          if fetch_port_read.acknowledged then
-            fetch_port_ready <= true;
-            -- Now that the access has been acknowledged, clear the pending request
-            fetch_port_write.valid <= false;
-          else
-            fetch_port_ready <= false;
-          end if;
         end if;
       end if;
       
