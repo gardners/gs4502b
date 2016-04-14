@@ -129,8 +129,6 @@ begin
   begin
     if rising_edge(cpuclock) then
 
-      -- By default not asking for bytes
-      fetch_port_write.valid <= false;
       -- Ask for redirected_address by default, so that we can correctly handle
       -- redirection when the memory controller blocks.
       fetch_port_write.translated <= redirected_address;
