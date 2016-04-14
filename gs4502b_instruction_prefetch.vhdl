@@ -140,6 +140,8 @@ begin
       fetch_buffer_now.address <= fetch_buffer_1.address;
       for i in 0 to 3 loop
         fetch_buffer_now.v(i).byte <= fetch_buffer_1.v(i).byte;
+        report "FETCH" & integer'image(coreid) & " Fetched byte " & integer'image(i)
+          & " = $" & to_hstring(fetch_buffer_1.v(i).byte);
       end loop;
       -- Tag bytes with instruction lengths
       for i in 0 to 3 loop
@@ -150,7 +152,9 @@ begin
 
       fetch_buffer_1.address <= fetch_port_read.translated;
       for i in 0 to 3 loop
-        fetch_buffer_1.v(0).byte <= fetch_port_read.bytes(i);
+        fetch_buffer_1.v(i).byte <= fetch_port_read.bytes(i);
+        report "FETCH" & integer'image(coreid) & " Fetch byte " & integer'image(i)
+          & " = $" & to_hstring(fetch_port_read.bytes(i));
       end loop;
       
       -- XXX When changing CPU personality, there is a 1 cycle delay before
@@ -250,7 +254,7 @@ begin
             & " : Adding 4 to (bytes_ready-consumed_bytes) to calculate new_bytes_ready";
           -- Read next 4 bytes: this happens through next block, which has a
           -- nice new burst fetch process, to keep the buffer filled.
-          desired_address <= desired_address + 1;
+          desired_address <= desired_address + 4;
 
         end if;
       end if;
