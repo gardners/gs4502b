@@ -78,8 +78,7 @@ architecture Behavioral of container is
   signal monitor_pc : unsigned(15 downto 0);
   signal monitor_pc_drive : unsigned(15 downto 0);
   signal sseg_ca_drive : std_logic_vector(7 downto 0);
-  signal sseg_an_drive : std_logic_vector(7 downto 0)
-
+  signal sseg_an_drive : std_logic_vector(7 downto 0);
   
   signal segled_counter : unsigned(31 downto 0) := (others => '0');
   
