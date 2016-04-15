@@ -132,8 +132,8 @@ begin
 
   -- Improve timing with drive stages
   monitor_pc_drive <= monitor_pc;
-  sseg_an <= ssgen_an_drive;
-  sseg_ca <= ssgen_ca_drive;
+  sseg_an <= sseg_an_drive;
+  sseg_ca <= sseg_ca_drive;
   
   process (pixelclock) is
     variable digit : std_logic_vector(3 downto 0);
