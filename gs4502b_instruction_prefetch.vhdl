@@ -301,7 +301,10 @@ begin
             ").";
           if fetch_port_read.ready or (primary_core_boost and (coreid=0)) then
             report "FETCH" & integer'image(coreid)
-              & " port ready";
+              & " port ready: Asking for $"
+              & to_hstring(fetch_address + 4)
+              & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&
+                                         ifetch_transaction_counter);
             fetch_port_write.valid <= true;
             fetch_port_write.translated <= fetch_address + 4;
             fetch_port_write.user_flags <=
@@ -397,9 +400,17 @@ begin
         fetch_port_write.valid <= true;
         fetch_port_write.translated <= redirected_address(31 downto 2)&"00";
         fetch_port_used := true;
+        fetch_port_write.user_flags <=
+          std_logic_vector(to_unsigned(coreid+1,2)&
+                           ifetch_transaction_counter);
+        report "FETCH" & integer'image(coreid)
+          & " port ready: Due to redirection, asking for $"
+          & to_hstring(redirected_address(31 downto 2)&"00")
+          & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&
+                                     ifetch_transaction_counter);
 
         -- Set the transaction ID we will be waiting for for this data
-        ifetch_expected_transaction_counter <= ifetch_transaction_counter + 1;
+        ifetch_expected_transaction_counter <= ifetch_transaction_counter;
         ifetch_transaction_counter          <= ifetch_transaction_counter + 1;
         
         fetch_address <= redirected_address(31 downto 2)&"00";

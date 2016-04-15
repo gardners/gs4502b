@@ -301,7 +301,8 @@ begin
       
       if fetching then
         report "MEM_CONTROLLER : Fetch port " & integer'image(fetch_port_number)
-          & " is asking for address $" & to_hstring(fetch_address);
+          & " is asking for address $" & to_hstring(fetch_address)
+          & " (Tid = $" & to_hstring(fetch_flags) & ").";
 
         -- Feed request into memory
         -- XXX - Add support for unaligned requests
