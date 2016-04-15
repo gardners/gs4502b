@@ -62,7 +62,7 @@ architecture behavioural of gs4502b is
   -- When true, this allows the primary CPU core (core 0) to monopolise the
   -- instruction fetch memory bus, potentially starving the other cores of
   -- instruction fetch cycles.  
-  signal primary_core_boost : boolean := false;
+  signal primary_core_boost : boolean := true;
 
   type pc3 is array (0 to 2) of unsigned(15 downto 0);
   signal monitor_pcs : pc3;
