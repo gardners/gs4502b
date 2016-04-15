@@ -67,7 +67,7 @@ begin
 
     -- Assert reset for 16 cycles to give CPU pipeline ample time to flush out
     -- and actually reset.
-    reset <= '0';
+    reset <= '1';
     for i in 1 to 4 loop
       pixelclock <= '1'; cpuclock <= '1'; ioclock <= '1'; wait for 2.5 ns;     
       pixelclock <= '0'; cpuclock <= '0'; ioclock <= '1'; wait for 2.5 ns;     
@@ -79,7 +79,7 @@ begin
       pixelclock <= '0'; cpuclock <= '0'; ioclock <= '0'; wait for 2.5 ns;     
     end loop;  -- i
     -- Run CPU for 8 million cycles.
-    reset <= '1';
+    reset <= '0';
     for i in 1 to 2000000 loop
       pixelclock <= '1'; cpuclock <= '1'; ioclock <= '1'; wait for 2.5 ns;     
       pixelclock <= '0'; cpuclock <= '0'; ioclock <= '1'; wait for 2.5 ns;     

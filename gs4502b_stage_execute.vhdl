@@ -389,11 +389,11 @@ begin
       
       -- On reset, force PC to Hypervisor mode and entry point, and reset
       -- register values.
-      if reset = '0' then
+      if reset = '1' then
 
         report "$" & to_hstring(expected_instruction_address) &
           " EXECUTE" & integer'image(coreid)
-          & " : /RESET asserted ";
+          & " : RESET asserted ";
 
         current_cpu_personality <= Hypervisor;
 
