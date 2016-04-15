@@ -326,6 +326,7 @@ begin
       bram_fetch_address_1 <= bram_fetch_address_in;
       bram_fetch_flags_1 <= bram_fetch_flags_in;
       bram_fetch_port_1 <= bram_fetch_port_in;
+
       bram_fetch_address_out <= bram_fetch_address_1;
       bram_fetch_flags_out <= bram_fetch_flags_1;
       bram_fetch_port_out <= bram_fetch_port_1;
@@ -342,7 +343,8 @@ begin
         & ",$" & to_hstring(bram_bytes_out(1))
         & ",$" & to_hstring(bram_bytes_out(2))
         & ",$" & to_hstring(bram_bytes_out(3))
-        & ") to port " & integer'image(bram_fetch_port_out);
+        & ") to port " & integer'image(bram_fetch_port_out)
+        & " (Tid $" & to_hstring(bram_fetch_flags_out) & ").";
 
       -- By default, present BRAM read result to everyone, in case they want it,
       -- and also to minimise logic depth.  Where non-BRAM reads occur, they will

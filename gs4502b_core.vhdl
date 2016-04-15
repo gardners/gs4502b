@@ -176,6 +176,7 @@ begin  -- behavioural
   instruction_prefetcher: entity work.gs4502b_instruction_prefetch
     port map (
       cpuclock => cpuclock,
+      reset => reset,
       coreid => coreid,
       primary_core_boost => primary_core_boost,
       

@@ -36,6 +36,7 @@ use work.alu.all;
 entity gs4502b_instruction_prefetch is
   port (
     cpuclock : in std_logic;
+    reset : in std_logic;
     coreid : in integer range 0 to 2;
     primary_core_boost : in boolean;
 
@@ -89,6 +90,8 @@ architecture behavioural of gs4502b_instruction_prefetch is
   -- And which address are we currently looking for to append to the end of our
   -- byte buffer?
   signal desired_address : translated_address := (others => '0');
+  signal ifetch_transaction_counter : unsigned(5 downto 0) := (others => '0');
+  signal ifetch_expected_transaction_counter : unsigned(5 downto 0) := (others => '0');
 
   -- Delayed signals to tell us which address and values of chip/fast RAM we are
   -- reading in a given cycle
@@ -100,6 +103,7 @@ architecture behavioural of gs4502b_instruction_prefetch is
   type prefetch_buffer is record
     v : prefetch_vector;
     address : translated_address;
+    user_flags : std_logic_vector(7 downto 0);
   end record;
   
   signal fetch_buffer_1 : prefetch_buffer;
@@ -140,6 +144,7 @@ begin
       -- Provide delayed memory address and data signals, so that we know where the
       -- RAM is reading from each cycle
       fetch_buffer_now.address <= fetch_buffer_1.address;
+      fetch_buffer_now.user_flags <= fetch_buffer_1.user_flags;
       for i in 0 to 3 loop
         fetch_buffer_now.v(i).byte <= fetch_buffer_1.v(i).byte;
       end loop;
@@ -151,6 +156,7 @@ begin
       end loop;
 
       fetch_buffer_1.address <= fetch_port_read.translated;
+      fetch_buffer_1.user_flags <= fetch_port_read.user_flags;
       for i in 0 to 3 loop
         fetch_buffer_1.v(i).byte <= fetch_port_read.bytes(i);
       end loop;
@@ -229,13 +235,21 @@ begin
         & " : RAM READING $" & to_hstring(fetch_buffer_now.address)
         &" - $" & to_hstring(fetch_buffer_now.address+3) &
         ", stow offset " & integer'image(store_offset) & ", am hoping for $"
-        & to_hstring(desired_address);
+        & to_hstring(desired_address)
+        & " address_redirecting=" & boolean'image(address_redirecting)
+        & ", reset=" & std_logic'image(reset);
 
       burst_sub_one := false;
       burst_add_one := false;
 
-      if address_redirecting = false then
-        if fetch_buffer_now.address = desired_address then
+      if (address_redirecting = false) and (reset = '0') then
+        report "I-FETCH" & integer'image(coreid)
+          & " : Waiting for Tid=$" & to_hstring(to_unsigned(coreid+1,2)
+                                                &ifetch_expected_transaction_counter)
+          & ", just saw $" & to_hstring(fetch_buffer_now.user_flags);
+        if fetch_buffer_now.user_flags
+          = std_logic_vector(to_unsigned(coreid+1,2)
+                             &ifetch_expected_transaction_counter) then
           -- But make sure we don't over flow our read queue
           report "I-FETCH: Found the bytes we were looking for to add to our buffer.";   
           if space_for_bytes then
@@ -254,6 +268,8 @@ begin
             -- Read next 4 bytes: this happens through next block, which has a
             -- nice new burst fetch process, to keep the buffer filled.
             desired_address <= desired_address + 4;
+            ifetch_expected_transaction_counter
+              <= ifetch_expected_transaction_counter + 1;
             report "I-FETCH" & integer'image(coreid)
               & " : desired_address <= $" & to_hstring(desired_address + 4);
           end if;
@@ -288,6 +304,11 @@ begin
               & " port ready";
             fetch_port_write.valid <= true;
             fetch_port_write.translated <= fetch_address + 4;
+            fetch_port_write.user_flags <=
+              std_logic_vector(to_unsigned(coreid+1,2)&
+                               ifetch_transaction_counter);
+            ifetch_transaction_counter <=
+              ifetch_transaction_counter + 1;
             fetch_address <= fetch_address + 4;
             fetch_port_used := true;
             if (burst_add_one = false) then
@@ -338,7 +359,7 @@ begin
 
       end if;
       
-      if address_redirecting = true then
+      if (address_redirecting = true) and (reset = '0') then
         report "$" & to_hstring(instruction_address) &
           " PREFETCH" & integer'image(coreid)
           & " : "
@@ -377,6 +398,10 @@ begin
         fetch_port_write.translated <= redirected_address(31 downto 2)&"00";
         fetch_port_used := true;
 
+        -- Set the transaction ID we will be waiting for for this data
+        ifetch_expected_transaction_counter <= ifetch_transaction_counter + 1;
+        ifetch_transaction_counter          <= ifetch_transaction_counter + 1;
+        
         fetch_address <= redirected_address(31 downto 2)&"00";
         desired_address <= redirected_address(31 downto 2)&"00";
         report "I-FETCH" & integer'image(coreid)
@@ -402,9 +427,11 @@ begin
       -- later.
       fetched_last_cycle <= fetch_port_used;
       if (coreid = 0) and primary_core_boost then
-        if not fetch_port_used then
+        if (not fetch_port_used) or (reset='1') then
           fetch_port_write.valid <= false;
         end if;
+      elsif reset='1' then
+        fetch_port_write.valid <= false;        
       end if;
       
       report "$" & to_hstring(instruction_address) & " I-FETCH" & integer'image(coreid);
