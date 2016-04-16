@@ -303,11 +303,33 @@ package body alu is
 
     -- Now do transfers explicity, so that ALU logic is not in the path
     if iflags.alusrc_a then
-      ret.value := regs.a_dup1; -- for flags
-      if iflags.aludst_b then regsout.b := regs.a_dup1; end if;
-      if iflags.aludst_x then regsout.x := regs.a_dup1; end if;
-      if iflags.aludst_y then regsout.y := regs.a_dup1; end if;
-      if iflags.aludst_z then regsout.z := regs.a_dup1; end if;
+      -- Do the register assignments fast
+      if iflags.aludst_b then regsout.b := regs.a_dup3; end if;
+      if iflags.aludst_x then
+        ret.n := false; ret.z := false;
+        if regs.a_dup3(7) = '1' then ret.n := true; end if;
+        if regs.a_dup3 = x"00" then ret.z := true; end if;
+        regsout.x := regs.a_dup1;
+      end if;
+      if iflags.aludst_y then
+        ret.n := false; ret.z := false;
+        if regs.a_dup3(7) = '1' then ret.n := true; end if;
+        if regs.a_dup3 = x"00" then ret.z := true; end if;
+        regsout.y := regs.a_dup1;
+      end if;
+      if iflags.aludst_z then
+        ret.n := false; ret.z := false;
+        if regs.a_dup3(7) = '1' then ret.n := true; end if;
+        if regs.a_dup3 = x"00" then ret.z := true; end if;
+        regsout.z := regs.a_dup1;
+      end if;
+
+      -- That just leaves the flags, as we also want to avoid them
+      -- taking too long.  We can speed things up a bit by assigning
+      -- the ALU return value now.  But we could in principle just
+      -- set N and Z right now, which would be even faster.
+      -- It would also be interesting to set the Z flag for each
+      -- register assignment, so that it can just be copied quickly.
     end if;
     if iflags.alusrc_b then ret.value := regs.b; end if;
     if iflags.alusrc_x then ret.value := regs.x; end if;
@@ -319,58 +341,57 @@ package body alu is
     -- Finally, we need to handle INC and DEC operations on the index registers.
     -- (and also on the accumulator for 4502 mode)
     if iflags.alu_inc then
+      ret.n := false; ret.z := false;
       ret.value := regs.a_dup2 + 1;
       if iflags.aludst_a then
         regsout.a := ret.value;
         regsout.a_dup1 := ret.value;
         regsout.a_dup2 := ret.value;
         regsout.a_dup3 := ret.value;
+        if regs.a_dup2 = x"FF" then ret.z := true; end if;
       end if;
       if iflags.aludst_x then
         ret.value := regs.x + 1;
         regsout.x := ret.value;
+        if regs.x = x"FF" then ret.z := true; end if;
       end if;
       if iflags.aludst_y then
         ret.value := regs.y + 1;
         regsout.y := ret.value;
+        if regs.y = x"FF" then ret.z := true; end if;
       end if;
       if iflags.aludst_z then
         ret.value := regs.z + 1;
         regsout.z := ret.value;
-      end if;
-      ret.n := false; ret.z := false;
-      if ret.value(7) = '1' then
-        ret.n := true;
-      end if;
-      if ret.value = x"00" then
-        ret.z := true;
-      end if;
+        if regs.z = x"FF" then ret.z := true; end if;
+      end if;            
     elsif iflags.alu_dec then
+      ret.n := false; ret.z := false;
       ret.value := regs.a_dup2 - 1;
       if iflags.aludst_a then
         regsout.a := ret.value;
         regsout.a_dup1 := ret.value;
         regsout.a_dup2 := ret.value;
         regsout.a_dup3 := ret.value;
+        if regs.a_dup2 = x"FF" then ret.z := true; end if;
       end if;
       if iflags.aludst_x then
         ret.value := regs.x - 1;
         regsout.x := ret.value;
+        if regs.x = x"FF" then ret.z := true; end if;
       end if;
       if iflags.aludst_y then
         ret.value := regs.y - 1;
         regsout.y := ret.value;
+        if regs.y = x"FF" then ret.z := true; end if;
       end if;
       if iflags.aludst_z then
         ret.value := regs.z - 1;
         regsout.z := ret.value;
+        if regs.z = x"FF" then ret.z := true; end if;
       end if;
-      ret.n := false; ret.z := false;
       if ret.value(7) = '1' then
         ret.n := true;
-      end if;
-      if ret.value = x"00" then
-        ret.z := true;
       end if;
     else
       -- For immediate loads of registers
@@ -387,30 +408,30 @@ package body alu is
       report "ALU: Setting A to $" & to_hstring(ret.value);
     end if;
     
-                                        -- if iflags.aludst_b then regsout.b := ret.value; end if;
-                                        -- if iflags.aludst_p then
-                                        --   -- Set flags from byte: for PLP
-                                        --   regsout.flags := (others => false);
-                                        --   -- PLP doesn't change E flag
-                                        --   regsout.flags.e := regs.flags.e;
-                                        --   if ret.value(0)='1' then regsout.flags.c := true; end if;
-                                        --   if ret.value(1)='1' then regsout.flags.z := true; end if;
-                                        --   if ret.value(2)='1' then regsout.flags.i := true; end if;
-                                        --   if ret.value(3)='1' then regsout.flags.d := true; end if;
-                                        --   if ret.value(6)='1' then regsout.flags.v := true; end if;
-                                        --   if ret.value(7)='1' then regsout.flags.n := true; end if;
-                                        --   -- Cancel renaming on all renamable flags (I and E are not renamable)
-                                        --   renamedout.flag_c := false;
-                                        --   renamedout.flag_d := false;
-                                        --   renamedout.flag_n := false;
-                                        --   renamedout.flag_v := false;
-                                        --   renamedout.flag_z := false;
-                                        -- end if;
-                                        -- if iflags.aludst_sph then regsout.sph := ret.value; end if;
-                                        -- if iflags.aludst_spl then regsout.spl := ret.value; end if;
-                                        -- if iflags.aludst_x then regsout.x := ret.value; end if;
-                                        -- if iflags.aludst_y then regsout.y := ret.value; end if;
-                                        -- if iflags.aludst_z then regsout.z := ret.value; end if;
+    -- if iflags.aludst_b then regsout.b := ret.value; end if;
+    -- if iflags.aludst_p then
+    --   -- Set flags from byte: for PLP
+    --   regsout.flags := (others => false);
+    --   -- PLP doesn't change E flag
+    --   regsout.flags.e := regs.flags.e;
+    --   if ret.value(0)='1' then regsout.flags.c := true; end if;
+    --   if ret.value(1)='1' then regsout.flags.z := true; end if;
+    --   if ret.value(2)='1' then regsout.flags.i := true; end if;
+    --   if ret.value(3)='1' then regsout.flags.d := true; end if;
+    --   if ret.value(6)='1' then regsout.flags.v := true; end if;
+    --   if ret.value(7)='1' then regsout.flags.n := true; end if;
+    --   -- Cancel renaming on all renamable flags (I and E are not renamable)
+    --   renamedout.flag_c := false;
+    --   renamedout.flag_d := false;
+    --   renamedout.flag_n := false;
+    --   renamedout.flag_v := false;
+    --   renamedout.flag_z := false;
+    -- end if;
+    -- if iflags.aludst_sph then regsout.sph := ret.value; end if;
+    -- if iflags.aludst_spl then regsout.spl := ret.value; end if;
+    -- if iflags.aludst_x then regsout.x := ret.value; end if;
+    -- if iflags.aludst_y then regsout.y := ret.value; end if;
+    -- if iflags.aludst_z then regsout.z := ret.value; end if;
     if iflags.update_nz then
       regsout.flags.n := ret.n;
       regsout.flags.z := ret.z;
