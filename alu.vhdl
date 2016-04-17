@@ -283,22 +283,50 @@ package body alu is
     end if;
     
     -- Do various register operations
+    -- XXX Handle renamed registers here, by copying renamed
+    -- status as well as value, including rename transaction id.
+    -- XXX Also make sure flags get renamed when transferring from a
+    -- renamed register.
+    -- Or do we just deem it too hard, and require regs and flags to be resolved
+    -- for a register operation? It is much simpler, and won't hurt the benefit
+    -- that register renaming provides for memory copies.
     if extraflags.tab then regsout.b := regs.a_dup3; end if;
-    if extraflags.tax then regsout.x := regs.a_dup3; end if;
-    if extraflags.tay then regsout.y := regs.a_dup3; end if;
-    if extraflags.taz then regsout.z := regs.a_dup3; end if;
-    if extraflags.tba then regsout.a := regs.b; end if;
-    if extraflags.txa then regsout.a := regs.x; end if;
-    if extraflags.tya then regsout.a := regs.y; end if;
-    if extraflags.tza then regsout.a := regs.z; end if;
+    if extraflags.tax then
+      regsout.x := regs.a_dup3;
+      renamedout.x := renamed.a;
+    end if;
+    if extraflags.tay then
+      regsout.y := regs.a_dup3;
+      renamedout.y := renamed.a;
+    end if;
+    if extraflags.taz then
+      regsout.z := regs.a_dup3;
+      renamedout.z := renamed.a;
+    end if;
+    if extraflags.tba then
+      regsout.a := regs.b;
+      renamedout.a := false;
+    end if;
+    if extraflags.txa then
+      regsout.a := regs.x;
+      renamedout.a := renamed.x;
+    end if;
+    if extraflags.tya then
+      regsout.a := regs.y;
+      renamedout.a := renamed.y;
+    end if;
+    if extraflags.tza then
+      regsout.a := regs.z;
+      renamedout.a := renamed.z;
+    end if;
     if extraflags.txs then regsout.spl := regs.x; end if;
     if extraflags.tys then regsout.sph := regs.y; end if;
     if extraflags.tsx then regsout.x := regs.spl; end if;
     if extraflags.tsy then regsout.y := regs.sph; end if;
-    if extraflags.lda then regsout.x := i2; end if;
-    if extraflags.ldx then regsout.x := i2; end if;
-    if extraflags.ldy then regsout.y := i2; end if;
-    if extraflags.ldz then regsout.z := i2; end if;
+    if extraflags.lda then regsout.a := i2; renamedout.a := false; end if;
+    if extraflags.ldx then regsout.x := i2; renamedout.x := false; end if;
+    if extraflags.ldy then regsout.y := i2; renamedout.y := false; end if;
+    if extraflags.ldz then regsout.z := i2; renamedout.z := false; end if;
     
     if extraflags.nega then
       regsout.a := (not regs.a) + 1;
