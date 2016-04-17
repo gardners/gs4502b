@@ -90,8 +90,8 @@ architecture behavioural of gs4502b_instruction_prefetch is
   -- And which address are we currently looking for to append to the end of our
   -- byte buffer?
   signal desired_address : translated_address := (others => '0');
-  signal ifetch_transaction_counter : unsigned(5 downto 0) := (others => '0');
-  signal ifetch_expected_transaction_counter : unsigned(5 downto 0) := (others => '0');
+  signal ifetch_transaction_counter : unsigned(3 downto 0) := (others => '0');
+  signal ifetch_expected_transaction_counter : unsigned(3 downto 0) := (others => '0');
 
   -- Delayed signals to tell us which address and values of chip/fast RAM we are
   -- reading in a given cycle
@@ -247,7 +247,7 @@ begin
           & " : Waiting for Tid=$" & to_hstring(to_unsigned(coreid+1,2)
                                                 &ifetch_expected_transaction_counter)
           & ", just saw $" & to_hstring(fetch_buffer_now.user_flags);
-        if fetch_buffer_now.user_flags
+        if fetch_buffer_now.user_flags(7 downto 2)
           = std_logic_vector(to_unsigned(coreid+1,2)
                              &ifetch_expected_transaction_counter) then
           -- But make sure we don't over flow our read queue
@@ -304,12 +304,12 @@ begin
               & " port ready: Asking for $"
               & to_hstring(fetch_address + 4)
               & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&
-                                         ifetch_transaction_counter);
+                                         ifetch_transaction_counter&"00");
             fetch_port_write.valid <= true;
             fetch_port_write.translated <= fetch_address + 4;
             fetch_port_write.user_flags <=
               std_logic_vector(to_unsigned(coreid+1,2)&
-                               ifetch_transaction_counter);
+                               ifetch_transaction_counter&"00");
             ifetch_transaction_counter <=
               ifetch_transaction_counter + 1;
             fetch_address <= fetch_address + 4;
@@ -402,12 +402,12 @@ begin
         fetch_port_used := true;
         fetch_port_write.user_flags <=
           std_logic_vector(to_unsigned(coreid+1,2)&
-                           ifetch_transaction_counter);
+                           ifetch_transaction_counter&"00");
         report "FETCH" & integer'image(coreid)
           & " port ready: Due to redirection, asking for $"
           & to_hstring(redirected_address(31 downto 2)&"00")
           & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&
-                                     ifetch_transaction_counter);
+                                     ifetch_transaction_counter&"00");
 
         -- Set the transaction ID we will be waiting for for this data
         ifetch_expected_transaction_counter <= ifetch_transaction_counter;
