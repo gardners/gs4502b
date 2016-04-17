@@ -90,3 +90,7 @@ extra_instruction_equations.vhdl:	extrainstructionflags
 Ophis/bin/ophis:
 	git submodule init ; git submodule update
 
+ghdl-bin/bin/ghdl:
+	git submodule init ; git submodule update
+	cd ghdl && ./configure --prefix=../ghdl-bin && make
+
