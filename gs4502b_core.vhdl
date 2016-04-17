@@ -140,6 +140,7 @@ architecture behavioural of gs4502b_core is
   signal validate_stalling : boolean;
   signal stage_validate_instruction : instruction_information;
   signal stage_validate_extra_instruction_flags : extra_instruction_flags;
+  signal alu_res : alu_result;
   signal stage_validate_resources_required : instruction_resources;
   signal stage_validate_resources_modified : instruction_resources;
   signal stage_validate_instruction_valid : boolean;
@@ -266,6 +267,7 @@ begin  -- behavioural
       instruction_in => stage_decode_instruction,
       instruction_out => stage_validate_instruction,
       instruction_out_extra_flags => stage_validate_extra_instruction_flags,
+      alu_result_out => alu_res,
 
       instruction_valid => stage_validate_instruction_valid,      
       instruction_address_is_as_expected => instruction_address_is_as_expected,
@@ -301,6 +303,7 @@ begin  -- behavioural
       stall => memory_stalling,
       instruction_in => stage_validate_instruction,
       instruction_in_extra_flags => stage_validate_extra_instruction_flags,
+      alu_res => alu_res,
       instruction_valid => stage_validate_instruction_valid,
       instruction_address_is_as_expected => instruction_address_is_as_expected,
       

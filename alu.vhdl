@@ -85,9 +85,10 @@ package alu is
     instruction : in instruction_flags;
     i1 : in unsigned(7 downto 0);
     i2 : in unsigned(7 downto 0);
-    cpuflags : in cpu_flags) return alu_result;
+    c_in : boolean;
+    d_in : boolean) return alu_result;
 
-  procedure do_alu_op(regs : in cpu_registers;
+  procedure do_reg_op(regs : in cpu_registers;
                       regsout : out cpu_registers;
                       renamed : in instruction_resources;
                       renamedout : out instruction_resources;
@@ -95,7 +96,7 @@ package alu is
                       extraflags : in extra_instruction_flags;
                       i2 : in unsigned(7 downto 0)
                       );
-  
+
 end package;
 
 package body alu is
@@ -261,7 +262,7 @@ package body alu is
     return ret;
   end function alu_op_sub;
 
-  procedure do_alu_op(regs : in cpu_registers;
+  procedure do_reg_op(regs : in cpu_registers;
                       regsout : out cpu_registers;
                       renamed : in instruction_resources;
                       renamedout : out instruction_resources;
@@ -269,31 +270,16 @@ package body alu is
                       extraflags : in extra_instruction_flags;
                       i2 : in unsigned(7 downto 0)
                       ) is
-    variable ret: alu_result;
   begin    
-    ret.value := (others => '1');
 
     regsout := regs;
     renamedout := renamed;
-
-    -- Do ALU operations
-    ret := alu_op(iflags,regs.a,i2,regs.flags);
-    report "ALU: i1=$" & to_hstring(regs.a) & ", i2=$" & to_hstring(i2)
-      & ", result=$" & to_hstring(ret.value);
 
     if iflags.update_nz then
       regsout.flags.n := false;
       regsout.flags.z := false;
       renamedout.flag_z := false;
       renamedout.flag_n := false;
-    end if;
-    if iflags.update_c then
-      regsout.flags.c := ret.c;
-      renamedout.flag_c := false;
-    end if;
-    if iflags.update_v then
-      regsout.flags.v := ret.v;
-      renamedout.flag_v := false;
     end if;
     
     -- Do various register operations
@@ -309,6 +295,21 @@ package body alu is
     if extraflags.tys then regsout.sph := regs.y; end if;
     if extraflags.tsx then regsout.x := regs.spl; end if;
     if extraflags.tsy then regsout.y := regs.sph; end if;
+    if extraflags.lda then regsout.x := i2; end if;
+    if extraflags.ldx then regsout.x := i2; end if;
+    if extraflags.ldy then regsout.y := i2; end if;
+    if extraflags.ldz then regsout.z := i2; end if;
+    
+    if extraflags.nega then
+      regsout.a := (not regs.a) + 1;
+      regsout.a_dup1 := (not regs.a_dup1) + 1;
+      regsout.a_dup2 := (not regs.a_dup2) + 1;
+      regsout.a_dup3 := (not regs.a_dup3) + 1;
+      if regs.a_dup2 = x"FF" then regsout.flags.z := true; end if;
+      if (regs.a_dup2 < x"81") and (regs.a_dup2 /= x"00")  then
+        regsout.flags.n := true;
+      end if;
+    end if;
     if extraflags.inca then
       regsout.a := regs.a + 1;
       regsout.a_dup1 := regs.a_dup1 + 1;
@@ -372,9 +373,9 @@ package body alu is
       end if;
     end if;
 
-    if extraflags.nz_from_alu then
-      regsout.flags.n := ret.n;
-      regsout.flags.z := ret.z;
+    if extraflags.nz_from_i2 then
+      if i2(7) = '1' then regsout.flags.n := true; end if;
+      if i2 = x"00" then regsout.flags.z := true; end if;
     end if;
     if extraflags.nz_from_a then
       if regs.a_dup2(7) = '1' then regsout.flags.n := true; end if;
@@ -412,7 +413,8 @@ package body alu is
     instruction : in instruction_flags;
     i1 : in unsigned(7 downto 0);
     i2 : in unsigned(7 downto 0);
-    cpuflags : in cpu_flags) return alu_result is
+    c_in : boolean;
+    d_in : boolean) return alu_result is
     variable r : alu_result;
   begin
                                         -- default action is nop, ie output input 1
@@ -427,8 +429,8 @@ package body alu is
       if i2 = x"00" then  r.z := true; else r.z := false; end if;
     end if;
 
-    if instruction.alu_adc then r:= alu_op_add(cpuflags.c, cpuflags.d, i1, i2); end if;
-    if instruction.alu_sbc then r:= alu_op_sub(cpuflags.c, cpuflags.d, i1, i2); end if;
+    if instruction.alu_adc then r:= alu_op_add(c_in, d_in, i1, i2); end if;
+    if instruction.alu_sbc then r:= alu_op_sub(c_in, d_in, i1, i2); end if;
     if instruction.alu_cmp then r:= alu_op_cmp(i1, i2); end if;
     if instruction.alu_or then
       r.value := unsigned(std_logic_vector(i1) or std_logic_vector(i2));

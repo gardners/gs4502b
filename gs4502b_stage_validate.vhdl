@@ -115,6 +115,7 @@ entity gs4502b_stage_validate is
     
 -- Output: 32-bit address source of instruction
     instruction_out : out instruction_information;
+    alu_result_out : out alu_result;
     instruction_out_extra_flags : out extra_instruction_flags;
 -- Output: Boolean: Is the instruction we have here ready for execution
 -- (including that the pipeline is not stalled)
@@ -171,12 +172,13 @@ architecture behavioural of gs4502b_stage_validate is
 begin
 
   process(cpuclock)
-    variable next_line : unsigned(9 downto 0);
+    variable alu_res : alu_result;
 
     -- MUX variables to choose between stall buffer and incoming instruction
     variable resources_modified : instruction_resources;
     variable resources_required : instruction_resources;
     variable instruction : instruction_information;
+    variable alu_reg : unsigned(7 downto 0) := x"00";
   begin
     if (rising_edge(cpuclock)) then
 
@@ -358,6 +360,18 @@ begin
       instruction_out <= instruction;           
       resources_modified_out <= resources_modified;
       resources_required_out <= resources_required;
+      -- XXX Check and stall if A, Carry and/or Decimal flag are not available
+      -- yet (we see them two cycles delayed from execute stage)
+      alu_reg := regs.a;
+      if instruction.instruction_flags.alusrc_x then alu_reg := regs.x; end if;
+      if instruction.instruction_flags.alusrc_y then alu_reg := regs.y; end if;
+      if instruction.instruction_flags.alusrc_z then alu_reg := regs.z; end if;
+      alu_result_out <= alu_op(instruction.instruction_flags,
+                               alu_reg,
+                               instruction.bytes.arg1,
+                               regs.flags.c,
+                               regs.flags.d);
+      
       -- Generate extra instruction flags that are used to speed up ALU processing
       if instruction.cpu_personality = CPU4502 then
         instruction_out_extra_flags

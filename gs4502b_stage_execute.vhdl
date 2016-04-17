@@ -49,6 +49,7 @@ entity gs4502b_stage_execute is
     reg_export : out cpu_registers;
     
     instruction_in : in instruction_information;
+    alu_res : in alu_result;
     instruction_in_extra_flags : in extra_instruction_flags;
     instruction_valid : in boolean;
     instruction_address_is_as_expected : in boolean;
@@ -274,14 +275,40 @@ begin
           -- XXX While the below plumbs in the ALU, no special instructions, or
           -- anything which touches memory (including the stack) are implemented.
           
-          -- If the instruction is immediate, implied or accumulator mode
-          do_alu_op(regs,
-                    regs_out,
-                    renamed_resources,
-                    renamed_out,
-                    instruction_in.instruction_flags,
-                    instruction_in_extra_flags,
-                    instruction_in.bytes.arg1);
+          -- If the instruction is immediate, implied or accumulator mode,
+          -- do ALU or register op as required
+          if instruction_in_extra_flags.is_alu_op
+             and (instruction_in.instruction_flags.do_load = false) then
+            if instruction_in.instruction_flags.aludst_a then
+              regs.a <= alu_res.value;
+              regs.a_dup1 <= alu_res.value;
+              regs.a_dup2 <= alu_res.value;
+              regs.a_dup3 <= alu_res.value;
+              renamed_out.a := false;
+            end if;
+            if instruction_in_extra_flags.nz_from_alu then
+              regs_out.flags.n := alu_res.n;
+              regs_out.flags.z := alu_res.z;
+              renamed_out.flag_n := false;
+              renamed_out.flag_z := false;
+            end if;
+            if instruction_in.instruction_flags.update_c then
+              regs_out.flags.c := alu_res.c;
+              renamed_out.flag_c := false;
+            end if;
+            if instruction_in.instruction_flags.update_v then
+              regs_out.flags.v := alu_res.v;
+              renamed_out.flag_v := false;
+            end if;
+          else
+            do_reg_op(regs,
+                      regs_out,
+                      renamed_resources,
+                      renamed_out,
+                      instruction_in.instruction_flags,
+                      instruction_in_extra_flags,
+                      instruction_in.bytes.arg1);
+          end if;
           report "EXECUTE" & integer'image(coreid)
             & ": Doing ALU operation. Aout=$" & to_hstring(regs_out.a);
 
