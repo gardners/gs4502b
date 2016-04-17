@@ -85,6 +85,7 @@ use Std.TextIO.all;
 use work.debugtools.all;
 use work.instructions.all;
 use work.alu.all;
+use work.extra_instruction_equations.all;
 
 ENTITY gs4502b_core IS
   PORT (
@@ -138,6 +139,7 @@ architecture behavioural of gs4502b_core is
   -- Signals output by validate stage
   signal validate_stalling : boolean;
   signal stage_validate_instruction : instruction_information;
+  signal stage_validate_extra_instruction_flags : extra_instruction_flags;
   signal stage_validate_resources_required : instruction_resources;
   signal stage_validate_resources_modified : instruction_resources;
   signal stage_validate_instruction_valid : boolean;
@@ -263,6 +265,8 @@ begin  -- behavioural
 
       instruction_in => stage_decode_instruction,
       instruction_out => stage_validate_instruction,
+      instruction_out_extra_flags => stage_validate_extra_instruction_flags,
+
       instruction_valid => stage_validate_instruction_valid,      
       instruction_address_is_as_expected => instruction_address_is_as_expected,
 
@@ -296,6 +300,7 @@ begin  -- behavioural
       
       stall => memory_stalling,
       instruction_in => stage_validate_instruction,
+      instruction_in_extra_flags => stage_validate_extra_instruction_flags,
       instruction_valid => stage_validate_instruction_valid,
       instruction_address_is_as_expected => instruction_address_is_as_expected,
       

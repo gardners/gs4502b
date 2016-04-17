@@ -35,6 +35,7 @@ use Std.TextIO.all;
 use work.debugtools.all;
 use work.instructions.all;
 use work.alu.all;
+use work.extra_instruction_equations.all;
 
 entity gs4502b_stage_execute is
   port (
@@ -48,6 +49,7 @@ entity gs4502b_stage_execute is
     reg_export : out cpu_registers;
     
     instruction_in : in instruction_information;
+    instruction_in_extra_flags : in extra_instruction_flags;
     instruction_valid : in boolean;
     instruction_address_is_as_expected : in boolean;
     completed_transaction : in transaction_result;
@@ -278,6 +280,7 @@ begin
                     renamed_resources,
                     renamed_out,
                     instruction_in.instruction_flags,
+                    instruction_in_extra_flags,
                     instruction_in.bytes.arg1);
           report "EXECUTE" & integer'image(coreid)
             & ": Doing ALU operation. Aout=$" & to_hstring(regs_out.a);

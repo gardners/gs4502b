@@ -76,6 +76,7 @@ use Std.TextIO.all;
 use work.debugtools.all;
 use work.instructions.all;
 use work.alu.all;
+use work.extra_instruction_equations.all;
 
 entity gs4502b_stage_validate is
   port (
@@ -114,6 +115,7 @@ entity gs4502b_stage_validate is
     
 -- Output: 32-bit address source of instruction
     instruction_out : out instruction_information;
+    instruction_out_extra_flags : out extra_instruction_flags;
 -- Output: Boolean: Is the instruction we have here ready for execution
 -- (including that the pipeline is not stalled)
     instruction_valid : out boolean;
@@ -353,10 +355,18 @@ begin
       stall_buffer_occupied <= false;
       
       -- Pass signals through
-      instruction_out <= instruction;
+      instruction_out <= instruction;           
       resources_modified_out <= resources_modified;
       resources_required_out <= resources_required;
-
+      -- Generate extra instruction flags that are used to speed up ALU processing
+      if instruction.cpu_personality = CPU4502 then
+        instruction_out_extra_flags
+          <= get_extra_instruction_flags("0"&std_logic_vector(instruction.bytes.opcode));
+      else
+        instruction_out_extra_flags
+          <= get_extra_instruction_flags("1"&std_logic_vector(instruction.bytes.opcode));
+      end if;
+      
       if instruction.translated = last_instruction_expected_address then
         instruction_address_is_as_expected <= true;
       else

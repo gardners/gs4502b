@@ -7,6 +7,7 @@ SIMULATIONFILES=	cpu_test.vhdl \
 			instruction_lengths.vhdl \
 			addressing_modes.vhdl \
 			instruction_equations.vhdl \
+			extra_instruction_equations.vhdl \
 			ram0.vhdl ram1.vhdl ram2.vhdl ram3.vhdl \
 			address_translator.vhdl \
 			gs4502b.vhdl \
@@ -71,11 +72,20 @@ addressing_modes.vhdl:	addressingmodeequations
 instructionequations:	instructionequations.c instruction_flags.h Makefile
 	gcc -g -Wall -o instructionequations instructionequations.c
 
+extrainstructionflags:	extrainstructionflags.c extra_instruction_flags.h Makefile
+	gcc -g -Wall -o extrainstructionflags extrainstructionflags.c
+
 instruction_flags.h:	Makefile instructionequations.c extractflags
+	./extractflags
+
+extra_instruction_flags.h:	Makefile extrainstructionflags.c extractflags
 	./extractflags
 
 instruction_equations.vhdl:	instructionequations
 	./instructionequations
+
+extra_instruction_equations.vhdl:	extrainstructionflags
+	./extrainstructionflags
 
 Ophis/bin/ophis:
 	git submodule init ; git submodule update
