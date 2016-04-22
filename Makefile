@@ -70,10 +70,10 @@ addressing_modes.vhdl:	addressingmodeequations
 	./addressingmodeequations
 
 instructionequations:	instructionequations.c instruction_flags.h Makefile
-	gcc -g -Wall -o instructionequations instructionequations.c
+	gcc -O3 -g -Wall -o instructionequations instructionequations.c
 
 extrainstructionflags:	extrainstructionflags.c extra_instruction_flags.h Makefile
-	gcc -g -Wall -o extrainstructionflags extrainstructionflags.c
+	gcc -O3 -g -Wall -o extrainstructionflags extrainstructionflags.c
 
 instruction_flags.h:	Makefile instructionequations.c extractflags
 	./extractflags
