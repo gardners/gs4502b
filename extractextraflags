@@ -1,0 +1,5 @@
+grep "#define I_" extrainstructionflags.c | cut -f3 -d\ | tr "|" "\n" | sort -u | awk '{ printf("#define %s (1LL<<%d)\n",$1,n++); } END { printf("\n#define MAX_FLAG (1LL<<%d)\n",n-1); }' > extra_instruction_flags.h
+
+echo "struct flag_name flag_names[]={" >> extra_instruction_flags.h
+
+grep "#define I_" extrainstructionflags.c | cut -f3 -d\ | tr "|" "\n" | sort -u | tr "A-Z" "a-z" | awk '{ printf("{\"%s\",(1LL<<%d)},\n",$1,n++); } END { printf("{NULL,0}\n};\n",n); }' >> extra_instruction_flags.h
