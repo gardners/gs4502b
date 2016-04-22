@@ -88,6 +88,10 @@ package alu is
     c_in : boolean;
     d_in : boolean) return alu_result;
 
+  function alu_op_cmp (
+    i1 : in unsigned(7 downto 0);
+    i2 : in unsigned(7 downto 0)) return alu_result;
+  
   procedure do_reg_op(regs : in cpu_registers;
                       regsout : out cpu_registers;
                       renamed : in instruction_resources;
@@ -323,7 +327,13 @@ package body alu is
     if extraflags.tys then regsout.sph := regs.y; end if;
     if extraflags.tsx then regsout.x := regs.spl; end if;
     if extraflags.tsy then regsout.y := regs.sph; end if;
-    if extraflags.lda then regsout.a := i2; renamedout.a := false; end if;
+    if extraflags.lda then
+      regsout.a := i2;
+      regsout.a_dup1 := i2;
+      regsout.a_dup2 := i2;
+      regsout.a_dup3 := i2;
+      renamedout.a := false;
+    end if;
     if extraflags.ldx then regsout.x := i2; renamedout.x := false; end if;
     if extraflags.ldy then regsout.y := i2; renamedout.y := false; end if;
     if extraflags.ldz then regsout.z := i2; renamedout.z := false; end if;
