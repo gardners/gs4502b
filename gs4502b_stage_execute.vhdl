@@ -114,6 +114,8 @@ begin
   process(cpuclock)
     variable regs_out : cpu_registers;
     variable renamed_out : instruction_resources;
+    variable alu_res_int : alu_result;
+
   begin
     if (rising_edge(cpuclock)) then
       
@@ -277,30 +279,53 @@ begin
           
           -- If the instruction is immediate, implied or accumulator mode,
           -- do ALU or register op as required
-          if instruction_in_extra_flags.is_alu_op
-             and (instruction_in.instruction_flags.do_load = false) then
-            if instruction_in.instruction_flags.aludst_a then
-              regs.a <= alu_res.value;
-              regs.a_dup1 <= alu_res.value;
-              regs.a_dup2 <= alu_res.value;
-              regs.a_dup3 <= alu_res.value;
-              renamed_out.a := false;
-            end if;
-            if instruction_in_extra_flags.nz_from_alu then
-              regs_out.flags.n := alu_res.n;
-              regs_out.flags.z := alu_res.z;
-              renamed_out.flag_n := false;
-              renamed_out.flag_z := false;
-            end if;
-            if instruction_in.instruction_flags.update_c then
-              regs_out.flags.c := alu_res.c;
-              renamed_out.flag_c := false;
-            end if;
-            if instruction_in.instruction_flags.update_v then
-              regs_out.flags.v := alu_res.v;
-              renamed_out.flag_v := false;
-            end if;
+          if instruction_in_extra_flags.cpx then
+            alu_res_int := alu_op_cmp(regs.x,instruction_in.bytes.arg1);
+          elsif instruction_in_extra_flags.cpy then
+            alu_res_int := alu_op_cmp(regs.y,instruction_in.bytes.arg1);
+          elsif instruction_in_extra_flags.cpz then
+            alu_res_int := alu_op_cmp(regs.z,instruction_in.bytes.arg1);
           else
+            alu_res_int := alu_res;
+          end if;
+          
+          if instruction_in.instruction_flags.aludst_a then
+            regs_out.a := alu_res_int.value;
+            regs_out.a_dup1 := alu_res_int.value;
+            regs_out.a_dup2 := alu_res_int.value;
+            regs_out.a_dup3 := alu_res_int.value;
+            renamed_out.a := false;
+          end if;
+          if instruction_in_extra_flags.nz_from_i2 then
+            regs_out.flags.n := false;
+            regs_out.flags.z := false;
+            if instruction_in.bytes.arg1 = x"00" then
+              regs_out.flags.z := true;
+            end if;
+            if instruction_in.bytes.arg1(7) = '1' then
+              regs_out.flags.n := true;
+            end if;
+            renamed_out.flag_n := false;
+            renamed_out.flag_z := false;
+          end if;
+          if instruction_in_extra_flags.nz_from_alu then
+            regs_out.flags.n := alu_res_int.n;
+            regs_out.flags.z := alu_res_int.z;
+            renamed_out.flag_n := false;
+            renamed_out.flag_z := false;
+          end if;
+          if instruction_in.instruction_flags.update_c then
+            regs_out.flags.c := alu_res_int.c;
+            renamed_out.flag_c := false;
+          end if;
+          if instruction_in.instruction_flags.update_v then
+            regs_out.flags.v := alu_res_int.v;
+            renamed_out.flag_v := false;
+          end if;
+
+          if instruction_in_extra_flags.reg_op then
+            report "EXECUTE" & integer'image(coreid)
+              & ": Doing register operation.";
             do_reg_op(regs,
                       regs_out,
                       renamed_resources,
@@ -309,8 +334,6 @@ begin
                       instruction_in_extra_flags,
                       instruction_in.bytes.arg1);
           end if;
-          report "EXECUTE" & integer'image(coreid)
-            & ": Doing ALU operation. Aout=$" & to_hstring(regs_out.a);
 
           if instruction_in.instruction_flags.do_branch_conditional
             and (
