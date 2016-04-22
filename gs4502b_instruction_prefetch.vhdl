@@ -141,19 +141,24 @@ begin
       -- Only mark fetch port in use when we push something new to it.
       fetch_port_used := false;
       
-      -- Provide delayed memory address and data signals, so that we know where the
-      -- RAM is reading from each cycle
-      fetch_buffer_now.address <= fetch_buffer_1.address;
-      fetch_buffer_now.user_flags <= fetch_buffer_1.user_flags;
-      for i in 0 to 3 loop
-        fetch_buffer_now.v(i).byte <= fetch_buffer_1.v(i).byte;
-      end loop;
-      -- Tag bytes with instruction lengths
-      for i in 0 to 3 loop
-        fetch_buffer_now.v(i).ilen
-          <= instruction_lengths
-          .instruction_length(opcode_high_bit&fetch_buffer_1.v(i).byte(7 downto 0));
-      end loop;
+      -- Handle memory read pipeline.
+      -- Pre-check the CPU core ID, so that we can save a little bit of logic later
+      -- XXX - We should be able to the complete validation here, excepting for
+      -- when address_redirecting is asserted.
+      if std_logic_vector(to_unsigned(coreid+1,2))
+        = fetch_buffer_1.user_flags(7 downto 6) then
+        fetch_buffer_now.address <= fetch_buffer_1.address;
+        fetch_buffer_now.user_flags <= fetch_buffer_1.user_flags;
+        for i in 0 to 3 loop
+          fetch_buffer_now.v(i).byte <= fetch_buffer_1.v(i).byte;
+        end loop;
+        -- Tag bytes with instruction lengths
+        for i in 0 to 3 loop
+          fetch_buffer_now.v(i).ilen
+            <= instruction_lengths
+            .instruction_length(opcode_high_bit&fetch_buffer_1.v(i).byte(7 downto 0));
+        end loop;
+      end if;
 
       fetch_buffer_1.address <= fetch_port_read.translated;
       fetch_buffer_1.user_flags <= fetch_port_read.user_flags;
@@ -247,9 +252,8 @@ begin
           & " : Waiting for Tid=$" & to_hstring(to_unsigned(coreid+1,2)
                                                 &ifetch_expected_transaction_counter)
           & ", just saw $" & to_hstring(fetch_buffer_now.user_flags);
-        if fetch_buffer_now.user_flags(7 downto 2)
-          = std_logic_vector(to_unsigned(coreid+1,2)
-                             &ifetch_expected_transaction_counter) then
+        if fetch_buffer_now.user_flags(5 downto 2)
+          = std_logic_vector(ifetch_expected_transaction_counter) then
           -- But make sure we don't over flow our read queue
           report "I-FETCH: Found the bytes we were looking for to add to our buffer.";   
           if space_for_bytes then
