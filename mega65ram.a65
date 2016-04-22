@@ -7,13 +7,7 @@
 		.checkpc $8100
 		.advance $8100,$00
 
-		ldy #$00
-		ldx #$fd
-l1:		lda $1000,x
-		sta $2000,x
-		inx
-		bne l1
-		jmp l1
+		jmp simple_cpu_tests
 
 		.checkpc $8200
 		.advance $8200,$00
@@ -37,6 +31,30 @@ l3:		lda $5000,x
 		inx
 		bne l3
 		jmp l3
+
+
+		.checkpc $9000
+		.advance $9000,$00
+
+simple_cpu_tests:
+		lda #$01
+		lda #$80
+		cmp #$7f
+		cmp #$80
+		cmp #$81
+		lda #$00
+		ldx #$01
+		ldy #$02
+		ldz #$03
+
+endlessloop:
+		ldy #$00
+		ldx #$fd
+l1:		lda $1000,x
+		sta $2000,x
+		inx
+		bne l1
+		jmp l1
 
 
 
