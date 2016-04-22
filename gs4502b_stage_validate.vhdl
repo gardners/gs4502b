@@ -373,12 +373,12 @@ begin
                                regs.flags.d);
       
       -- Generate extra instruction flags that are used to speed up ALU processing
-      if instruction.cpu_personality = CPU4502 then
-        instruction_out_extra_flags
-          <= get_extra_instruction_flags("0"&std_logic_vector(instruction.bytes.opcode));
-      else
+      if instruction.cpu_personality = CPU6502 then
         instruction_out_extra_flags
           <= get_extra_instruction_flags("1"&std_logic_vector(instruction.bytes.opcode));
+      else
+        instruction_out_extra_flags
+          <= get_extra_instruction_flags("0"&std_logic_vector(instruction.bytes.opcode));
       end if;
       
       if instruction.translated = last_instruction_expected_address then
