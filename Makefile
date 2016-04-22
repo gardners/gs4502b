@@ -79,7 +79,7 @@ instruction_flags.h:	Makefile instructionequations.c extractflags
 	./extractflags
 
 extra_instruction_flags.h:	Makefile extrainstructionflags.c extractextraflags
-	./extractflags
+	./extractextraflags
 
 instruction_equations.vhdl:	instructionequations
 	./instructionequations
