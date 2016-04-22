@@ -8,11 +8,11 @@ struct flag_name {
 
 #include "extra_instruction_flags.h"
 
-#define I_LDAIMM NZ_FROM_I2|LDA
-#define I_LDXIMM NZ_FROM_I2|LDX
-#define I_LAXIMM NZ_FROM_I2|LDX|LDA
-#define I_LDYIMM NZ_FROM_I2|LDY
-#define I_LDZIMM NZ_FROM_I2|LDZ
+#define I_LDAIMM NZ_FROM_I2|LDA|REG_OP
+#define I_LDXIMM NZ_FROM_I2|LDX|REG_OP
+#define I_LAXIMM NZ_FROM_I2|LDX|LDA|REG_OP
+#define I_LDYIMM NZ_FROM_I2|LDY|REG_OP
+#define I_LDZIMM NZ_FROM_I2|LDZ|REG_OP
 #define I_LDA NOTHING
 #define I_LDX NOTHING
 #define I_LAX NOTHING
@@ -32,9 +32,9 @@ struct flag_name {
 #define I_ORA NZ_FROM_ALU|IS_ALU_OP
 
 #define I_CMP NZ_FROM_ALU|IS_ALU_OP
-#define I_CPX NZ_FROM_ALU|IS_ALU_OP
-#define I_CPY NZ_FROM_ALU|IS_ALU_OP
-#define I_CPZ NZ_FROM_ALU|IS_ALU_OP
+#define I_CPX NZ_FROM_ALU|IS_ALU_OP|CPX
+#define I_CPY NZ_FROM_ALU|IS_ALU_OP|CPY
+#define I_CPZ NZ_FROM_ALU|IS_ALU_OP|CPZ
 
 #define I_CLE NOTHING
 #define I_SEE NOTHING
@@ -83,15 +83,15 @@ struct flag_name {
 #define I_NOP NOTHING
 
 // Register increment/decrements
-#define I_NEG NEGA
-#define I_INCA INCA|NZ_FROM_A
-#define I_DECA DECA|NZ_FROM_A
-#define I_DEX DECX|NZ_FROM_X
-#define I_INX INCX|NZ_FROM_X
-#define I_DEY DECY|NZ_FROM_Y
-#define I_INY INCY|NZ_FROM_Y
-#define I_DEZ DECZ|NZ_FROM_Z
-#define I_INZ INCZ|NZ_FROM_Z
+#define I_NEG NEGA|REG_OP
+#define I_INCA INCA|NZ_FROM_A|REG_OP
+#define I_DECA DECA|NZ_FROM_A|REG_OP
+#define I_DEX DECX|NZ_FROM_X|REG_OP
+#define I_INX INCX|NZ_FROM_X|REG_OP
+#define I_DEY DECY|NZ_FROM_Y|REG_OP
+#define I_INY INCY|NZ_FROM_Y|REG_OP
+#define I_DEZ DECZ|NZ_FROM_Z|REG_OP
+#define I_INZ INCZ|NZ_FROM_Z|REG_OP
 // Accumulator RMW instructions
 #define I_ASLA NZ_FROM_ALU|IS_ALU_OP
 #define I_ROLA NZ_FROM_ALU|IS_ALU_OP
@@ -113,19 +113,19 @@ struct flag_name {
 #define I_RMB NOTHING
 #define I_SMB NOTHING
 
-#define I_TAB TAB
-#define I_TAX TAX|NZ_FROM_A
-#define I_TAY TAY|NZ_FROM_A
-#define I_TAZ TAZ|NZ_FROM_A
-#define I_TBA TBA|NZ_FROM_B
-#define I_TXA TXA|NZ_FROM_X
-#define I_TYA TYA|NZ_FROM_Y
-#define I_TZA TZA|NZ_FROM_Z
+#define I_TAB TAB|REG_OP
+#define I_TAX TAX|NZ_FROM_A|REG_OP
+#define I_TAY TAY|NZ_FROM_A|REG_OP
+#define I_TAZ TAZ|NZ_FROM_A|REG_OP
+#define I_TBA TBA|NZ_FROM_B|REG_OP
+#define I_TXA TXA|NZ_FROM_X|REG_OP
+#define I_TYA TYA|NZ_FROM_Y|REG_OP
+#define I_TZA TZA|NZ_FROM_Z|REG_OP
 
-#define I_TYS TYS
-#define I_TSY TSY|NZ_FROM_SPH
-#define I_TXS TXS
-#define I_TSX TSX|NZ_FROM_SPL
+#define I_TYS TYS|REG_OP
+#define I_TSY TSY|NZ_FROM_SPH|REG_OP
+#define I_TXS TXS|REG_OP
+#define I_TSX TSX|NZ_FROM_SPL|REG_OP
 
 // The funny word-based operations. For now, we will trigger an exception,
 // and have the hypervisor implement them?
@@ -197,7 +197,7 @@ long long opcodes[512]={
     I_BVS,I_ADC,I_KIL,I_RRA,I_NOP,I_ADC,I_ROR,I_RRA,I_SEI,I_ADC,I_NOP,I_RRA,I_NOP,I_ADC,I_ROR,I_RRA,
     I_NOP,I_STA,I_NOP,I_SAX,I_STY,I_STA,I_STX,I_SAX,I_DEY,I_NOP,I_TXA,I_XAA,I_STY,I_STA,I_STX,I_SAX,
     I_BCC,I_STA,I_KIL,I_AHX,I_STY,I_STA,I_STX,I_SAX,I_TYA,I_STA,I_TXS,I_TAS,I_SHY,I_STA,I_SHX,I_AHX,
-    I_LDY,I_LDA,I_LDX,I_LAX,I_LDY,I_LDA,I_LDX,I_LAX,I_TAY,I_LDA,I_TAX,I_LAX,I_LDY,I_LDA,I_LDX,I_LAX,
+    I_LDYIMM,I_LDA,I_LDXIMM,I_LAXIMM,I_LDY,I_LDA,I_LDX,I_LAX,I_TAY,I_LDAIMM,I_TAX,I_LAX,I_LDY,I_LDA,I_LDX,I_LAX,
     I_BCS,I_LDA,I_KIL,I_LAX,I_LDY,I_LDA,I_LDX,I_LAX,I_CLV,I_LDA,I_TSX,I_LAS,I_LDY,I_LDA,I_LDX,I_LAX,
     I_CPY,I_CMP,I_NOP,I_DCP,I_CPY,I_CMP,I_DEC,I_DCP,I_INY,I_CMP,I_DEX,I_AXS,I_CPY,I_CMP,I_DEC,I_DCP,
     I_BNE,I_CMP,I_KIL,I_DCP,I_NOP,I_CMP,I_DEC,I_DCP,I_CLD,I_CMP,I_NOP,I_DCP,I_NOP,I_CMP,I_DEC,I_DCP,
