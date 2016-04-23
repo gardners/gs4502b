@@ -36,7 +36,8 @@ l3:		lda $5000,x
 		.checkpc $9000
 		.advance $9000,$00
 
-simple_cpu_tests:		
+simple_cpu_tests:
+		; register loads and immediate mode compares
 		lda #$01
 		lda #$80
 		cmp #$7f
@@ -55,10 +56,23 @@ simple_cpu_tests:
 		cpz #$02
 		cpz #$03
 		cpz #$04
+
+		; ADC / SBC immediate mode
 		clc
 		adc #$70
 		sec
 		adc #$00
+		sec
+		sbc #$10
+		clc
+		sbc #$10
+
+		; some indirect addressing modes
+		ldy #$23
+		lda ($10),Y
+		ldx #$07
+		lda ($20,X)
+
 
 endlessloop:
 		ldy #$00
