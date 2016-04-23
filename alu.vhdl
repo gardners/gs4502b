@@ -471,7 +471,7 @@ package body alu is
 
     if instruction.alu_adc then r:= alu_op_add(c_in, d_in, i1_dup, i2); end if;
     if instruction.alu_sbc then r:= alu_op_sub(c_in, d_in, i1_dup, i2); end if;
---    if instruction.alu_cmp then r:= alu_op_cmp(i1, i2); end if;
+    if instruction.alu_cmp then r:= alu_op_cmp(i1, i2); end if;
     if instruction.alu_or then
       r.value := unsigned(std_logic_vector(i1) or std_logic_vector(i2));
       r.n := false; r.z := false;
