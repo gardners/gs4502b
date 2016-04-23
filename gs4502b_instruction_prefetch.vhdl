@@ -90,8 +90,8 @@ architecture behavioural of gs4502b_instruction_prefetch is
   -- And which address are we currently looking for to append to the end of our
   -- byte buffer?
   signal desired_address : translated_address := (others => '0');
-  signal ifetch_transaction_counter : unsigned(5 downto 0) := (others => '0');
-  signal ifetch_expected_transaction_counter : unsigned(5 downto 0) := (others => '0');
+  signal ifetch_transaction_counter : unsigned(4 downto 0) := (others => '0');
+  signal ifetch_expected_transaction_counter : unsigned(4 downto 0) := (others => '0');
 
   -- Delayed signals to tell us which address and values of chip/fast RAM we are
   -- reading in a given cycle
@@ -159,11 +159,13 @@ begin
       if (std_logic_vector(to_unsigned(coreid+1,2))
           = fetch_buffer_1.user_flags(7 downto 6))
         and (address_redirecting = false)
-        and ((fetch_buffer_now_valid and
-              fetch_buffer_1.user_flags(5 downto 0)
+        and ((fetch_buffer_now_valid 
+              and fetch_buffer_1.user_flags(5) = '0'
+              and fetch_buffer_1.user_flags(4 downto 0)
               = std_logic_vector(ifetch_expected_transaction_counter + 1))
-             or ((fetch_buffer_now_valid = false) and
-                 fetch_buffer_1.user_flags(5 downto 0)
+             or ((fetch_buffer_now_valid = false)
+                 and fetch_buffer_1.user_flags(5) = '0'
+                 and fetch_buffer_1.user_flags(4 downto 0)
                  = std_logic_vector(ifetch_expected_transaction_counter))) then
         fetch_buffer_now_valid <= true;
       else
@@ -260,7 +262,7 @@ begin
 
       if (address_redirecting = false) and (reset = '0') then
         report "I-FETCH" & integer'image(coreid)
-          & " : Waiting for Tid=$" & to_hstring(to_unsigned(coreid+1,2)
+          & " : Waiting for Tid=$" & to_hstring(to_unsigned(coreid+1,2)&"0"
                                                 &ifetch_expected_transaction_counter)
           & ", just saw $" & to_hstring(fetch_buffer_now.user_flags);
         if fetch_buffer_now_valid then
@@ -317,12 +319,12 @@ begin
             report "FETCH" & integer'image(coreid)
               & " port ready: Asking for $"
               & to_hstring(fetch_address + 4)
-              & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&
+              & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&"0"&
                                          ifetch_transaction_counter);
             fetch_port_write.valid <= true;
             fetch_port_write.translated <= fetch_address + 4;
             fetch_port_write.user_flags <=
-              std_logic_vector(to_unsigned(coreid+1,2)&
+              std_logic_vector(to_unsigned(coreid+1,2)&"0"&
                                ifetch_transaction_counter);
             ifetch_transaction_counter <=
               ifetch_transaction_counter + 1;
@@ -415,12 +417,12 @@ begin
         fetch_port_write.translated <= redirected_address(31 downto 2)&"00";
         fetch_port_used := true;
         fetch_port_write.user_flags <=
-          std_logic_vector(to_unsigned(coreid+1,2)&
+          std_logic_vector(to_unsigned(coreid+1,2)&"0"&
                            ifetch_transaction_counter);
         report "FETCH" & integer'image(coreid)
           & " port ready: Due to redirection, asking for $"
           & to_hstring(redirected_address(31 downto 2)&"00")
-          & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&
+          & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&"0"&
                                      ifetch_transaction_counter);
 
         -- Set the transaction ID we will be waiting for for this data
