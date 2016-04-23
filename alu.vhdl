@@ -327,9 +327,12 @@ package body alu is
       renamedout.a := renamed.z;
     end if;
     if extraflags.txs then regsout.spl := regs.x; end if;
-    if extraflags.tys then regsout.sph := regs.y; end if;
+    if extraflags.tys then regsout.sph := regs.y_dup1; end if;
     if extraflags.tsx then regsout.x := regs.spl; end if;
-    if extraflags.tsy then regsout.y := regs.sph; end if;
+    if extraflags.tsy then
+      regsout.y := regs.sph;
+      regsout.y_dup1 := regs.sph;
+    end if;
     if extraflags.lda then
       regsout.a := i2;
       regsout.a_dup1 := i2;
@@ -390,8 +393,8 @@ package body alu is
       end if;
     end if;
     if extraflags.incy then
-      regsout.y := regs.y + 1;
-      regsout.y_dup1 := regs.y + 1;
+      regsout.y := regs.y_dup1 + 1;
+      regsout.y_dup1 := regs.y_dup1 + 1;
       if regs.y = x"FF" then regsout.flags.z := true; end if;
       if (regs.y >= x"7F") and (regs.y /= x"FF")  then
         regsout.flags.n := true;
