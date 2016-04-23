@@ -58,6 +58,12 @@ entity gs4502b_instruction_prefetch is
     
     stall : in boolean;
 
+    -- We also need to know when we are being asked to provide an indirect
+    -- vector for one of the indirect addressing modes
+    vector_fetch_address : in unsigned(15 downto 0);
+    vector_fetch_transaction_id : in unsigned(4 downto 0);
+    vector_fetch_valid : in boolean := false;
+    
     instruction_out : out instruction_information;
     instruction_out_valid : out boolean;
     branch8_pc : out unsigned(15 downto 0);
@@ -332,7 +338,8 @@ begin
             -- Mark transaction as being instruction fetch
             fetch_port_write.user_flags(5) <= '0';
             -- And finally the transaction number.
-            fetch_port_write.user_flags(4 downto 0) <= ifetch_transaction_counter;
+            fetch_port_write.user_flags(4 downto 0)
+              <= std_logic_vector(ifetch_transaction_counter);
             -- Now update our transaction numbers
             ifetch_transaction_counter <= ifetch_transaction_counter + 1;
             fetch_address <= fetch_address + 4;

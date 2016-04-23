@@ -37,9 +37,15 @@ entity gs4502b_stage_decode is
     address_redirecting : in boolean;
     redirected_address : in translated_address;
 
--- Output: 32-bit address source of instruction
+-- Output: Instruction with relevant information
     instruction_out : out instruction_information;
 
+-- Output: Vector de-reference request to prefetch stage, which will schedule
+-- it in on the memory controller
+    vector_fetch_address : out unsigned(15 downto 0);
+    vector_fetch_transaction_id : out unsigned(4 downto 0);
+    vector_fetch_valid : out boolean := false;
+    
     stall : in boolean;
     stalling : out boolean := false;
     
@@ -65,6 +71,8 @@ architecture behavioural of gs4502b_stage_decode is
 
   signal stalled_instruction : instruction_information;
   signal stall_buffer_occupied : boolean := false;
+
+  signal vector_fetch_transaction_counter : unsigned(4 downto 0) := (others => '0');
   
 begin
 
@@ -75,6 +83,8 @@ begin
   begin
     if (rising_edge(cpuclock)) then
 
+      vector_fetch_valid <= false;
+      
       if stall_buffer_occupied then
         instruction := stalled_instruction;
       else
@@ -169,16 +179,35 @@ begin
           end if;
         end if;
         if instruction.addressing_mode.prex then
-          -- Only increments lower byte, so doesn't work for JMP ($nnnn,X),
-          -- which will be handled with the branch address calculation above.
-          instruction.argument_address(7 downto 0) :=
-            instruction.argument_address(7 downto 0) + regs.x;
+          -- For 6502 mode: Only increment lower byte
+          -- For 4502 mode: increment both bytes (including for JMP ($nnnn,X))
+          if current_cpu_personality = CPU6502 then
+            -- 6502 mode: 8-bit calculation of address
+            instruction.argument_address(7 downto 0) :=
+              instruction.argument_address(7 downto 0) + regs.x;
+          else
+            -- 4502 mode: 16-bit calculation of address
+            instruction.argument_address(15 downto 0) :=
+              instruction.argument_address(15 downto 0) + regs.x;
+          end if;
         end if;
         if instruction.addressing_mode.presp then
           instruction.argument_address := (regs.sph & regs.spl)
                                           - instruction.bytes.arg1;
         end if;
-        
+        if instruction.addressing_mode.indirect then
+          -- Instruction is indirect, so we need to request reading of the vector.
+          -- For simplicity, we just request the whole four bytes, and do the final
+          -- resolution in the validate stage.
+          -- (the validate stage will use the indirect flag to realise it must
+          -- stall until it receives the vector to allow it to complete the
+          -- address calculation)
+          vector_fetch_address <= instruction.argument_address;
+          vector_fetch_transaction_id <= vector_fetch_transaction_counter;
+          instruction.vector_fetch_transaction := vector_fetch_transaction_counter;
+          vector_fetch_valid <= true;
+          vector_fetch_transaction_counter <= vector_fetch_transaction_counter + 1;
+        end if;
         
         
         

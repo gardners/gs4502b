@@ -135,6 +135,10 @@ architecture behavioural of gs4502b_core is
   signal stage_decode_resources_modified : instruction_resources;
   signal stage_decode_instruction_information : instruction_information;
   signal decode_stalling : boolean;
+  -- For requesting the prefetcher read an indirect address vector  
+  signal vector_fetch_address : unsigned(15 downto 0);
+  signal vector_fetch_transaction_id : unsigned(4 downto 0);
+  signal vector_fetch_valid : boolean;
 
   -- Signals output by validate stage
   signal validate_stalling : boolean;
@@ -190,6 +194,10 @@ begin  -- behavioural
       redirected_pch => stage_execute_redirected_pch,
       stall => decode_stalling,
 
+      vector_fetch_address => vector_fetch_address,
+      vector_fetch_transaction_id => vector_fetch_transaction_id,
+      vector_fetch_valid => vector_fetch_valid,
+      
       regs => reg_export,
       
       instruction_out => stage_prefetch_instruction,
@@ -231,6 +239,10 @@ begin  -- behavioural
       branch16_pc => branch16_pc,
 
       instruction_out => stage_decode_instruction,
+      
+      vector_fetch_address => vector_fetch_address,
+      vector_fetch_transaction_id => vector_fetch_transaction_id,
+      vector_fetch_valid => vector_fetch_valid,
       
       address_redirecting => stage_execute_redirecting,
       redirected_address => stage_execute_redirected_address,

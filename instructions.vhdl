@@ -90,6 +90,10 @@ package instructions is
     -- Address of argument
     argument_address : unsigned(15 downto 0);
     argument_translated : translated_address;
+
+    -- Transaction ID for any indirect vector that this instruction requires
+    -- (implied by addressing_mode.indirect)
+    vector_fetch_transaction : unsigned(4 downto 0);
     
     -- Once we know both the opcode and the arguments, we can work out if the
     -- instruction can modify the memory map. This means looking for MAP
