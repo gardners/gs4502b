@@ -74,6 +74,7 @@ package alu is
     b : unsigned(7 downto 0);
     x : unsigned(7 downto 0);
     y : unsigned(7 downto 0);
+    y_dup1 : unsigned(7 downto 0);
     z : unsigned(7 downto 0);
     spl : unsigned(7 downto 0);
     sph : unsigned(7 downto 0);
@@ -302,6 +303,7 @@ package body alu is
     end if;
     if extraflags.tay then
       regsout.y := regs.a_dup3;
+      regsout.y_dup1 := regs.a_dup3;
       renamedout.y := renamed.a;
     end if;
     if extraflags.taz then
@@ -317,7 +319,7 @@ package body alu is
       renamedout.a := renamed.x;
     end if;
     if extraflags.tya then
-      regsout.a := regs.y;
+      regsout.a := regs.y_dup1;
       renamedout.a := renamed.y;
     end if;
     if extraflags.tza then
@@ -336,7 +338,11 @@ package body alu is
       renamedout.a := false;
     end if;
     if extraflags.ldx then regsout.x := i2; renamedout.x := false; end if;
-    if extraflags.ldy then regsout.y := i2; renamedout.y := false; end if;
+    if extraflags.ldy then
+      regsout.y := i2;
+      regsout.y_dup1 := i2;
+      renamedout.y := false;
+    end if;
     if extraflags.ldz then regsout.z := i2; renamedout.z := false; end if;
     
     if extraflags.nega then
@@ -385,6 +391,7 @@ package body alu is
     end if;
     if extraflags.incy then
       regsout.y := regs.y + 1;
+      regsout.y_dup1 := regs.y + 1;
       if regs.y = x"FF" then regsout.flags.z := true; end if;
       if (regs.y >= x"7F") and (regs.y /= x"FF")  then
         regsout.flags.n := true;
@@ -392,6 +399,7 @@ package body alu is
     end if;
     if extraflags.decy then
       regsout.y := regs.y - 1;
+      regsout.y_dup1 := regs.y - 1;
       if regs.y = x"01" then regsout.flags.z := true; end if;
       if (regs.y > x"80") or (regs.y = x"00")  then
         regsout.flags.n := true;

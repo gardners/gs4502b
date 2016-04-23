@@ -176,6 +176,7 @@ begin
         end if;
         if completed_transaction.id = res_names.y then
           regs.y <= completed_transaction.value;
+          regs.y_dup1 <= completed_transaction.value;
           renamed_resources.y <= false;
           report "$" & to_hstring(expected_instruction_address) &
             " EXECUTE" & integer'image(coreid)
@@ -479,6 +480,7 @@ begin
         regs.b <= x"00";
         regs.x <= x"00";
         regs.y <= x"00";
+        regs.y_dup1 <= x"00";
         regs.z <= x"00";
         regs.sph <= x"01";
         regs.spl <= x"FF";
