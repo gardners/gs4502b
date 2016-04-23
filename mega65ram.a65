@@ -46,6 +46,10 @@ simple_cpu_tests:
 		ldx #$01
 		ldy #$02
 		ldz #$03
+		clc
+		adc #$70
+		sec
+		adc #$00
 
 endlessloop:
 		ldy #$00
