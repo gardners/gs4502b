@@ -288,7 +288,11 @@ begin
           elsif instruction_in_extra_flags.cpz then
             alu_res_int := alu_op_cmp(regs.z,instruction_in.bytes.arg1);
           else
+            -- ALU does a lot, so we need to feed it two duplicates of the accumulator
+            -- so that the fanout isn't so wide that it causes significant
+            -- propogation delays.
             alu_res_int := alu_op(instruction_in.instruction_flags,
+                               regs.a_dup3,
                                regs.a_dup1,
                                instruction_in.bytes.arg1,
                                regs.flags.c,

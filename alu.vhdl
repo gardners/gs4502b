@@ -84,6 +84,7 @@ package alu is
   function alu_op (
     instruction : in instruction_flags;
     i1 : in unsigned(7 downto 0);
+    i1_dup : in unsigned(7 downto 0);
     i2 : in unsigned(7 downto 0);
     c_in : boolean;
     d_in : boolean) return alu_result;
@@ -340,7 +341,7 @@ package body alu is
     
     if extraflags.nega then
       regsout.a := (not regs.a) + 1;
-      regsout.a_dup1 := (not regs.a_dup1) + 1;
+      regsout.a_dup1 := (not regs.a_dup3) + 1;
       regsout.a_dup2 := (not regs.a_dup2) + 1;
       regsout.a_dup3 := (not regs.a_dup3) + 1;
       if regs.a_dup2 = x"FF" then regsout.flags.z := true; end if;
@@ -350,7 +351,7 @@ package body alu is
     end if;
     if extraflags.inca then
       regsout.a := regs.a + 1;
-      regsout.a_dup1 := regs.a_dup1 + 1;
+      regsout.a_dup1 := regs.a_dup3 + 1;
       regsout.a_dup2 := regs.a_dup2 + 1;
       regsout.a_dup3 := regs.a_dup3 + 1;
       if regs.a_dup2 = x"FF" then regsout.flags.z := true; end if;
@@ -360,7 +361,7 @@ package body alu is
     end if;
     if extraflags.deca then
       regsout.a := regs.a - 1;
-      regsout.a_dup1 := regs.a_dup1 - 1;
+      regsout.a_dup1 := regs.a_dup3 - 1;
       regsout.a_dup2 := regs.a_dup2 - 1;
       regsout.a_dup3 := regs.a_dup3 - 1;
       if regs.a_dup2 = x"01" then regsout.flags.z := true; end if;
@@ -450,6 +451,7 @@ package body alu is
   function alu_op (
     instruction : in instruction_flags;
     i1 : in unsigned(7 downto 0);
+    i1_dup : in unsigned(7 downto 0);
     i2 : in unsigned(7 downto 0);
     c_in : boolean;
     d_in : boolean) return alu_result is
@@ -467,9 +469,9 @@ package body alu is
       if i2 = x"00" then  r.z := true; else r.z := false; end if;
     end if;
 
-    if instruction.alu_adc then r:= alu_op_add(c_in, d_in, i1, i2); end if;
-    if instruction.alu_sbc then r:= alu_op_sub(c_in, d_in, i1, i2); end if;
-    if instruction.alu_cmp then r:= alu_op_cmp(i1, i2); end if;
+    if instruction.alu_adc then r:= alu_op_add(c_in, d_in, i1_dup, i2); end if;
+    if instruction.alu_sbc then r:= alu_op_sub(c_in, d_in, i1_dup, i2); end if;
+--    if instruction.alu_cmp then r:= alu_op_cmp(i1, i2); end if;
     if instruction.alu_or then
       r.value := unsigned(std_logic_vector(i1) or std_logic_vector(i2));
       r.n := false; r.z := false;
