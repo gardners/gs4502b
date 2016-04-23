@@ -36,6 +36,7 @@ use work.debugtools.all;
 use work.instructions.all;
 use work.alu.all;
 use work.extra_instruction_equations.all;
+use work.disassemble.all;
 
 entity gs4502b_stage_execute is
   port (
@@ -84,6 +85,8 @@ end gs4502b_stage_execute;
 
 architecture behavioural of gs4502b_stage_execute is
 
+  signal personality : cpu_personality := CPU4502;
+  
   -- Primary CPU state
   signal reg_pcl : unsigned(7 downto 0) := x"00";
   signal reg_pch : unsigned(7 downto 0) := x"81";
@@ -267,9 +270,8 @@ begin
             "SP:" & to_hstring(regs.sph & regs.spl)
             & " " & to_string(regs.flags) 
             & "  :  "
-            & to_hstring(instruction_in.bytes.opcode) & " "
-            & to_hstring(instruction_in.bytes.arg1) & " "
-            & to_hstring(instruction_in.bytes.arg2)        
+            & disassemble_instruction(reg_pch & reg_pcl, instruction_in.bytes,
+                                      personality)
             ;
 
 
@@ -286,7 +288,11 @@ begin
           elsif instruction_in_extra_flags.cpz then
             alu_res_int := alu_op_cmp(regs.z,instruction_in.bytes.arg1);
           else
-            alu_res_int := alu_res;
+            alu_res_int := alu_op(instruction_in.instruction_flags,
+                               regs.a_dup1,
+                               instruction_in.bytes.arg1,
+                               regs.flags.c,
+                               regs.flags.d);
           end if;
           
           if instruction_in.instruction_flags.aludst_a then
@@ -449,6 +455,7 @@ begin
           & " : RESET asserted ";
 
         current_cpu_personality <= Hypervisor;
+        personality <= Hypervisor;
 
         -- Tell pipeline to stall while reset is held, as part of reset clamping.
         -- Pipeline stages under reset flush themselves.

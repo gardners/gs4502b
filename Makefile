@@ -17,6 +17,8 @@ SIMULATIONFILES=	cpu_test.vhdl \
 			gs4502b_stage_decode.vhdl \
 			gs4502b_stage_validate.vhdl \
 			gs4502b_stage_execute.vhdl \
+			disassemble.vhdl \
+
 
 GHDL=/usr/local/ghdl-0.34/bin/ghdl
 

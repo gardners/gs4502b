@@ -360,17 +360,6 @@ begin
       instruction_out <= instruction;           
       resources_modified_out <= resources_modified;
       resources_required_out <= resources_required;
-      -- XXX Check and stall if A, Carry and/or Decimal flag are not available
-      -- yet (we see them two cycles delayed from execute stage)
-      alu_reg := regs.a;
-      if instruction.instruction_flags.alusrc_x then alu_reg := regs.x; end if;
-      if instruction.instruction_flags.alusrc_y then alu_reg := regs.y; end if;
-      if instruction.instruction_flags.alusrc_z then alu_reg := regs.z; end if;
-      alu_result_out <= alu_op(instruction.instruction_flags,
-                               alu_reg,
-                               instruction.bytes.arg1,
-                               regs.flags.c,
-                               regs.flags.d);
       
       -- Generate extra instruction flags that are used to speed up ALU processing
       if instruction.cpu_personality = CPU6502 then
