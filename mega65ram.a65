@@ -36,7 +36,7 @@ l3:		lda $5000,x
 		.checkpc $9000
 		.advance $9000,$00
 
-simple_cpu_tests:
+simple_cpu_tests:		
 		lda #$01
 		lda #$80
 		cmp #$7f
@@ -44,8 +44,17 @@ simple_cpu_tests:
 		cmp #$81
 		lda #$00
 		ldx #$01
+		cpx #$00
+		cpx #$01
+		cpx #$02
 		ldy #$02
+		cpy #$01
+		cpy #$02
+		cpy #$03
 		ldz #$03
+		cpz #$02
+		cpz #$03
+		cpz #$04
 		clc
 		adc #$70
 		sec
