@@ -156,6 +156,9 @@ begin
       end loop;
 
       -- Work out if this is the thing we will want next cycle?
+      -- Bit 5 of user_flags is used to indicate if it is an instruction fetch
+      -- or indirect address resolution.  0 = instruction fetch, which is what
+      -- we care about here.
       if (std_logic_vector(to_unsigned(coreid+1,2))
           = fetch_buffer_1.user_flags(7 downto 6))
         and (address_redirecting = false)
@@ -323,11 +326,15 @@ begin
                                          ifetch_transaction_counter);
             fetch_port_write.valid <= true;
             fetch_port_write.translated <= fetch_address + 4;
-            fetch_port_write.user_flags <=
-              std_logic_vector(to_unsigned(coreid+1,2)&"0"&
-                               ifetch_transaction_counter);
-            ifetch_transaction_counter <=
-              ifetch_transaction_counter + 1;
+            -- Put our Core ID in the upper bits
+            fetch_port_write.user_flags(7 downto 6) <=
+              std_logic_vector(to_unsigned(coreid+1,2));
+            -- Mark transaction as being instruction fetch
+            fetch_port_write.user_flags(5) <= '0';
+            -- And finally the transaction number.
+            fetch_port_write.user_flags(4 downto 0) <= ifetch_transaction_counter;
+            -- Now update our transaction numbers
+            ifetch_transaction_counter <= ifetch_transaction_counter + 1;
             fetch_address <= fetch_address + 4;
             fetch_port_used := true;
             if (burst_add_one = false) then
