@@ -310,10 +310,10 @@ begin
         -- Feed request into memory
         -- XXX - Add support for unaligned requests
         -- XXX - Add support for non-BRAM requests (i.e., IO, and later, DDR RAM)
-        next_fetch_address0 <= fetch_address + 0;
-        next_fetch_address1 <= fetch_address + 1;
-        next_fetch_address2 <= fetch_address + 2;
-        next_fetch_address3 <= fetch_address + 3;
+        next_fetch_address0 <= to_unsigned(to_integer(fetch_address) + 0,32);
+        next_fetch_address1 <= to_unsigned(to_integer(fetch_address) + 1,32);
+        next_fetch_address2 <= to_unsigned(to_integer(fetch_address) + 2,32);
+        next_fetch_address3 <= to_unsigned(to_integer(fetch_address) + 3,32);
         next_fetch_port <= fetch_port_number;
         next_fetch_flags <= fetch_flags;        
       else
