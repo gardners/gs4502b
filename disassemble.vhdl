@@ -208,7 +208,7 @@ package body disassemble is
       to_unsigned(65539 + to_integer(pc) + to_integer(bytes.arg2&bytes.arg1),16);
     if addr_mode.rel8byte3 then
       branch_pc :=
-        to_unsigned(65539 + to_integer(pc) + to_integer(
+        to_unsigned(65538 + to_integer(pc) + to_integer(
           bytes.arg2(7)&bytes.arg2(7)&bytes.arg2(7)&bytes.arg2(7)&
           bytes.arg2(7)&bytes.arg2(7)&bytes.arg2(7)&bytes.arg2(7)&
           bytes.arg2),16);
