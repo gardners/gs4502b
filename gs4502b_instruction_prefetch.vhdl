@@ -118,8 +118,6 @@ architecture behavioural of gs4502b_instruction_prefetch is
 
   signal opcode_high_bit : std_logic := '1';
 
-  signal skip_bytes : integer := 0;
-
   signal fetched_last_cycle : boolean := false;
 
   signal end_of_trace : boolean := false;
@@ -215,14 +213,8 @@ begin
         instruction_out_valid <= false;
       else
         -- Work out bytes in instruction, so that we can shift down appropriately.
-        -- XXX
 
-        if skip_bytes > 0 then
-          instruction_out_valid <= false;
-          skip_bytes <= 0;
-        else
-          instruction_out_valid <= true;
-        end if;
+        instruction_out_valid <= true;
         consumed_bytes := ilen_buffer(0);
         new_bytes_ready := bytes_ready - consumed_bytes;
         
@@ -346,7 +338,8 @@ begin
             fetch_port_used := true;
             if (burst_add_one = false) then
               report "I-FETCH" & integer'image(coreid)
-                & " : Decrementing burst_fetch, fetching $"
+                & " : Decrementing burst_fetch to "
+                & integer'image(burst_fetch-1) & ", fetching $"
                 & to_hstring(fetch_address + 4) & ", desired_address=$"
                 & to_hstring(desired_address);
               burst_fetch <= burst_fetch - 1;
@@ -360,19 +353,26 @@ begin
           end if;          
         elsif (burst_add_one = true) then
           report "I-FETCH" & integer'image(coreid)
-            & " : Incrementing burst_fetch";
-          burst_fetch <= burst_fetch + 1;
+            & " : Incrementing burst_fetch to " & integer'image(burst_fetch + 1);
+          if burst_fetch < (BYTE_BUFFER_WIDTH/4+1) then
+            burst_fetch <= burst_fetch + 1;
+          end if;
         end if;
         -- Make sure that we don't get stuck forever waiting for bytes
-        if (bytes_ready < 4) and (burst_fetch = 0) then
-          burst_fetch <= (BYTE_BUFFER_WIDTH/4+1);
-        end if;
+        -- XXX This should never be needed, and just results in a core placing
+        -- unnecessary demands on the memory bandwidth
+        -- if (bytes_ready < 4) and (burst_fetch = 0) then
+        -- report "I-FETCH" & integer'image(coreid)
+        -- & " : Empty buffer: resetting burst_fetch to " & integer'image((BYTE_BUFFER_WIDTH/4+1));
+        -- burst_fetch <= (BYTE_BUFFER_WIDTH/4+1);
+        -- end if;
         
         report "I-FETCH" & integer'image(coreid)
           & " buffer was " & to_hstring(byte_buffer)
           &", now " & to_hstring(new_byte_buffer)
           &", with " & integer'image(new_bytes_ready)
-          & " bytes ready, " & integer'image(consumed_bytes) & " bytes consumed.";
+          & " bytes ready, " & integer'image(consumed_bytes) & " bytes consumed "
+          & "(burst_fetch = " & integer'image(burst_fetch) & ").";
 
         byte_buffer <= new_byte_buffer;
         ilen_buffer <= new_ilen_buffer;
@@ -402,9 +402,9 @@ begin
         -- branch.
         end_of_trace <= false;
         
-        instruction_address <= redirected_address(31 downto 2)&"00";
+        instruction_address <= redirected_address;
         instruction_pc(15 downto 8) <= redirected_pch;
-        instruction_pc(7 downto 0) <= redirected_address(7 downto 2)&"00";
+        instruction_pc(7 downto 0) <= redirected_address(7 downto 0);
 
         -- Invalidate current buffer
         bytes_ready <= 0;
@@ -416,26 +416,18 @@ begin
         -- the next word.
         dispatched_bytes <= 0;
 
-        -- Indicate how many bytes we need to skip.
-        -- To keep timing, we have to overwrite ilen_buffer(0), as muxing to
-        -- pick that or skip_bytes is too slow.
-        if redirected_address(1 downto 0) /= "00" then
-          skip_bytes <= to_integer(redirected_address(1 downto 0));
-          ilen_buffer(0) <= to_integer(redirected_address(1 downto 0));
-        end if;
-
         -- Start reading from this address.
         -- Clobber any other address we have asked for, as anything else we
         -- were waiting for is not redundant.
         fetch_port_write.valid <= true;
-        fetch_port_write.translated <= redirected_address(31 downto 2)&"00";
+        fetch_port_write.translated <= redirected_address;
         fetch_port_used := true;
         fetch_port_write.user_flags <=
           std_logic_vector(to_unsigned(coreid+1,2)&"0"&
                            ifetch_transaction_counter);
         report "FETCH" & integer'image(coreid)
           & " port ready: Due to redirection, asking for $"
-          & to_hstring(redirected_address(31 downto 2)&"00")
+          & to_hstring(redirected_address)
           & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&"0"&
                                      ifetch_transaction_counter);
 
@@ -443,10 +435,10 @@ begin
         ifetch_expected_transaction_counter <= ifetch_transaction_counter;
         ifetch_transaction_counter          <= ifetch_transaction_counter + 1;
         
-        fetch_address <= redirected_address(31 downto 2)&"00";
-        desired_address <= redirected_address(31 downto 2)&"00";
+        fetch_address <= redirected_address;
+        desired_address <= redirected_address;
         report "I-FETCH" & integer'image(coreid)
-          & " : desired_address <= $" & to_hstring(redirected_address(31 downto 2)&"00");
+          & " : desired_address <= $" & to_hstring(redirected_address);
 
       else
       -- Otherwise, keep fetching from where we were.

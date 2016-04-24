@@ -207,6 +207,8 @@ begin
           instruction.vector_fetch_transaction := vector_fetch_transaction_counter;
           vector_fetch_valid <= true;
           vector_fetch_transaction_counter <= vector_fetch_transaction_counter + 1;
+          report "DECODE" & integer'image(coreid)
+            & " fetching vector at $" & to_hstring(instruction.argument_address);
         end if;
         
         

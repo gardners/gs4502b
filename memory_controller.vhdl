@@ -88,7 +88,10 @@ architecture behavioural of memory_controller is
   signal mrdata2 : std_logic_vector(8 downto 0);
   signal mrdata3 : std_logic_vector(8 downto 0);
 
-  signal next_fetch_address : translated_address;
+  signal next_fetch_address0 : translated_address;
+  signal next_fetch_address1 : translated_address;
+  signal next_fetch_address2 : translated_address;
+  signal next_fetch_address3 : translated_address;
   signal next_fetch_flags : std_logic_vector(7 downto 0);
   signal next_fetch_port : integer range 0 to 3;
   signal bram_fetch_address_in : translated_address;
@@ -307,19 +310,27 @@ begin
         -- Feed request into memory
         -- XXX - Add support for unaligned requests
         -- XXX - Add support for non-BRAM requests (i.e., IO, and later, DDR RAM)
-        next_fetch_address <= fetch_address;
+        next_fetch_address0 <= fetch_address + 0;
+        next_fetch_address1 <= fetch_address + 1;
+        next_fetch_address2 <= fetch_address + 2;
+        next_fetch_address3 <= fetch_address + 3;
         next_fetch_port <= fetch_port_number;
         next_fetch_flags <= fetch_flags;        
       else
         report "MEM_CONTROLLER : Not fetching.";
-        next_fetch_address <= (others => '0');
+        next_fetch_address0 <= (others => '0');
+        next_fetch_address1 <= (others => '0');
+        next_fetch_address2 <= (others => '0');
+        next_fetch_address3 <= (others => '0');
       end if;
 
       -- Push request to RAM
-      for i in 0 to 3 loop
-        ram_interfaces(i).iaddr <= std_logic_vector(next_fetch_address(18 downto 2));
-      end loop;
-      bram_fetch_address_in <= next_fetch_address;
+      ram_interfaces(0).iaddr <= std_logic_vector(next_fetch_address0(18 downto 2));
+      ram_interfaces(1).iaddr <= std_logic_vector(next_fetch_address1(18 downto 2));
+      ram_interfaces(2).iaddr <= std_logic_vector(next_fetch_address2(18 downto 2));
+      ram_interfaces(3).iaddr <= std_logic_vector(next_fetch_address3(18 downto 2));
+      
+      bram_fetch_address_in <= next_fetch_address0;
       bram_fetch_flags_in <= next_fetch_flags;
       bram_fetch_port_in <= next_fetch_port;
 
@@ -332,11 +343,28 @@ begin
       bram_fetch_flags_out <= bram_fetch_flags_1;
       bram_fetch_port_out <= bram_fetch_port_1;
 
-      bram_bytes_out(0) <= irdata0;
-      bram_bytes_out(1) <= irdata1;
-      bram_bytes_out(2) <= irdata2;
-      bram_bytes_out(3) <= irdata3;
-      
+      case bram_fetch_address_1(1 downto 0) is
+        when "00" =>
+          bram_bytes_out(0) <= irdata0;
+          bram_bytes_out(1) <= irdata1;
+          bram_bytes_out(2) <= irdata2;
+          bram_bytes_out(3) <= irdata3;
+        when "01" =>
+          bram_bytes_out(0) <= irdata1;
+          bram_bytes_out(1) <= irdata2;
+          bram_bytes_out(2) <= irdata3;
+          bram_bytes_out(3) <= irdata0;
+        when "10" =>
+          bram_bytes_out(0) <= irdata2;
+          bram_bytes_out(1) <= irdata3;
+          bram_bytes_out(2) <= irdata0;
+          bram_bytes_out(3) <= irdata1;
+        when others =>
+          bram_bytes_out(0) <= irdata3;
+          bram_bytes_out(1) <= irdata0;
+          bram_bytes_out(2) <= irdata1;
+          bram_bytes_out(3) <= irdata2;
+      end case;
 
       report "MEM_CONTROLLER : Presenting address $"
         & to_hstring(bram_fetch_address_out)
