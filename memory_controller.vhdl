@@ -118,8 +118,34 @@ architecture behavioural of memory_controller is
   signal fetch_port1_buffering : boolean := false;
   signal fetch_port2_buffering : boolean := false;
   signal fetch_port3_buffering : boolean := false;  
+
+
+  function bytes_reorder(v : bytes4; rotate : unsigned(1 downto 0)) return bytes4 is
+      variable vout : bytes4;
+  begin
+    case rotate is
+      when "00" =>
+        vout := v;
+      when "01" =>
+        vout(0) := v(1);
+        vout(1) := v(2);
+        vout(2) := v(3);
+        vout(3) := v(0);
+      when "10" =>
+        vout(0) := v(2);
+        vout(1) := v(3);
+        vout(2) := v(0);
+        vout(3) := v(1);
+      when others =>
+        vout(0) := v(2);
+        vout(1) := v(3);
+        vout(2) := v(0);
+        vout(3) := v(1);
+    end case;
+    return vout;
+  end function;
   
-begin    
+begin      
   
   ram: entity work.ram0
     port map ( a_clk => cpuclock,
@@ -186,7 +212,9 @@ begin
     variable fetch_port1 : fetch_port_in;
     variable fetch_port2 : fetch_port_in;
     variable fetch_port3 : fetch_port_in;
+    
   begin
+    
     if rising_edge(cpuclock) then
 
       -- XXX Make second ports idle until we implement memory access
@@ -343,28 +371,10 @@ begin
       bram_fetch_flags_out <= bram_fetch_flags_1;
       bram_fetch_port_out <= bram_fetch_port_1;
 
-      case bram_fetch_address_1(1 downto 0) is
-        when "00" =>
-          bram_bytes_out(0) <= irdata0;
-          bram_bytes_out(1) <= irdata1;
-          bram_bytes_out(2) <= irdata2;
-          bram_bytes_out(3) <= irdata3;
-        when "01" =>
-          bram_bytes_out(0) <= irdata1;
-          bram_bytes_out(1) <= irdata2;
-          bram_bytes_out(2) <= irdata3;
-          bram_bytes_out(3) <= irdata0;
-        when "10" =>
-          bram_bytes_out(0) <= irdata2;
-          bram_bytes_out(1) <= irdata3;
-          bram_bytes_out(2) <= irdata0;
-          bram_bytes_out(3) <= irdata1;
-        when others =>
-          bram_bytes_out(0) <= irdata3;
-          bram_bytes_out(1) <= irdata0;
-          bram_bytes_out(2) <= irdata1;
-          bram_bytes_out(3) <= irdata2;
-      end case;
+      bram_bytes_out(0) <= irdata0;
+      bram_bytes_out(1) <= irdata1;
+      bram_bytes_out(2) <= irdata2;
+      bram_bytes_out(3) <= irdata3;
 
       report "MEM_CONTROLLER : Presenting address $"
         & to_hstring(bram_fetch_address_out)
@@ -379,20 +389,24 @@ begin
       -- and also to minimise logic depth.  Where non-BRAM reads occur, they will
       -- be used to overwrite these value.
       fetch_port0_out.translated <= bram_fetch_address_out;
-      fetch_port0_out.bytes <= bram_bytes_out;
+      fetch_port0_out.bytes
+        <= bytes_reorder(bram_bytes_out,bram_fetch_address_1(1 downto 0));
       fetch_port0_out.user_flags <= bram_fetch_flags_out;
       fetch_port1_out.translated <= bram_fetch_address_out;
-      fetch_port1_out.bytes <= bram_bytes_out;
+      fetch_port1_out.bytes
+        <= bytes_reorder(bram_bytes_out,bram_fetch_address_1(1 downto 0));
       fetch_port1_out.user_flags <= bram_fetch_flags_out;
       fetch_port2_out.translated <= bram_fetch_address_out;
-      fetch_port2_out.bytes <= bram_bytes_out;
+      fetch_port2_out.bytes
+        <= bytes_reorder(bram_bytes_out,bram_fetch_address_1(1 downto 0));
       fetch_port2_out.user_flags <= bram_fetch_flags_out;
       fetch_port3_out.translated <= bram_fetch_address_out;
-      fetch_port3_out.bytes <= bram_bytes_out;
+      fetch_port3_out.bytes
+        <= bytes_reorder(bram_bytes_out,bram_fetch_address_1(1 downto 0));
       fetch_port3_out.user_flags <= bram_fetch_flags_out;
       
     end if;
-  end process;
+    end process;
   
 end behavioural;
 
