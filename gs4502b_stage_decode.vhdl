@@ -42,9 +42,8 @@ entity gs4502b_stage_decode is
 
 -- Output: Vector de-reference request to prefetch stage, which will schedule
 -- it in on the memory controller
-    vector_fetch_address : out unsigned(15 downto 0);
+    vector_fetch_address : out translated_address;
     vector_fetch_transaction_id : out unsigned(4 downto 0);
-    vector_fetch_valid : out boolean := false;
 -- And from prefecth we get indication when they are ready to receive a vector
 -- from us.
     prefetch_ready_to_accept_vector_request : in boolean;
@@ -85,8 +84,6 @@ begin
     variable branch_pc : unsigned(15 downto 0);
   begin
     if (rising_edge(cpuclock)) then
-
-      vector_fetch_valid <= false;
       
       if stall_buffer_occupied then
         instruction := stalled_instruction;
@@ -208,10 +205,24 @@ begin
           -- address calculation -- that is, the loaded vector is presented to the
           -- execute stage, not to us.  This is essentially to save a cycle in
           -- the pipeline.)
-          vector_fetch_address <= instruction.argument_address;
+          vector_fetch_address
+            <= resolve_address_to_long(instruction.argument_address,
+                                       false,
+                                     
+                                       cpuport_value,cpuport_ddr,
+                                       viciii_iomode,
+                                       reg_map_low,
+                                       reg_mb_low,
+                                       reg_offset_low,
+                                       reg_map_high,
+                                       reg_mb_high,
+                                       reg_offset_high,
+                                       rom_at_8000,
+                                       rom_at_a000,
+                                       rom_at_c000,
+                                       rom_at_e000);
           vector_fetch_transaction_id <= vector_fetch_transaction_counter;
           instruction.vector_fetch_transaction := vector_fetch_transaction_counter;
-          vector_fetch_valid <= true;
           vector_fetch_transaction_counter <= vector_fetch_transaction_counter + 1;
           report "DECODE" & integer'image(coreid)
             & " fetching vector at $" & to_hstring(instruction.argument_address);

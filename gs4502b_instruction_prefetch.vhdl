@@ -60,9 +60,8 @@ entity gs4502b_instruction_prefetch is
 
     -- We also need to know when we are being asked to provide an indirect
     -- vector for one of the indirect addressing modes
-    vector_fetch_address : in unsigned(15 downto 0);
-    vector_fetch_transaction_id : in unsigned(4 downto 0);
-    vector_fetch_valid : in boolean := false;
+    vector_fetch_address_in : in translated_address;
+    vector_fetch_transaction_id_in : in unsigned(4 downto 0);
     prefetch_ready_to_accept_vector_request : out boolean := true;
     vector_fetch_out_transaction_id : out unsigned(4 downto 0);
     vector_fetch_out_bytes : out bytes4;
@@ -102,6 +101,11 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal ifetch_transaction_counter : unsigned(4 downto 0) := (others => '0');
   signal ifetch_expected_transaction_counter : unsigned(4 downto 0) := (others => '0');
 
+  signal last_vector_fetch_transaction_id : unsigned(4 downto 0) := (others => '1');
+  signal vector_fetch_stall_buffer_occupied : boolean := false;
+  signal vector_fetch_stall_buffer_transaction_id : unsigned(4 downto 0);
+  signal vector_fetch_stall_buffer_address : translated_address;
+  
   -- Delayed signals to tell us which address and values of chip/fast RAM we are
   -- reading in a given cycle
   type prefetch_byte is record
@@ -143,6 +147,9 @@ begin
     variable burst_sub_one : boolean := false;
 
     variable fetch_port_used : boolean := false;
+
+    variable vector_fetch_address : translated_address;
+    variable vector_fetch_transaction_id : unsigned(4 downto 0);
   begin
     if rising_edge(cpuclock) then
 
@@ -328,7 +335,53 @@ begin
             & " more to go, ready="
             & boolean'image(fetch_port_read.ready) &
             ").";
-          if fetch_port_read.ready or (primary_core_boost and (coreid=0)) then
+          if vector_fetch_transaction_id = last_vector_fetch_transaction_id
+            or fetch_port_read.ready or (primary_core_boost and (coreid=0)) then
+            -- After this cycle, we will be able to accept another indirect vector
+            -- request.  Else not.
+            if vector_fetch_stall_buffer_occupied = false then
+              prefetch_ready_to_accept_vector_request <= true;
+            else
+              vector_fetch_stall_buffer_occupied <= false;
+            end if;
+          else
+            prefetch_ready_to_accept_vector_request <= false;
+            if (vector_fetch_transaction_id /= last_vector_fetch_transaction_id)
+              and vector_fetch_stall_buffer_occupied = false then
+              vector_fetch_stall_buffer_occupied <= true;
+              vector_fetch_stall_buffer_address <= vector_fetch_address_in;
+              vector_fetch_stall_buffer_transaction_id <= vector_fetch_transaction_id_in;
+            end if;              
+          end if;
+          if vector_fetch_stall_buffer_occupied then
+            vector_fetch_address := vector_fetch_stall_buffer_address;
+            vector_fetch_transaction_id := vector_fetch_stall_buffer_transaction_id;
+          else
+            vector_fetch_address := vector_fetch_address_in;
+            vector_fetch_transaction_id := vector_fetch_transaction_id_in;
+          end if;
+          if vector_fetch_transaction_id /= last_vector_fetch_transaction_id
+            and (fetch_port_read.ready or (primary_core_boost and (coreid=0))) then
+            -- Indirect vector fetch
+            report "FETCH" & integer'image(coreid)
+              & " port ready: Asking for INDIRECT VECTOR at $"
+              & to_hstring(fetch_address + 4)
+              & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&"1"&
+                                         vector_fetch_transaction_id);
+            last_vector_fetch_transaction_id <= vector_fetch_transaction_id;
+            fetch_port_write.valid <= true;
+            fetch_port_write.translated
+              <= vector_fetch_address;
+            -- Put our Core ID in the upper bits
+            fetch_port_write.user_flags(7 downto 6) <=
+              std_logic_vector(to_unsigned(coreid+1,2));
+            -- Mark transaction as being vector fetch
+            fetch_port_write.user_flags(5) <= '1';
+            -- And finally the transaction number.
+            fetch_port_write.user_flags(4 downto 0)
+              <= std_logic_vector(vector_fetch_transaction_id);
+            fetch_port_used := true;            
+          elsif fetch_port_read.ready or (primary_core_boost and (coreid=0)) then
             report "FETCH" & integer'image(coreid)
               & " port ready: Asking for $"
               & to_hstring(fetch_address + 4)
