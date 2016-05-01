@@ -40,6 +40,7 @@ entity gs4502b_stage_decode is
 
 -- Output: Instruction with relevant information
     instruction_out : out instruction_information;
+    instruction_out_valid : out boolean;
 
 -- Output: Vector de-reference request to prefetch stage, which will schedule
 -- it in on the memory controller
@@ -98,7 +99,7 @@ begin
         & ", instruction_in_valid = " & boolean'image(instruction_in_valid)
         & ", stall_buffer_occupied = " & boolean'image(stall_buffer_occupied);
       
-      if (stall = false) and (instruction_in_valid = true) then
+      if (stall = false) and (instruction_in_valid  or stall_buffer_occupied) then
         report "$" & to_hstring(instruction.translated) &
           " DECODE" & integer'image(coreid)
           & " : Not stalled. Decoding. reg_map_high="
@@ -262,7 +263,7 @@ begin
           instruction.modifies_cpu_personality := false;
         end if;
 
-        if instruction.addressing_mode.indirect
+        if instruction_in_valid and instruction.addressing_mode.indirect
           and (not prefetch_ready_to_accept_vector_request) then
           report "$" & to_hstring(instruction.translated) &
             " DECODE" & integer'image(coreid)
@@ -281,16 +282,25 @@ begin
         
       else
         -- Pipeline stalled: hold existing values.
-        report "$" & to_hstring(instruction.translated) &
-          " DECODE" & integer'image(coreid)
-          & " : Stalled -- holding values.";
-        stall_buffer_occupied <= true;
-        stalled_instruction <= instruction;
-        stalling <= true;
+        if stall then
+          report "$" & to_hstring(instruction.translated) &
+            " DECODE" & integer'image(coreid)
+            & " : Stalled -- holding values.";
+          stalling <= true;
+        else
+          stalling <= false;
+        end if;
+        if instruction_in_valid then
+          stall_buffer_occupied <= true;
+        end if;
+        if not stall_buffer_occupied then
+          stalled_instruction <= instruction;
+        end if;        
+        
       end if;
       
       instruction_out <= instruction;
-
+      instruction_out_valid <= (instruction_in_valid  or stall_buffer_occupied);
     end if;    
   end process;    
   

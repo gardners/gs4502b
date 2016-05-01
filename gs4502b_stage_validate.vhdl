@@ -85,6 +85,7 @@ entity gs4502b_stage_validate is
     
 -- Input: translated address of instruction in memory
     instruction_in : in instruction_information;
+    instruction_in_valid : in boolean;
 
 -- Input: What resources does this instruction require and modify?
     resources_required_in : in instruction_resources;
@@ -176,6 +177,7 @@ begin
 
   process(cpuclock)
     variable alu_res : alu_result;
+    variable will_stall : boolean;
 
     -- MUX variables to choose between stall buffer and incoming instruction
     variable resources_modified : instruction_resources;
@@ -314,7 +316,7 @@ begin
     
     -- We are stalled unless we are processing something we are reading in,
     -- and we are not being asked to stall ourselves.
-    stalling <= true;
+    will_stall := true;
     
     if stall = false then
       -- Downstream stage is willing to accept an instruction
@@ -335,7 +337,7 @@ begin
         
         -- Reading from pipeline input, and we are not stalled, so we can tell
         -- the upstream pipeline stage to resume
-        stalling <= false;
+        will_stall := false;
         stall_out_current <= false;
 
         report "$" & to_hstring(last_instruction_expected_address) &
@@ -408,6 +410,41 @@ begin
         -- Set delayed flag for all resources to false
         resources_about_to_be_locked_by_execute_stage <= (others => false);
       end if;
+
+      -- Stall if instruction has outstanding resources, but would otherwise be
+      -- fine to execute.
+      if
+        (not_empty(resources_required and resources_about_to_be_locked_by_execute_stage)
+        or not_empty(resources_required and resources_what_will_still_be_outstanding_next_cycle)
+        or not_empty(resources_required and resources_freshly_locked_by_execute_stage))
+        -- Make sure instruction personality will be valid
+        and (instruction.cpu_personality = current_cpu_personality) then
+
+        report "VALIDATE" & integer'image(coreid)
+          & " : stalling upstream, due to unmet resource requirements to execute this instruction.";
+        report "  contributors: "
+          & boolean'image(not_empty(resources_required and resources_about_to_be_locked_by_execute_stage)) & ", "
+          & boolean'image(not_empty(resources_required and resources_what_will_still_be_outstanding_next_cycle)) & ", "
+          & boolean'image(not_empty(resources_required and resources_freshly_locked_by_execute_stage)) & ", "
+        -- Make sure instruction personality will be valid
+          & boolean'image(instruction.cpu_personality /= current_cpu_personality) & ", "
+          & boolean'image(instruction.modifies_cpu_personality);
+
+        will_stall := true;
+        stall_out_current <= true;
+
+        -- If we weren't already stalling the upstream, then we need to
+        -- copy the current inputs to the stall buffer, and mark the stall
+        -- buffer as occupied. We don't need to buffer the stalled instruction
+        -- in any other circumstance, since the instruction would be invalid.
+        if stall_out_current=false then
+          stalled_instruction <= instruction;
+          stalled_resources_modified <= resources_modified;
+          stalled_resources_required <= resources_required;
+          stall_buffer_occupied <= true;
+        end if;     
+      end if;
+
       
       if
         -- Are all the resources we need here?
@@ -451,23 +488,10 @@ begin
         -- What would be really nice is if we can insert bubbles in the
         -- pipeline to be closed up when we get here, so that we can avoid
         -- the need for any extra buffer registers and muxes.
-
+        
         -- Tell downstream stage the instruction is not valid for execution.
         instruction_valid <= false;
 
-        -- Tell upstream stage that we are stalled
-        stalling <= true;
-        stall_out_current <= true;
-
-        -- If we weren't already stalling the upstream, then we need to
-        -- copy the current inputs to the stall buffer, and mark the stall
-        -- buffer as occupied.
-        if stall_out_current=false then
-          stalled_instruction <= instruction;
-          stalled_resources_modified <= resources_modified;
-          stalled_resources_required <= resources_required;
-          stall_buffer_occupied <= true;
-        end if;
       else
         -- Instruction meets all requirements
         -- Release and pass forward
@@ -493,6 +517,12 @@ begin
       -- XXX: We should assign them so that we avoid having flip-flops.        
       instruction_valid <= false;        
     end if;
+
+    stalling <= will_stall;
+    report "$" & to_hstring(last_instruction_expected_address) &
+      " VALIDATE" & integer'image(coreid)
+      & " : setting stalling to " & boolean'image(will_stall);
+    
   end process;    
   
 end behavioural;

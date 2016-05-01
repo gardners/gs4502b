@@ -129,6 +129,7 @@ architecture behavioural of gs4502b_core is
   
   -- Signals output by decode stage
   signal stage_decode_instruction : instruction_information;
+  signal stage_decode_instruction_valid : boolean;
   -- The value we last used, for passing along the pipeline
   signal stage_decode_cache_line_number : unsigned(9 downto 0);
   -- To be wired to cache ram for reading next line
@@ -246,6 +247,7 @@ begin  -- behavioural
       branch16_pc => branch16_pc,
 
       instruction_out => stage_decode_instruction,
+      instruction_out_valid => stage_decode_instruction_valid,
       
       vector_fetch_address => vector_fetch_address,
       vector_fetch_transaction_id => vector_fetch_transaction_id,
@@ -284,6 +286,8 @@ begin  -- behavioural
       regs => reg_export,
 
       instruction_in => stage_decode_instruction,
+      instruction_in_valid => stage_decode_instruction_valid,
+
       vector_fetch_transaction_id => vector_fetch_out_transaction_id,
       vector_fetch_vector => vector_fetch_out_bytes,
       
