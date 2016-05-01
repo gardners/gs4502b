@@ -88,8 +88,8 @@ architecture behavioural of gs4502b_stage_execute is
   signal personality : cpu_personality := CPU4502;
   
   -- Primary CPU state
-  signal reg_pcl : unsigned(7 downto 0) := x"00";
-  signal reg_pch : unsigned(7 downto 0) := x"81";
+  signal reg_pcl : unsigned(7 downto 0) := x"AD";
+  signal reg_pch : unsigned(7 downto 0) := x"DE";
   signal regs : cpu_registers;
   
   -- Memory mapping registers
@@ -495,7 +495,7 @@ begin
             -- Main core.
             redirected_address <= x"0FF88100";
             expected_instruction_address <= x"0FF88100";
-            redirected_pch <= x"81";                             
+            redirected_pch <= x"81";
             reg_pch <= x"81";
             reg_pcl <= x"00";
             -- XXX Should start in hypervisor mode
