@@ -346,7 +346,7 @@ begin
             end if;
           else
             prefetch_ready_to_accept_vector_request <= false;
-            if (vector_fetch_transaction_id /= last_vector_fetch_transaction_id)
+            if (to_integer(vector_fetch_transaction_id) /= to_integer(last_vector_fetch_transaction_id))
               and vector_fetch_stall_buffer_occupied = false then
               vector_fetch_stall_buffer_occupied <= true;
               vector_fetch_stall_buffer_address <= vector_fetch_address_in;
@@ -360,14 +360,20 @@ begin
             vector_fetch_address := vector_fetch_address_in;
             vector_fetch_transaction_id := vector_fetch_transaction_id_in;
           end if;
-          if vector_fetch_transaction_id /= last_vector_fetch_transaction_id
+          if (to_integer(vector_fetch_transaction_id) /= to_integer(last_vector_fetch_transaction_id))
             and (fetch_port_read.ready or (primary_core_boost and (coreid=0))) then
             -- Indirect vector fetch
+            report "FETCH vector mismatch = " & boolean'image((vector_fetch_transaction_id /= last_vector_fetch_transaction_id)) &
+              ", values = [" & to_string(std_logic_vector(vector_fetch_transaction_id)) & "], ["
+              & to_string(std_logic_vector(last_vector_fetch_transaction_id)) & "].";
             report "FETCH" & integer'image(coreid)
               & " port ready: Asking for INDIRECT VECTOR at $"
               & to_hstring(fetch_address + 4)
               & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&"1"&
-                                         vector_fetch_transaction_id);
+                                         vector_fetch_transaction_id)
+              & " (last vector Tid was $" & to_hstring(to_unsigned(coreid+1,2)&"1"&
+                                                       last_vector_fetch_transaction_id)
+              & ").";
             last_vector_fetch_transaction_id <= vector_fetch_transaction_id;
             fetch_port_write.valid <= true;
             fetch_port_write.translated
