@@ -36,6 +36,9 @@ l3:		lda $5000,x
 		.checkpc $9000
 		.advance $9000,$00
 
+		; make destination address non-aligned to test non-aligned loading
+		nop
+		
 simple_cpu_tests:
 		; register loads and immediate mode compares
 		lda #$01
@@ -71,6 +74,7 @@ simple_cpu_tests:
 		ldy #$23
 		lda ($10),Y
 		ldx #$07
+		nop
 		lda ($20,X)
 
 

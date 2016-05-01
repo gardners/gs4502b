@@ -142,6 +142,18 @@ architecture behavioural of memory_controller is
         vout(2) := v(0);
         vout(3) := v(1);
     end case;
+
+    report "bytes_reorder: reordering (" &
+      "$" & to_hstring(v(0)) & "," &
+      "$" & to_hstring(v(1)) & "," &
+      "$" & to_hstring(v(2)) & "," &
+      "$" & to_hstring(v(3)) & ") to (" &
+      "$" & to_hstring(vout(0)) & "," &
+      "$" & to_hstring(vout(1)) & "," &
+      "$" & to_hstring(vout(2)) & "," &
+      "$" & to_hstring(vout(3)) & ") (rotate=" & integer'image(to_integer(rotate))
+      & ")";
+
     return vout;
   end function;
   
@@ -338,10 +350,25 @@ begin
         -- Feed request into memory
         -- XXX - Add support for unaligned requests
         -- XXX - Add support for non-BRAM requests (i.e., IO, and later, DDR RAM)
-        next_fetch_address0 <= to_unsigned(to_integer(fetch_address) + 0,32);
-        next_fetch_address1 <= to_unsigned(to_integer(fetch_address) + 1,32);
-        next_fetch_address2 <= to_unsigned(to_integer(fetch_address) + 2,32);
-        next_fetch_address3 <= to_unsigned(to_integer(fetch_address) + 3,32);
+        case fetch_address(1 downto 0) is
+          when "00" =>
+            next_fetch_address0 <= to_unsigned(to_integer(fetch_address) + 0,32);
+            next_fetch_address1 <= to_unsigned(to_integer(fetch_address) + 0,32);
+            next_fetch_address2 <= to_unsigned(to_integer(fetch_address) + 0,32);
+          when "01" =>
+            next_fetch_address0 <= to_unsigned(to_integer(fetch_address) + 4,32);
+            next_fetch_address1 <= to_unsigned(to_integer(fetch_address) + 0,32);
+            next_fetch_address2 <= to_unsigned(to_integer(fetch_address) + 0,32);
+          when "10" =>
+            next_fetch_address0 <= to_unsigned(to_integer(fetch_address) + 4,32);
+            next_fetch_address1 <= to_unsigned(to_integer(fetch_address) + 4,32);
+            next_fetch_address2 <= to_unsigned(to_integer(fetch_address) + 0,32);
+          when others =>
+            next_fetch_address0 <= to_unsigned(to_integer(fetch_address) + 4,32);
+            next_fetch_address1 <= to_unsigned(to_integer(fetch_address) + 4,32);
+            next_fetch_address2 <= to_unsigned(to_integer(fetch_address) + 4,32);
+        end case;          
+        next_fetch_address3 <= to_unsigned(to_integer(fetch_address) + 0,32);
         next_fetch_port <= fetch_port_number;
         next_fetch_flags <= fetch_flags;        
       else
@@ -390,19 +417,19 @@ begin
       -- be used to overwrite these value.
       fetch_port0_out.translated <= bram_fetch_address_out;
       fetch_port0_out.bytes
-        <= bytes_reorder(bram_bytes_out,bram_fetch_address_1(1 downto 0));
+        <= bytes_reorder(bram_bytes_out,bram_fetch_address_out(1 downto 0));
       fetch_port0_out.user_flags <= bram_fetch_flags_out;
       fetch_port1_out.translated <= bram_fetch_address_out;
       fetch_port1_out.bytes
-        <= bytes_reorder(bram_bytes_out,bram_fetch_address_1(1 downto 0));
+        <= bytes_reorder(bram_bytes_out,bram_fetch_address_out(1 downto 0));
       fetch_port1_out.user_flags <= bram_fetch_flags_out;
       fetch_port2_out.translated <= bram_fetch_address_out;
       fetch_port2_out.bytes
-        <= bytes_reorder(bram_bytes_out,bram_fetch_address_1(1 downto 0));
+        <= bytes_reorder(bram_bytes_out,bram_fetch_address_out(1 downto 0));
       fetch_port2_out.user_flags <= bram_fetch_flags_out;
       fetch_port3_out.translated <= bram_fetch_address_out;
       fetch_port3_out.bytes
-        <= bytes_reorder(bram_bytes_out,bram_fetch_address_1(1 downto 0));
+        <= bytes_reorder(bram_bytes_out,bram_fetch_address_out(1 downto 0));
       fetch_port3_out.user_flags <= bram_fetch_flags_out;
       
     end if;
