@@ -45,6 +45,9 @@ entity gs4502b_stage_decode is
     vector_fetch_address : out unsigned(15 downto 0);
     vector_fetch_transaction_id : out unsigned(4 downto 0);
     vector_fetch_valid : out boolean := false;
+-- And from prefecth we get indication when they are ready to receive a vector
+-- from us.
+    prefetch_ready_to_accept_vector_request : in boolean;
     
     stall : in boolean;
     stalling : out boolean := false;
@@ -195,13 +198,16 @@ begin
           instruction.argument_address := (regs.sph & regs.spl)
                                           - instruction.bytes.arg1;
         end if;
-        if instruction.addressing_mode.indirect then
+        if instruction.addressing_mode.indirect
+          and prefetch_ready_to_accept_vector_request then
           -- Instruction is indirect, so we need to request reading of the vector.
           -- For simplicity, we just request the whole four bytes, and do the final
           -- resolution in the validate stage.
           -- (the validate stage will use the indirect flag to realise it must
           -- stall until it receives the vector to allow it to complete the
-          -- address calculation)
+          -- address calculation -- that is, the loaded vector is presented to the
+          -- execute stage, not to us.  This is essentially to save a cycle in
+          -- the pipeline.)
           vector_fetch_address <= instruction.argument_address;
           vector_fetch_transaction_id <= vector_fetch_transaction_counter;
           instruction.vector_fetch_transaction := vector_fetch_transaction_counter;
@@ -209,9 +215,7 @@ begin
           vector_fetch_transaction_counter <= vector_fetch_transaction_counter + 1;
           report "DECODE" & integer'image(coreid)
             & " fetching vector at $" & to_hstring(instruction.argument_address);
-        end if;
-        
-        
+        end if;                
         
         instruction.mispredict_translated
           := resolve_address_to_long(branch_pc,
@@ -240,11 +244,21 @@ begin
           instruction.modifies_cpu_personality := false;
         end if;
 
-        if stall_buffer_occupied then
-          stall_buffer_occupied <= false;
+        if instruction.addressing_mode.indirect
+          and (not prefetch_ready_to_accept_vector_request) then
+          report "$" & to_hstring(instruction.translated) &
+            " DECODE" & integer'image(coreid)
+            & " : Stalled waiting PREFETCH to accept our vector request) -- holding values.";
+          stall_buffer_occupied <= true;
+          stalled_instruction <= instruction;
           stalling <= true;
         else
-          stalling <= false;
+          if stall_buffer_occupied then
+            stall_buffer_occupied <= false;
+            stalling <= true;
+          else
+            stalling <= false;
+          end if;
         end if;
         
       else

@@ -103,8 +103,11 @@ entity gs4502b_stage_validate is
     redirected_address : in translated_address;
     redirected_pch : in unsigned(15 downto 8);
 
--- What can we see from the memory controller?
+-- What can we see from the memory controller (memory access side)?
     completed_transaction : in transaction_result;
+-- And is there an indirect vector that from the instruction-fetch side?
+    vector_fetch_transaction_id : in unsigned(4 downto 0);
+    vector_fetch_vector : in bytes4;
 
     regs : in cpu_registers;
     

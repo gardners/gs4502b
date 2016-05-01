@@ -63,6 +63,9 @@ entity gs4502b_instruction_prefetch is
     vector_fetch_address : in unsigned(15 downto 0);
     vector_fetch_transaction_id : in unsigned(4 downto 0);
     vector_fetch_valid : in boolean := false;
+    prefetch_ready_to_accept_vector_request : out boolean := true;
+    vector_fetch_out_transaction_id : out unsigned(4 downto 0);
+    vector_fetch_out_bytes : out bytes4;
     
     instruction_out : out instruction_information;
     instruction_out_valid : out boolean;
@@ -179,6 +182,15 @@ begin
         fetch_buffer_now_valid <= false;
       end if;
 
+      if (std_logic_vector(to_unsigned(coreid+1,2))
+          = fetch_buffer_1.user_flags(7 downto 6))
+        and (address_redirecting = false)
+        and fetch_buffer_1.user_flags(5) = '1' then
+        -- We have a vector -- pass it to the VALIDATE stage
+        vector_fetch_out_transaction_id
+          <= unsigned(fetch_buffer_1.user_flags(4 downto 0));
+        vector_fetch_out_bytes <= fetch_port_read.bytes;
+      end if;
 
       fetch_buffer_1.address <= fetch_port_read.translated;
       fetch_buffer_1.user_flags <= fetch_port_read.user_flags;

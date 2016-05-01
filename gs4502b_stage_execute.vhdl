@@ -50,7 +50,6 @@ entity gs4502b_stage_execute is
     reg_export : out cpu_registers;
     
     instruction_in : in instruction_information;
-    alu_res : in alu_result;
     instruction_in_extra_flags : in extra_instruction_flags;
     instruction_valid : in boolean;
     instruction_address_is_as_expected : in boolean;

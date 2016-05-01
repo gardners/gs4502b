@@ -125,6 +125,7 @@ architecture behavioural of gs4502b_core is
   signal branch8_pc : unsigned(15 downto 0);
   signal branch8_zp_pc : unsigned(15 downto 0);
   signal branch16_pc : unsigned(15 downto 0);
+  signal prefetch_ready_to_accept_vector_request : boolean;
   
   -- Signals output by decode stage
   signal stage_decode_instruction : instruction_information;
@@ -139,12 +140,13 @@ architecture behavioural of gs4502b_core is
   signal vector_fetch_address : unsigned(15 downto 0);
   signal vector_fetch_transaction_id : unsigned(4 downto 0);
   signal vector_fetch_valid : boolean;
+  signal vector_fetch_out_transaction_id : unsigned(4 downto 0);
+  signal vector_fetch_out_bytes : bytes4;
 
   -- Signals output by validate stage
   signal validate_stalling : boolean;
   signal stage_validate_instruction : instruction_information;
   signal stage_validate_extra_instruction_flags : extra_instruction_flags;
-  signal alu_res : alu_result;
   signal stage_validate_resources_required : instruction_resources;
   signal stage_validate_resources_modified : instruction_resources;
   signal stage_validate_instruction_valid : boolean;
@@ -197,8 +199,13 @@ begin  -- behavioural
       vector_fetch_address => vector_fetch_address,
       vector_fetch_transaction_id => vector_fetch_transaction_id,
       vector_fetch_valid => vector_fetch_valid,
+
+      vector_fetch_out_transaction_id => vector_fetch_out_transaction_id,
+      vector_fetch_out_bytes => vector_fetch_out_bytes,
       
       regs => reg_export,
+
+      prefetch_ready_to_accept_vector_request => prefetch_ready_to_accept_vector_request,
       
       instruction_out => stage_prefetch_instruction,
       branch8_pc => branch8_pc,
@@ -243,6 +250,7 @@ begin  -- behavioural
       vector_fetch_address => vector_fetch_address,
       vector_fetch_transaction_id => vector_fetch_transaction_id,
       vector_fetch_valid => vector_fetch_valid,
+      prefetch_ready_to_accept_vector_request => prefetch_ready_to_accept_vector_request,
       
       address_redirecting => stage_execute_redirecting,
       redirected_address => stage_execute_redirected_address,
@@ -277,9 +285,11 @@ begin  -- behavioural
       regs => reg_export,
 
       instruction_in => stage_decode_instruction,
+      vector_fetch_transaction_id => vector_fetch_out_transaction_id,
+      vector_fetch_vector => vector_fetch_out_bytes,
+      
       instruction_out => stage_validate_instruction,
       instruction_out_extra_flags => stage_validate_extra_instruction_flags,
-      alu_result_out => alu_res,
 
       instruction_valid => stage_validate_instruction_valid,      
       instruction_address_is_as_expected => instruction_address_is_as_expected,
@@ -315,7 +325,6 @@ begin  -- behavioural
       stall => memory_stalling,
       instruction_in => stage_validate_instruction,
       instruction_in_extra_flags => stage_validate_extra_instruction_flags,
-      alu_res => alu_res,
       instruction_valid => stage_validate_instruction_valid,
       instruction_address_is_as_expected => instruction_address_is_as_expected,
       
