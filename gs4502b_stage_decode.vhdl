@@ -25,6 +25,7 @@ entity gs4502b_stage_decode is
     current_cpu_personality : in cpu_personality;
 
     instruction_in : in instruction_information;
+    instruction_in_valid : in boolean;
     branch8_pc : in unsigned(15 downto 0);
     branch16_pc : in unsigned(15 downto 0);
     branch8_zp_pc : in unsigned(15 downto 0);
@@ -90,8 +91,14 @@ begin
       else
         instruction := instruction_in;
       end if;
+
+      report "$" & to_hstring(instruction.translated) &
+        " DECODE" & integer'image(coreid)
+        & " stall = " & boolean'image(stall)
+        & ", instruction_in_valid = " & boolean'image(instruction_in_valid)
+        & ", stall_buffer_occupied = " & boolean'image(stall_buffer_occupied);
       
-      if stall = false then
+      if (stall = false) and (instruction_in_valid = true) then
         report "$" & to_hstring(instruction.translated) &
           " DECODE" & integer'image(coreid)
           & " : Not stalled. Decoding. reg_map_high="
