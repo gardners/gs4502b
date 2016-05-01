@@ -57,3 +57,6 @@ instructionequations
 .gitignore
 *.s
 icachebits.vhdl
+extra_instruction_equations.vhdl
+extra_instruction_flags.h
+extrainstructionflags
