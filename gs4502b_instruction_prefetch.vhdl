@@ -227,30 +227,36 @@ begin
       report "I-FETCH" & integer'image(coreid)
         & " : Fetching instruction @ $" & to_hstring(instruction_address)
         & ", with " & integer'image(bytes_ready) & " bytes available.";
-      
-      if bytes_ready < 3 then
-        instruction_out_valid <= false;
-      else
-        -- Work out bytes in instruction, so that we can shift down appropriately.
 
-        instruction_out_valid <= true;
-        consumed_bytes := ilen_buffer(0);
+      if stall = false then
+        if bytes_ready < 3 then
+          instruction_out_valid <= false;
+        else
+          -- Work out bytes in instruction, so that we can shift down appropriately.
+
+          instruction_out_valid <= true;
+          consumed_bytes := ilen_buffer(0);
+        end if;
+
         new_bytes_ready := bytes_ready - consumed_bytes;
         
         case consumed_bytes is
           when 1 =>
             report "I-FETCH" & integer'image(coreid)
+              & " $" & to_hstring(instruction_address)
               & " : Instruction buffer head contains $"
               & to_hstring(byte_buffer(7 downto 0))
               & ".";
           when 2 =>
             report "I-FETCH" & integer'image(coreid)
+              & " $" & to_hstring(instruction_address)
               & " : Instruction buffer head contains $"
               & to_hstring(byte_buffer(7 downto 0))
               & " $" & to_hstring(byte_buffer(15 downto 8))
               & ".";
           when others =>
             report "I-FETCH" & integer'image(coreid)
+              & " $" & to_hstring(instruction_address)
               & " : Instruction buffer head contains $"
               & to_hstring(byte_buffer(7 downto 0))
               & " $" & to_hstring(byte_buffer(15 downto 8))
@@ -329,7 +335,7 @@ begin
           & ", burst_add_one = " & boolean'image(burst_add_one)
           & ", burst_sub_one = " & boolean'image(burst_sub_one);
         if (burst_fetch > 0) and (not end_of_trace)
-           and (not address_redirecting) then
+          and (not address_redirecting) then
           report "I-FETCH" & integer'image(coreid)
             & " : Requesting next instruction word (" & integer'image(burst_fetch)
             & " more to go, ready="
@@ -363,12 +369,9 @@ begin
           if (to_integer(vector_fetch_transaction_id) /= to_integer(last_vector_fetch_transaction_id))
             and (fetch_port_read.ready or (primary_core_boost and (coreid=0))) then
             -- Indirect vector fetch
-            report "FETCH vector mismatch = " & boolean'image((vector_fetch_transaction_id /= last_vector_fetch_transaction_id)) &
-              ", values = [" & to_string(std_logic_vector(vector_fetch_transaction_id)) & "], ["
-              & to_string(std_logic_vector(last_vector_fetch_transaction_id)) & "].";
             report "FETCH" & integer'image(coreid)
               & " port ready: Asking for INDIRECT VECTOR at $"
-              & to_hstring(fetch_address + 4)
+              & to_hstring(vector_fetch_address)
               & " as Tid $" & to_hstring(to_unsigned(coreid+1,2)&"1"&
                                          vector_fetch_transaction_id)
               & " (last vector Tid was $" & to_hstring(to_unsigned(coreid+1,2)&"1"&
@@ -554,11 +557,21 @@ begin
         instruction.addressing_mode
           := get_addressing_modes("0"&std_logic_vector(byte_buffer(7 downto 0)));
       end if;      
+
       instruction.modifies_cpu_personality := false;
       instruction.cpu_personality := current_cpu_personality;
       instruction.bytes.opcode := byte_buffer(7 downto 0);
       instruction.bytes.arg1 := byte_buffer(15 downto 8);
 
+      if consumed_bytes /= 3 then
+        -- Set upper byte of address field to B register, so that we can treat
+        -- ZP and ABS addressing modes equivalently. (Also gives us the option
+        -- of having another CPU personality that allows (ABS),Y etc).
+        instruction.bytes.arg2 := regs.b;
+      else
+        instruction.bytes.arg2 := byte_buffer(23 downto 16);
+      end if;
+      
       if  (address_redirecting = false) and
         (instruction.instruction_flags.do_branch
          and (not instruction.instruction_flags.do_branch_conditional)) then
@@ -569,38 +582,43 @@ begin
       end if; 
       
       if bytes_ready > 2 then
+        -- If we have more than 2 bytes, we know we have enough for any instruction
         instruction.translated := instruction_address;
-        instruction.bytes.arg2 := byte_buffer(23 downto 16);
+        report "FETCH" & integer'image(coreid)
+          & " setting instruction.translated to $ " & to_hstring(instruction_address);
+
       else
-        instruction.translated := (others => '1');
-        -- Set upper byte of address field to B register, so that we can treat
-        -- ZP and ABS addressing modes equivalently. (Also gives us the option
-        -- of having another CPU personality that allows (ABS),Y etc).
-        instruction.bytes.arg2 := regs.b;
+        -- Magic value so that we can see when there were insufficient bytes.
+        -- XXX Should be (others => '1') when testing complete.
+        instruction.translated := x"FF0B1435";
+        report "FETCH" & integer'image(coreid)
+          & " invalidating instruction.translated";
       end if;
       instruction.pc := instruction_pc;
       instruction.pc_expected := next_pc;
       instruction.pc_mispredict := next_pc;
       instruction.branch_predict := false;
 
-      -- Work out possible PC values for JMP/JSR, as well as 8 and 16 bit
-      -- branch options.
-      branch8_pc <=
-        to_unsigned(65538 + to_integer(instruction_pc) + to_integer(
-          byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&
-          byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&
-          byte_buffer(15 downto 8)),16);
-      branch16_pc <=
-        to_unsigned(65539 + to_integer(instruction_pc) + to_integer(byte_buffer(23 downto 8)),16);
-      -- For those bizarre BBR/BBS instructions, where the branch is from the
-      -- 3rd byte of the instruction, not the 2nd
-      branch8_zp_pc <=
-        to_unsigned(65539 + to_integer(instruction_pc) + to_integer(
-          byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&
-          byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&
-          byte_buffer(23 downto 16)),16);
-      
-      instruction_out <= instruction;
+      if stall = false then
+        -- Work out possible PC values for JMP/JSR, as well as 8 and 16 bit
+        -- branch options.
+        branch8_pc <=
+          to_unsigned(65538 + to_integer(instruction_pc) + to_integer(
+            byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&
+            byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&byte_buffer(15)&
+            byte_buffer(15 downto 8)),16);
+        branch16_pc <=
+          to_unsigned(65539 + to_integer(instruction_pc) + to_integer(byte_buffer(23 downto 8)),16);
+        -- For those bizarre BBR/BBS instructions, where the branch is from the
+        -- 3rd byte of the instruction, not the 2nd
+        branch8_zp_pc <=
+          to_unsigned(65539 + to_integer(instruction_pc) + to_integer(
+            byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&
+            byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&byte_buffer(23)&
+            byte_buffer(23 downto 16)),16);
+        
+        instruction_out <= instruction;
+      end if;
     end if;
   end process;
 
