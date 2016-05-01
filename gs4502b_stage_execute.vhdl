@@ -346,6 +346,26 @@ begin
                       instruction_in.bytes.arg1);
           end if;
 
+          -- Flag setting instructions
+          if instruction_in.instruction_flags.do_set_e then
+            regs_out.flags.e := instruction_in.instruction_flags.do_set_flag;
+          end if;
+          if instruction_in.instruction_flags.do_set_i then
+            regs_out.flags.i := instruction_in.instruction_flags.do_set_flag;
+          end if;
+          if instruction_in.instruction_flags.do_set_d then
+            regs_out.flags.d := instruction_in.instruction_flags.do_set_flag;
+            renamed_out.flag_d := false;
+          end if;
+          if instruction_in.instruction_flags.do_set_c then
+            regs_out.flags.c := instruction_in.instruction_flags.do_set_flag;
+            renamed_out.flag_c := false;
+          end if;
+          if instruction_in.instruction_flags.do_set_v then
+            regs_out.flags.v := instruction_in.instruction_flags.do_set_flag;
+            renamed_out.flag_v := false;
+          end if;
+          
           if instruction_in.instruction_flags.do_branch_conditional
             and (
               (instruction_in.instruction_flags.branch_z
