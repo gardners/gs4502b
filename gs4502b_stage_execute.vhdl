@@ -118,7 +118,7 @@ begin
     variable regs_out : cpu_registers;
     variable renamed_out : instruction_resources;
     variable alu_res_int : alu_result;
-
+    variable index_register : unsigned(7 downto 0);
   begin
     if (rising_edge(cpuclock)) then
       
@@ -282,13 +282,18 @@ begin
           
           -- If the instruction is immediate, implied or accumulator mode,
           -- do ALU or register op as required
+          
           if instruction_in_extra_flags.cpx then
             alu_res_int := alu_op_cmp(regs.x,instruction_in.bytes.arg1);
-          elsif instruction_in_extra_flags.cpy then
+          end if;
+          if instruction_in_extra_flags.cpy then
             alu_res_int := alu_op_cmp(regs.y,instruction_in.bytes.arg1);
-          elsif instruction_in_extra_flags.cpz then
+          end if;
+          if instruction_in_extra_flags.cpz then
             alu_res_int := alu_op_cmp(regs.z,instruction_in.bytes.arg1);
-          else
+          end if;
+
+          if not instruction_in_extra_flags.compare_index_register then            
             -- ALU does a lot, so we need to feed it two duplicates of the accumulator
             -- so that the fanout isn't so wide that it causes significant
             -- propogation delays.
