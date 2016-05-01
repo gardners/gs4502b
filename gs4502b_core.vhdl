@@ -115,13 +115,13 @@ architecture behavioural of gs4502b_core is
   signal rom_from_colour_ram : std_logic := '0';
 
   -- General pipeline control
-  signal instruction_ready : std_logic := '0';
   signal expected_instruction_address : unsigned(31 downto 0)
     := "00001111000011110000111010101010";
   signal expected_instruction_pch : unsigned(15 downto 8) := "00000000";
 
   -- Signals output by prefetch stage
   signal stage_prefetch_instruction : instruction_information;
+  signal stage_prefetch_instruction_valid : boolean;
   signal branch8_pc : unsigned(15 downto 0);
   signal branch8_zp_pc : unsigned(15 downto 0);
   signal branch16_pc : unsigned(15 downto 0);
@@ -206,6 +206,7 @@ begin  -- behavioural
       prefetch_ready_to_accept_vector_request => prefetch_ready_to_accept_vector_request,
       
       instruction_out => stage_prefetch_instruction,
+      instruction_out_valid => stage_prefetch_instruction_valid,
       branch8_pc => branch8_pc,
       branch8_zp_pc => branch8_zp_pc,
       branch16_pc => branch16_pc,
@@ -239,6 +240,7 @@ begin  -- behavioural
       regs => reg_export,
 
       instruction_in => stage_prefetch_instruction,
+      instruction_in_valid => stage_prefetch_instruction_valid,
       branch8_pc => branch8_pc,
       branch8_zp_pc => branch8_zp_pc,
       branch16_pc => branch16_pc,
