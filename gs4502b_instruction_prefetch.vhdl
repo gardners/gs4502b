@@ -385,7 +385,8 @@ begin
         buffer_address <= buffer_address + consumed_bytes;
 
         report "I-FETCH" & integer'image(coreid)
-          & " : Updated: new_bytes_ready = " & integer'image(new_bytes_ready);
+          & " : Updated: new_bytes_ready = " & integer'image(new_bytes_ready)
+          & ", consumed_bytes = " & integer'image(consumed_bytes);
 
         instruction_address <= instruction_address + consumed_bytes;
         instruction_pc <= instruction_pc + consumed_bytes;        
