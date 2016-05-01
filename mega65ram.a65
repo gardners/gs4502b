@@ -74,8 +74,15 @@ simple_cpu_tests:
 		ldy #$23
 		lda ($10),Y
 		ldx #$07
-		nop
+		nop		
 		lda ($20,X)
+		; And test with several back to back, to make sure that pipeline
+		; buffering of vector fetches works properly.
+		lda ($30,X)
+		lda ($40,X)
+		lda ($50,X)
+		lda ($60,X)
+		lda ($70,X)
 
 
 endlessloop:
