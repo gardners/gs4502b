@@ -43,7 +43,7 @@ entity gs4502b_stage_decode is
 -- Output: Vector de-reference request to prefetch stage, which will schedule
 -- it in on the memory controller
     vector_fetch_address : out translated_address;
-    vector_fetch_transaction_id : out unsigned(4 downto 0);
+    vector_fetch_transaction_id : out unsigned(4 downto 0) := (others => '1');
 -- And from prefecth we get indication when they are ready to receive a vector
 -- from us.
     prefetch_ready_to_accept_vector_request : in boolean;
