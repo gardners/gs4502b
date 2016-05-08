@@ -9,15 +9,15 @@ struct flag_name {
 #include "extra_instruction_flags.h"
 
 #define I_LDAIMM NZ_FROM_I2|LDA|REG_OP
-#define I_LDXIMM NZ_FROM_I2|LDX|REG_OP
-#define I_LAXIMM NZ_FROM_I2|LDX|LDA|REG_OP
-#define I_LDYIMM NZ_FROM_I2|LDY|REG_OP
-#define I_LDZIMM NZ_FROM_I2|LDZ|REG_OP
+#define I_LDXIMM NZ_FROM_I2|LDX|REG_OP|INDIRECT_HOLD
+#define I_LAXIMM NZ_FROM_I2|LDX|LDA|REG_OP|INDIRECT_HOLD
+#define I_LDYIMM NZ_FROM_I2|LDY|REG_OP|INDIRECT_HOLD
+#define I_LDZIMM NZ_FROM_I2|LDZ|REG_OP|INDIRECT_HOLD
 #define I_LDA NOTHING
-#define I_LDX NOTHING
-#define I_LAX NOTHING
-#define I_LDY NOTHING
-#define I_LDZ NOTHING
+#define I_LDX NOTHING|INDIRECT_HOLD
+#define I_LAX NOTHING|INDIRECT_HOLD
+#define I_LDY NOTHING|INDIRECT_HOLD
+#define I_LDZ NOTHING|INDIRECT_HOLD
 #define I_STA NOTHING
 #define I_STX NOTHING
 #define I_SAX NOTHING
@@ -46,17 +46,17 @@ struct flag_name {
 #define I_SEI NOTHING
 #define I_CLV NOTHING
 
-#define I_PHA NOTHING
-#define I_PHP NOTHING
-#define I_PHX NOTHING
-#define I_PHY NOTHING
-#define I_PHZ NOTHING
+#define I_PHA NOTHING|INDIRECT_HOLD
+#define I_PHP NOTHING|INDIRECT_HOLD
+#define I_PHX NOTHING|INDIRECT_HOLD
+#define I_PHY NOTHING|INDIRECT_HOLD
+#define I_PHZ NOTHING|INDIRECT_HOLD
 
-#define I_PLA NOTHING
-#define I_PLP NOTHING
-#define I_PLX NOTHING
-#define I_PLY NOTHING
-#define I_PLZ NOTHING
+#define I_PLA NOTHING|INDIRECT_HOLD
+#define I_PLP NOTHING|INDIRECT_HOLD
+#define I_PLX NOTHING|INDIRECT_HOLD
+#define I_PLY NOTHING|INDIRECT_HOLD
+#define I_PLZ NOTHING|INDIRECT_HOLD
 
 #define I_BNE NOTHING
 #define I_BEQ NOTHING
@@ -70,13 +70,13 @@ struct flag_name {
 #define I_BBS NOTHING
 // we assume that pc_expected is branch address, pc_mispredict is return address,
 // so we JMP/BRA are effectively NOPs, while JSR/BSR just have to push the PC to stack.
-#define I_JSR NOTHING
-#define I_BSR NOTHING
+#define I_JSR NOTHING|INDIRECT_HOLD
+#define I_BSR NOTHING|INDIRECT_HOLD
 #define I_BRA NOTHING
 #define I_JMP NOTHING
-#define I_BRK NOTHING
-#define I_RTS NOTHING
-#define I_RTI NOTHING
+#define I_BRK NOTHING|INDIRECT_HOLD
+#define I_RTS NOTHING|INDIRECT_HOLD
+#define I_RTI NOTHING|INDIRECT_HOLD
 // We will use the same flag for MAP and EOM (NOP), and check the opcode to discern between them.
 #define I_MAP NOTHING
 #define I_EOM NOTHING
@@ -86,12 +86,12 @@ struct flag_name {
 #define I_NEG NEGA|REG_OP
 #define I_INCA INCA|NZ_FROM_A|REG_OP
 #define I_DECA DECA|NZ_FROM_A|REG_OP
-#define I_DEX DECX|NZ_FROM_X|REG_OP
-#define I_INX INCX|NZ_FROM_X|REG_OP
-#define I_DEY DECY|NZ_FROM_Y|REG_OP
-#define I_INY INCY|NZ_FROM_Y|REG_OP
-#define I_DEZ DECZ|NZ_FROM_Z|REG_OP
-#define I_INZ INCZ|NZ_FROM_Z|REG_OP
+#define I_DEX DECX|NZ_FROM_X|REG_OP|INDIRECT_HOLD
+#define I_INX INCX|NZ_FROM_X|REG_OP|INDIRECT_HOLD
+#define I_DEY DECY|NZ_FROM_Y|REG_OP|INDIRECT_HOLD
+#define I_INY INCY|NZ_FROM_Y|REG_OP|INDIRECT_HOLD
+#define I_DEZ DECZ|NZ_FROM_Z|REG_OP|INDIRECT_HOLD
+#define I_INZ INCZ|NZ_FROM_Z|REG_OP|INDIRECT_HOLD
 // Accumulator RMW instructions
 #define I_ASLA NZ_FROM_ALU|IS_ALU_OP
 #define I_ROLA NZ_FROM_ALU|IS_ALU_OP
@@ -113,19 +113,19 @@ struct flag_name {
 #define I_RMB NOTHING
 #define I_SMB NOTHING
 
-#define I_TAB TAB|REG_OP
-#define I_TAX TAX|NZ_FROM_A|REG_OP
-#define I_TAY TAY|NZ_FROM_A|REG_OP
-#define I_TAZ TAZ|NZ_FROM_A|REG_OP
+#define I_TAB TAB|REG_OP|INDIRECT_HOLD
+#define I_TAX TAX|NZ_FROM_A|REG_OP|INDIRECT_HOLD
+#define I_TAY TAY|NZ_FROM_A|REG_OP|INDIRECT_HOLD
+#define I_TAZ TAZ|NZ_FROM_A|REG_OP|INDIRECT_HOLD
 #define I_TBA TBA|NZ_FROM_B|REG_OP
 #define I_TXA TXA|NZ_FROM_X|REG_OP
 #define I_TYA TYA|NZ_FROM_Y|REG_OP
 #define I_TZA TZA|NZ_FROM_Z|REG_OP
 
-#define I_TYS TYS|REG_OP
-#define I_TSY TSY|NZ_FROM_SPH|REG_OP
-#define I_TXS TXS|REG_OP
-#define I_TSX TSX|NZ_FROM_SPL|REG_OP
+#define I_TYS TYS|REG_OP|INDIRECT_HOLD
+#define I_TSY TSY|NZ_FROM_SPH|REG_OP|INDIRECT_HOLD
+#define I_TXS TXS|REG_OP|INDIRECT_HOLD
+#define I_TSX TSX|NZ_FROM_SPL|REG_OP|INDIRECT_HOLD
 
 // The funny word-based operations. For now, we will trigger an exception,
 // and have the hypervisor implement them?
