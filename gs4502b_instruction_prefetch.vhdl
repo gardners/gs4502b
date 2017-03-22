@@ -30,6 +30,7 @@ use work.debugtools.all;
 use work.instructions.all;
 use work.addressing_modes.all;
 use work.instruction_equations.all;
+use work.extra_instruction_equations.all;
 use work.instruction_lengths.all;
 use work.alu.all;
 
@@ -549,11 +550,15 @@ begin
       if current_cpu_personality = CPU6502 then
         instruction.instruction_flags
           := get_instruction_flags("1"&std_logic_vector(byte_buffer(7 downto 0)));
+        instruction.instruction_extra_flags
+          := get_extra_instruction_flags("1"&std_logic_vector(byte_buffer(7 downto 0)));
         instruction.addressing_mode
           := get_addressing_modes("1"&std_logic_vector(byte_buffer(7 downto 0)));
       else
         instruction.instruction_flags
           := get_instruction_flags("0"&std_logic_vector(byte_buffer(7 downto 0)));
+        instruction.instruction_extra_flags
+          := get_extra_instruction_flags("0"&std_logic_vector(byte_buffer(7 downto 0)));
         instruction.addressing_mode
           := get_addressing_modes("0"&std_logic_vector(byte_buffer(7 downto 0)));
       end if;      

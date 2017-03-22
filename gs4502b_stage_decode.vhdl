@@ -49,6 +49,11 @@ entity gs4502b_stage_decode is
 -- And from prefecth we get indication when they are ready to receive a vector
 -- from us.
     prefetch_ready_to_accept_vector_request : in boolean;
+-- Flag to indicate if there are no pending mutations of the index/SP/B registers
+-- that would prevent us calculating any indirect address (note for simplicity,
+-- we use a single flag for all of these registers, instead of tracking the state
+-- separately for each, which could reduce the delay in some cases).
+    indirect_ready : in boolean;
     
     stall : in boolean;
     stalling : out boolean := false;
@@ -77,6 +82,9 @@ architecture behavioural of gs4502b_stage_decode is
   signal stall_buffer_occupied : boolean := false;
 
   signal vector_fetch_transaction_counter : unsigned(4 downto 0) := (others => '0');
+
+  signal indirect_fast_hold : boolean := false;
+  signal indirect_fast_hold_asserted : boolean := false;
   
 begin
 
@@ -97,9 +105,14 @@ begin
         " DECODE" & integer'image(coreid)
         & " stall = " & boolean'image(stall)
         & ", instruction_in_valid = " & boolean'image(instruction_in_valid)
-        & ", stall_buffer_occupied = " & boolean'image(stall_buffer_occupied);
+        & ", stall_buffer_occupied = " & boolean'image(stall_buffer_occupied)
+        & ", indirect_ready = " & boolean'image(indirect_ready)
+        & ", indirect_fast_hold = " & boolean'image(indirect_fast_hold);
       
-      if (stall = false) and (instruction_in_valid  or stall_buffer_occupied) then
+      if ((stall = false) and (instruction_in_valid  or stall_buffer_occupied))
+        and ((indirect_fast_hold = false)
+             or (instruction.addressing_mode.indirect = false))
+      then
         report "$" & to_hstring(instruction.translated) &
           " DECODE" & integer'image(coreid)
           & " : Not stalled. Decoding. reg_map_high="
@@ -132,7 +145,30 @@ begin
                                      rom_at_a000,
                                      rom_at_c000,
                                      rom_at_e000);
+        
+        report "DECODE" & integer'image(coreid)
+          & " : i.expected_translated = $"
+          & to_hstring(instruction.expected_translated);
 
+        if instruction.instruction_extra_flags.indirect_hold then
+          -- Remember if this instruction will mutate a register that could impact
+          -- on the calculation of an indirect operand
+          indirect_fast_hold <= true;
+          indirect_fast_hold_asserted <= true;
+        else
+          -- If not, then consider expiring indirect_fast_hold, if we know that
+          -- the last potentially indirect modifying instruction has cleared.
+
+          -- XXX Check should be done outside of stall-checked loop to avoid
+          -- unnecessary wait states.
+
+          indirect_fast_hold <= (not indirect_ready) or indirect_fast_hold_asserted;
+          
+          -- Also, note that we have not just seen such an instruction now, so
+          -- that we can do the calculation above taking this into account
+          indirect_fast_hold_asserted <= false;
+        end if;
+        
         -- Now work out the correct branch address from the options, by
         -- considering the addressing mode.
         -- XXX: Doesn't currently cover indirect (or indirect,X) JMP/JSR.

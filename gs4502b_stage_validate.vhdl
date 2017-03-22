@@ -110,13 +110,12 @@ entity gs4502b_stage_validate is
     vector_fetch_transaction_id : in unsigned(4 downto 0);
     vector_fetch_vector : in bytes4;
 
+-- Tell decode stage when we have safely processed all pending instructions
+-- that could mess with indirect address calculation.
+    indirect_ready : out boolean := true;
+
     regs : in cpu_registers;
-    
--- Tell memory controller about cache misses
-    cache_miss : out boolean := false;
-    cache_miss_address : out translated_address;
-    cache_miss_pch : out unsigned(15 downto 8);
-    
+        
 -- Output: 32-bit address source of instruction
     instruction_out : out instruction_information;
     alu_result_out : out alu_result;
@@ -129,7 +128,7 @@ entity gs4502b_stage_validate is
 -- Output: What resources does this instruction require and modify?
     resources_required_out : out instruction_resources;
     resources_modified_out : out instruction_resources;
-
+    
 -- Output: Stall signal to tell pipeline behind us to wait
     stalling : out boolean
     
@@ -172,6 +171,13 @@ architecture behavioural of gs4502b_stage_validate is
   signal stalled_instruction : instruction_information;
   signal stalled_resources_required : instruction_resources;
   signal stalled_resources_modified : instruction_resources;
+
+  signal indirect_ready_countdown : integer range 3 downto 0 := 0;
+  signal indirect_ready_instruction_countdown : integer range 3 downto 0 := 0;
+  signal indirect_ready_transaction_id : transaction_id;
+  signal indirect_ready_transaction_pending : boolean := false;
+
+  signal next_data_fetch_transaction_id : transaction_id := 0;
   
 begin
 
@@ -184,6 +190,11 @@ begin
     variable resources_required : instruction_resources;
     variable instruction : instruction_information;
     variable alu_reg : unsigned(7 downto 0) := x"00";
+
+    -- Flags that get set if we validate an instruction that will modify the
+    -- inputs to an indirect address computation
+    variable hold_indirect_fetch : boolean := false;
+    variable hold_indirect_regop : boolean := false;
   begin
     if (rising_edge(cpuclock)) then
 
@@ -194,43 +205,53 @@ begin
       if completed_transaction.valid = true then
         report "$" & to_hstring(last_instruction_expected_address) &
           " VALIDATE" & integer'image(coreid)
-          & " : Processing completed memory transaction.";
+          & " : Processing completed memory transaction (tid"
+          & integer'image(completed_transaction.id) & ").";
 
         if completed_transaction.id = reg_a_name then
           -- Must happen same cycle in execute: reg_a <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.a <= false;
+          report " VALIDATE" & integer'image(coreid) & "renamed reg A value arrived.";
         end if;
         if completed_transaction.id = reg_b_name then
           -- Must happen same cycle in execute: reg_b <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.b <= false;
+          report " VALIDATE" & integer'image(coreid) & "renamed reg B value arrived.";
         end if;
         if completed_transaction.id = reg_x_name then
           -- Must happen same cycle in execute: reg_x <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.x <= false;
+          report " VALIDATE" & integer'image(coreid) & "renamed reg X value arrived.";
         end if;
         if completed_transaction.id = reg_y_name then
           -- Must happen same cycle in execute: reg_y <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.y <= false;
+          report " VALIDATE" & integer'image(coreid) & "renamed reg Y value arrived.";
         end if;
         if completed_transaction.id = reg_z_name then
           -- Must happen same cycle in execute: reg_z <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.z <= false;
+          report " VALIDATE" & integer'image(coreid) & "renamed reg Z value arrived.";
         end if;
         if completed_transaction.id = flag_z_name then
           -- Must happen same cycle in execute: flag_z <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.flag_z <= false;
+          report " VALIDATE" & integer'image(coreid) & "renamed flag Z value arrived.";
         end if;
         if completed_transaction.id = flag_c_name then
           -- Must happen same cycle in execute: flag_c <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.flag_c <= false;
+          report " VALIDATE" & integer'image(coreid) & "renamed flag C value arrived.";
         end if;
         if completed_transaction.id = flag_n_name then
           -- Must happen same cycle in execute: flag_n <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.flag_n <= false;
+          report " VALIDATE" & integer'image(coreid) & "renamed flag N value arrived.";
         end if;
         if completed_transaction.id = flag_v_name then
           -- Must happen same cycle in execute: flag_v <= completed_transaction_value;
           resources_what_will_still_be_outstanding_next_cycle.flag_v <= false;
+          report " VALIDATE" & integer'image(coreid) & "renamed flag V value arrived.";
         end if;
       end if;
       
@@ -246,50 +267,60 @@ begin
         if resources_freshly_locked_by_execute_stage.a then
           reg_a_name <= resource_lock_transaction_id_in;
           resources_what_will_still_be_outstanding_next_cycle.a <= true;
+          report " VALIDATE" & integer'image(coreid) & "renaming reg A (tid"
+            & integer'image(resource_lock_transaction_id_in) & ".";
         end if;
         if resources_freshly_locked_by_execute_stage.b then
           reg_b_name <= resource_lock_transaction_id_in;
           resources_what_will_still_be_outstanding_next_cycle.b <= true;
+          report " VALIDATE" & integer'image(coreid) & "renaming reg B (tid"
+            & integer'image(resource_lock_transaction_id_in) & ".";
         end if;
         if resources_freshly_locked_by_execute_stage.x then
           reg_x_name <= resource_lock_transaction_id_in;
           resources_what_will_still_be_outstanding_next_cycle.x <= true;
+          report " VALIDATE" & integer'image(coreid) & "renaming reg X (tid"
+            & integer'image(resource_lock_transaction_id_in) & ".";
         end if;
         if resources_freshly_locked_by_execute_stage.y then
           reg_y_name <= resource_lock_transaction_id_in;
           resources_what_will_still_be_outstanding_next_cycle.y <= true;
+          report " VALIDATE" & integer'image(coreid) & "renaming reg Y (tid"
+            & integer'image(resource_lock_transaction_id_in) & ".";
         end if;
         if resources_freshly_locked_by_execute_stage.z then
           reg_z_name <= resource_lock_transaction_id_in;
           resources_what_will_still_be_outstanding_next_cycle.z <= true;
+          report " VALIDATE" & integer'image(coreid) & "renaming reg Z (tid"
+            & integer'image(resource_lock_transaction_id_in) & ".";
         end if;
         if resources_freshly_locked_by_execute_stage.flag_z then
           flag_z_name <= resource_lock_transaction_id_in;
           resources_what_will_still_be_outstanding_next_cycle.flag_z <= true;
+          report " VALIDATE" & integer'image(coreid) & "renaming flag Z (tid"
+            & integer'image(resource_lock_transaction_id_in) & ".";
         end if;
         if resources_freshly_locked_by_execute_stage.flag_c then
           flag_c_name <= resource_lock_transaction_id_in;
           resources_what_will_still_be_outstanding_next_cycle.flag_c <= true;
+          report " VALIDATE" & integer'image(coreid) & "renaming flag C (tid"
+            & integer'image(resource_lock_transaction_id_in) & ".";
         end if;
         if resources_freshly_locked_by_execute_stage.flag_v then
           flag_v_name <= resource_lock_transaction_id_in;
           resources_what_will_still_be_outstanding_next_cycle.flag_v <= true;
+          report " VALIDATE" & integer'image(coreid) & "renaming flag V (tid"
+            & integer'image(resource_lock_transaction_id_in) & ".";
         end if;
         if resources_freshly_locked_by_execute_stage.flag_n then
           flag_n_name <= resource_lock_transaction_id_in;
           resources_what_will_still_be_outstanding_next_cycle.flag_n
             <= true;
+          report " VALIDATE" & integer'image(coreid) & "renaming flag N (tid"
+            & integer'image(resource_lock_transaction_id_in) & ".";
         end if;
       end if;
 
-      -- For any incoming instruction, if the lower bits of the expected
-      -- address match the cache line, but the instruction address is wrong,
-      -- then this is a cache miss. The expected address can be from one of two
-      -- sources: (a) from the previous valid instruction; or (b) from the
-      -- execute stage of the CPU, if it is redirecting program flow.
-      -- (Note that we must also check the CPU personality, which as far as
-      -- cache address space is concerned, effectively represents a couple of
-      -- extra bits).
       if (instruction.translated = last_instruction_expected_address)
         and (instruction.cpu_personality = current_cpu_personality) then
         report "$" & to_hstring(last_instruction_expected_address) &
@@ -323,7 +354,6 @@ begin
       report "$" & to_hstring(last_instruction_expected_address) &
         " VALIDATE" & integer'image(coreid)
         & " : not stalled";
-
       
       if stall_buffer_occupied then
         -- Pass instruction from our stall buffer
@@ -346,6 +376,11 @@ begin
 
       end if;          
 
+      report "VALIDATE" & integer'image(coreid)
+        & " : i.expected_translated = $"
+        & to_hstring(instruction.expected_translated);
+
+      
       -- For unconditional jumps and branches, simply set the new PC
       if instruction.instruction_flags.do_branch
         and (not instruction.instruction_flags.do_branch_conditional) then
@@ -357,6 +392,10 @@ begin
       -- cycles incurred by taking a branch, especially a non-conditional
       -- once, where we know immediately that the branch will be taken.
       end if;
+
+      report "VALIDATE" & integer'image(coreid)
+        & " : i.expected_translated = $"
+        & to_hstring(instruction.expected_translated);
       
       -- In either case above, the stall buffer becomes empty
       stall_buffer_occupied <= false;
@@ -421,7 +460,7 @@ begin
         and (instruction.cpu_personality = current_cpu_personality) then
 
         report "VALIDATE" & integer'image(coreid)
-          & " : stalling upstream, due to unmet resource requirements to execute this instruction.";
+          & " : stalling upstream, due to unmet renamed resource requirements to execute this instruction.";
         report "  contributors: "
           & boolean'image(not_empty(resources_required and resources_about_to_be_locked_by_execute_stage)) & ", "
           & boolean'image(not_empty(resources_required and resources_what_will_still_be_outstanding_next_cycle)) & ", "
@@ -491,6 +530,8 @@ begin
         
         -- Tell downstream stage the instruction is not valid for execution.
         instruction_valid <= false;
+        report "VALIDATE" & integer'image(coreid)
+          & " : instruction_valid <= false due to renaming or mis-matched CPU personality.";
 
       else
         -- Instruction meets all requirements
@@ -507,6 +548,19 @@ begin
         -- be able to do so, but the delay will only be 1 cycle, as the
         -- actual resource locks will are read back from the execute stage.
         instruction_valid <= true;
+
+        -- Work out if we need to hold indirect address computation until this
+        -- instruction completes?
+        if instruction.translated = last_instruction_expected_address then
+          if instruction.instruction_extra_flags.indirect_hold and
+            instruction.instruction_flags.do_load then
+            hold_indirect_regop := true;
+            report "VALIDATE" & integer'image(coreid)
+              & " : Holding indirect address computation until this instruction completes (it will rename index registers).";
+          else
+            hold_indirect_regop := false;
+          end if;
+        end if;
       end if;
     else
       -- Pipeline stalled: hold existing values.
@@ -518,10 +572,53 @@ begin
       instruction_valid <= false;        
     end if;
 
+    hold_indirect_fetch := instruction.instruction_extra_flags.indirect_hold;
+    
     stalling <= will_stall;
     report "$" & to_hstring(last_instruction_expected_address) &
       " VALIDATE" & integer'image(coreid)
-      & " : setting stalling to " & boolean'image(will_stall);
+      & " : setting stalling to " & boolean'image(will_stall)
+      & ", hold_indirect_fetch = " & boolean'image(hold_indirect_fetch);
+
+    if instruction.instruction_extra_flags.indirect_hold then -- hold_indirect_fetch then
+      report "VALIDATE" & integer'image(coreid) & " : hold_indirect_fetch = true, hold tid = "& integer'image(next_data_fetch_transaction_id);
+      -- We need to wait until the CPU get the result of the memory transaction
+      -- associated with this instruction, and then allow 2 more cycles for it
+      -- to propogate back to the decode stage.
+      indirect_ready_transaction_id <= next_data_fetch_transaction_id;
+      indirect_ready_transaction_pending <= true;
+      indirect_ready_countdown <= 2;
+      indirect_ready <= false;
+    elsif hold_indirect_regop then
+      -- Wait until this instruction has passed by the EXECUTE stage.
+      -- EXECUTE could be stalled, however, so we can't just count cycles.
+      -- Instead we need to know when the EXECUTE stage has dispatched whatever
+      -- it is doing now, and also this instruction. So what we really need to
+      -- count is 2 cycles where the EXECUTE stage is not stalling, and then allow
+      -- 2 more cycles for it to propogate back to the decode stage.
+      indirect_ready_instruction_countdown <= 2;
+      indirect_ready_countdown <= 2;
+      indirect_ready <= false;
+      report "VALIDATE" & integer'image(coreid) & " : hold_indirect_regop = true, waiting for two cycles when execute is not stalled";
+    else
+      if (indirect_ready_transaction_pending and
+          indirect_ready_transaction_id = completed_transaction.id)
+        and (indirect_ready_instruction_countdown = 0) then
+        indirect_ready_transaction_pending <= false;
+        if indirect_ready_countdown >0 then
+          indirect_ready_countdown <= indirect_ready_countdown - 1;
+          indirect_ready <= false;
+        else
+          indirect_ready <= true;
+        end if;
+      else
+        if (indirect_ready_instruction_countdown > 0) and
+          (stall = false) then
+          indirect_ready_instruction_countdown
+            <= indirect_ready_instruction_countdown -1;
+        end if;
+      end if;
+    end if;
     
   end process;    
   

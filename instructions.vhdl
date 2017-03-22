@@ -4,6 +4,7 @@ use ieee.STD_LOGIC_1164.all;
 use ieee.numeric_std.all;
 use work.addressing_modes.all;
 use work.instruction_equations.all;
+use work.extra_instruction_equations.all;
 
 package instructions is
 
@@ -86,6 +87,7 @@ package instructions is
     -- Data computed from the opcode
     addressing_mode : addressing_mode;
     instruction_flags : instruction_flags;
+    instruction_extra_flags : extra_instruction_flags;
 
     -- Address of argument
     argument_address : unsigned(15 downto 0);

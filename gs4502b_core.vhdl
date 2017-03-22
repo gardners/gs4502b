@@ -150,6 +150,7 @@ architecture behavioural of gs4502b_core is
   signal stage_validate_resources_required : instruction_resources;
   signal stage_validate_resources_modified : instruction_resources;
   signal stage_validate_instruction_valid : boolean;
+  signal stage_validate_indirect_ready : boolean;
   signal instruction_address_is_as_expected : boolean;
   signal cache_miss : boolean;
   signal cache_miss_address : translated_address;
@@ -252,6 +253,7 @@ begin  -- behavioural
       vector_fetch_address => vector_fetch_address,
       vector_fetch_transaction_id => vector_fetch_transaction_id,
       prefetch_ready_to_accept_vector_request => prefetch_ready_to_accept_vector_request,
+      indirect_ready => stage_validate_indirect_ready,
       
       address_redirecting => stage_execute_redirecting,
       redirected_address => stage_execute_redirected_address,
@@ -297,6 +299,8 @@ begin  -- behavioural
       instruction_valid => stage_validate_instruction_valid,      
       instruction_address_is_as_expected => instruction_address_is_as_expected,
 
+      indirect_ready => stage_validate_indirect_ready,
+      
       resources_required_out => stage_validate_resources_required,
       resources_modified_out => stage_validate_resources_modified,
       stalling => validate_stalling
@@ -340,7 +344,7 @@ begin  -- behavioural
       redirected_pch => stage_execute_redirected_pch,
 
       completed_transaction => completed_transaction,
-
+      
       stalling => execute_stalling
       );
   end block;

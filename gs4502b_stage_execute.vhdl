@@ -76,7 +76,7 @@ entity gs4502b_stage_execute is
     
     -- What mode is the CPU currently in? (4502, 6502 or hypervisor)
     current_cpu_personality : out cpu_personality := CPU4502;
-
+    
     -- Tell validate stage to stall?
     stalling : out boolean := false
     );
@@ -261,7 +261,7 @@ begin
             & " : Executing instruction.";
           report "PC $" & to_hstring(reg_pch & reg_pcl) &
             " EXECUTE" & integer'image(coreid)
-            & " Inputs : " &
+            & " : Inputs : " &
             "A:" & to_hstring(regs.a) & " " &
             "X:" & to_hstring(regs.x) & " " &
             "Y:" & to_hstring(regs.y) & " " &
@@ -273,7 +273,7 @@ begin
             & disassemble_instruction(reg_pch & reg_pcl, instruction_in.bytes,
                                       personality)
             ;
-
+          
 
           -- XXX Not yet implemented!
           -- XXX While the below plumbs in the ALU, no special instructions, or
@@ -369,6 +369,7 @@ begin
             regs_out.flags.v := instruction_in.instruction_flags.do_set_flag;
             renamed_out.flag_v := false;
           end if;
+          report "EXECUTE" & integer'image(coreid) & " : checkpoint";
           
           if instruction_in.instruction_flags.do_branch_conditional
             and (
@@ -415,6 +416,9 @@ begin
             flush_cycles <= 1;
 
           else
+            report "EXECUTE" & integer'image(coreid) & " : checkpoint";
+
+
             -- Branch not taken
             if instruction_in.instruction_flags.do_branch_conditional = false then
               report "EXECUTE" & integer'image(coreid)
@@ -452,10 +456,12 @@ begin
             reg_pch <= instruction_in.pc_expected(15 downto 8);
             reg_pcl <= instruction_in.pc_expected(7 downto 0);
           end if;
+          report "EXECUTE" & integer'image(coreid) & " : checkpoint";
 
           -- XXX - Almost certainly not showing the correct PCH here: there
           -- should be a PCH for both expected and mispredict cases.
-          report "$" & to_hstring(expected_instruction_address) &
+          report "EXECUTE" & integer'image(coreid) & " : " &
+             "$" & to_hstring(expected_instruction_address) &
             " EXECUTE : Advancing PC to $" & to_hstring(instruction_in.pc_expected)
             & "($" & to_hstring(instruction_in.expected_translated) & ").";
           
@@ -464,8 +470,9 @@ begin
           -- XXX Need to work out the conditions under which this can occur.
           -- Is it only branch mis-predicts? If so, we can flag the mispredict
           -- when the mis-predict occurs.  This should be the case.
-          report "$" & to_hstring(expected_instruction_address) &
-            " EXECUTE : Ignoring validated instruction (wrong instruction address or CPU personality).";
+          report "EXECUTE" & integer'image(coreid) & " : " &
+             "$" & to_hstring(expected_instruction_address) &
+            " : Ignoring validated instruction (wrong instruction address or CPU personality).";
           
         end if;
         
