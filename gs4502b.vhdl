@@ -10,6 +10,7 @@ use work.addressing_modes.all;
 use work.instruction_equations.all;
 use work.instruction_lengths.all;
 use work.alu.all;
+use work.visualise.all;
 
 entity gs4502b is
   port (
@@ -167,5 +168,12 @@ begin
                  viciii_iomode => viciii_iomode
                  );
 
+  process (cpuclock, ioclock) is
+    variable ignored : boolean;
+  begin
+    ignored := visualise("gs4502b","reset",reset);
+    ignored := visualise("gs4502b","fetch_port_write",fetch_port_write);
+  end process;        
+  
 end behavioural;
   
