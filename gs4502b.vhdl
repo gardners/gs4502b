@@ -168,12 +168,39 @@ begin
                  viciii_iomode => viciii_iomode
                  );
 
-  process (cpuclock, ioclock) is
+  process (cpuclock) is
     variable ignored : boolean;
   begin
-    ignored := visualise("gs4502b","reset",reset);
-    ignored := visualise("gs4502b","fetch_port_write",fetch_port_write);
-  end process;        
-  
+    if rising_edge(cpuclock) then
+      ignored := visualise("gs4502b","cpuclock",cpuclock);
+      ignored := visualise("gs4502b","ioclock",ioclock);
+      ignored := visualise("gs4502b","reset",reset);
+      ignored := visualise("gs4502b","fetch_port_write",fetch_port_write);
+      ignored := visualise("gs4502b","rom_at_8000",rom_at_8000);
+      ignored := visualise("gs4502b","rom_at_a000",rom_at_a000);
+      ignored := visualise("gs4502b","rom_at_c000",rom_at_c000);
+      ignored := visualise("gs4502b","rom_at_e000",rom_at_e000);
+      ignored := visualise("gs4502b","viciii_iomode",viciii_iomode);
+      ignored := visualise("gs4502b","fastio_rdata",fastio_rdata);
+      ignored := visualise("gs4502b","monitor_core_id",monitor_core_id);
+      ignored := visualise("gs4502b","fetch_ports_in(0)",fetch_ports_in(0));
+      ignored := visualise("gs4502b","fetch_ports_in(1)",fetch_ports_in(1));
+      ignored := visualise("gs4502b","fetch_ports_in(2)",fetch_ports_in(2));
+      ignored := visualise("gs4502b","fetch_ports_out(0)",fetch_ports_out(0));
+      ignored := visualise("gs4502b","fetch_ports_out(1)",fetch_ports_out(1));
+      ignored := visualise("gs4502b","fetch_ports_out(2)",fetch_ports_out(2));
+      ignored := visualise("gs4502b","mem_ports_in(0)",mem_ports_in(0));
+      ignored := visualise("gs4502b","mem_ports_in(1)",mem_ports_in(1));
+      ignored := visualise("gs4502b","mem_ports_in(2)",mem_ports_in(2));
+      ignored := visualise("gs4502b","mem_ports_out(0)",mem_ports_out(0));
+      ignored := visualise("gs4502b","mem_ports_out(1)",mem_ports_out(1));
+      ignored := visualise("gs4502b","mem_ports_out(2)",mem_ports_out(2));
+      ignored := visualise("gs4502b","primary_core_boost",
+                           to_std_logic(primary_core_boost));
+      ignored := visualise("gs4502b","monitor_pcs(0)",monitor_pcs(0));
+      ignored := visualise("gs4502b","monitor_pcs(1)",monitor_pcs(1));
+      ignored := visualise("gs4502b","monitor_pcs(2)",monitor_pcs(2));
+    end if;
+  end process;  
 end behavioural;
   
