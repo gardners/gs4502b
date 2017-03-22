@@ -8,6 +8,8 @@ package debugtools is
     function to_string(sv: Std_Logic_Vector) return string;
     function to_hstring(sv: Std_Logic_Vector) return string;
     function to_hstring(sv: unsigned) return string;
+    function to_std_Logic(L: BOOLEAN) return std_logic;
+
     procedure HWRITE(L:inout LINE; VALUE:in BIT_VECTOR;
     JUSTIFIED:in SIDE := RIGHT; FIELD:in WIDTH := 0);
 
@@ -79,5 +81,13 @@ package body debugtools is
       return to_hstring(std_logic_vector(sv));
     end;
 
+    function to_std_Logic(L: BOOLEAN) return std_logic is 
+    begin 
+        if l then 
+            return('1'); 
+        else 
+            return('0'); 
+        end if; 
+    end function to_std_Logic; 
       
 end debugtools;
