@@ -109,19 +109,18 @@ begin
                mem_port2_out => mem_ports_out(2)
                );
 
-  cpu_cores: for core in 0 to 2 generate
-    thecore: entity work.gs4502b_core
-      port map ( coreid => core,
+    core0: entity work.gs4502b_core
+      port map ( coreid => 0,
                  cpuclock => cpuclock,                 
                  reset => reset,
                  primary_core_boost => primary_core_boost,
                  
-                 monitor_pc => monitor_pcs(core),
+                 monitor_pc => monitor_pcs(0),
 
-                 fetch_port_read => fetch_ports_out(core),
-                 fetch_port_write => fetch_ports_in(core),
-                 mem_port_read => mem_ports_out(core),
-                 mem_port_write => mem_ports_in(core),
+                 fetch_port_read => fetch_ports_out(0),
+                 fetch_port_write => fetch_ports_in(0),
+                 mem_port_read => mem_ports_out(0),
+                 mem_port_write => mem_ports_in(0),
 
                  rom_at_8000 => rom_at_8000,
                  rom_at_a000 => rom_at_a000,
@@ -129,7 +128,44 @@ begin
                  rom_at_e000 => rom_at_e000,
                  viciii_iomode => viciii_iomode
                  );
-  end generate cpu_cores;
+    core1: entity work.gs4502b_core
+      port map ( coreid => 1,
+                 cpuclock => cpuclock,                 
+                 reset => reset,
+                 primary_core_boost => primary_core_boost,
+                 
+                 monitor_pc => monitor_pcs(1),
+
+                 fetch_port_read => fetch_ports_out(1),
+                 fetch_port_write => fetch_ports_in(1),
+                 mem_port_read => mem_ports_out(1),
+                 mem_port_write => mem_ports_in(1),
+
+                 rom_at_8000 => rom_at_8000,
+                 rom_at_a000 => rom_at_a000,
+                 rom_at_c000 => rom_at_c000,
+                 rom_at_e000 => rom_at_e000,
+                 viciii_iomode => viciii_iomode
+                 );
+    core2: entity work.gs4502b_core
+      port map ( coreid => 2,
+                 cpuclock => cpuclock,                 
+                 reset => reset,
+                 primary_core_boost => primary_core_boost,
+                 
+                 monitor_pc => monitor_pcs(2),
+
+                 fetch_port_read => fetch_ports_out(2),
+                 fetch_port_write => fetch_ports_in(2),
+                 mem_port_read => mem_ports_out(2),
+                 mem_port_write => mem_ports_in(2),
+
+                 rom_at_8000 => rom_at_8000,
+                 rom_at_a000 => rom_at_a000,
+                 rom_at_c000 => rom_at_c000,
+                 rom_at_e000 => rom_at_e000,
+                 viciii_iomode => viciii_iomode
+                 );
 
 end behavioural;
   
