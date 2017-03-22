@@ -38,9 +38,21 @@ int vhdl_structure_discover(int depth,char *file,struct entity **e)
     if (sscanf(line,"%*[ ]%[^:]: entity work.%s",
 	       name,class)==2) {
       for(int i=0;i<depth;i++) fprintf(stderr,"  ");
-      fprintf(stderr,"'%s' is a '%s'\n",name,class);
+      fprintf(stderr," '%s' is a '%s'\n",name,class);
       vhdl_structure_discover(depth+1,class,e);
     }
+    if (sscanf(line,"%*[ ]%[^ ] : in %[^:;\( \r\n];",name,class)==2)
+      {
+	for(int i=0;i<depth;i++) fprintf(stderr,"  ");
+	fprintf(stderr,"input signal '%s' of type '%s'\n",name,class);
+      }
+    if (sscanf(line,"%*[ ]signal %[^ ] : %[^:;\( \r\n];",name,class)==2)
+      {
+	for(int i=0;i<depth;i++) fprintf(stderr,"  ");
+	fprintf(stderr,"internal signal '%s' of type '%s'\n",name,class);
+      }
+
+    
     line[0]=0; fgets(line,1024,f);
   }
   fclose(f);
