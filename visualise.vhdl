@@ -12,7 +12,6 @@ use work.alu.all;
 package visualise is
 
   function visualise(e : string; s : string; v : boolean) return boolean;
-  function visualise(e : string; s : string; v : std_ulogic) return boolean;
   function visualise(e : string; s : string; v : std_logic) return boolean;
   function visualise(e : string; s : string; v : std_logic_vector) return boolean;
   function visualise(e : string; s : string; v : unsigned) return boolean;
@@ -34,12 +33,6 @@ package body visualise is
   function visualise(e : string; s : string; v : std_logic) return boolean is
   begin
     report "VISUALISE:" & e & ":" & s & ":bit:" & std_logic'image(v);
-    return true;
-  end function;
-
-  function visualise(e : string; s : string; v : std_ulogic) return boolean is
-  begin
-    report "VISUALISE:" & e & ":" & s & ":bit:" & std_ulogic'image(v);
     return true;
   end function;
 

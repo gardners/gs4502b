@@ -82,6 +82,29 @@ int vhdl_structure_discover(int depth,char *file,struct entity **e)
 
 int main(int argc,char **argv)
 {
+  // Build model of the system
   vhdl_structure_discover(0,"gs4502b",&model);
+
+  fprintf(stderr,"Read model.\n");
+  
+  // Watch for VISUALISE lines in output of ghdl, and generate our visualisations
+  // from that, whenever time advances.
+  // The lines have a format like:
+  // visualise.vhdl:75:5:@1625ns:(report note): VISUALISE:gs4502b:mem_ports_in(2):mem_port_in:false
+  char line[1024],module[1024],signal[1024],type[1024],value[1024];
+  long long timestamp;
+  line[0]=0; fgets(line,1024,stdin);
+  while(line[0]) {
+    int r=sscanf(line,
+		 "%*[^:]:%*d:%*d:@%lldns:(report note):"
+		 " VISUALISE:%[^:]:%[^:]:%[^:]:%[^\r\n]",
+		 &timestamp,module,signal,type,value);
+    if (r==5) {
+      fprintf(stderr,"%lldns:%s:%s:%s:%s\n",
+	      timestamp,module,signal,type,value);
+    }
+    line[0]=0; fgets(line,1024,stdin);
+  }
+  
   return 0;
 }
