@@ -38,9 +38,6 @@ visualise:	visualise.c Makefile
 simulate:	cpu_test
 	./cpu_test || $(GHDL) -r cpu_test
 
-simulateandlog:	cpu_test
-	./cpu_test --vcd=newcpu.vcd || $(GHDL) --vcd=newcpu.vcd -r cpu_test
-
 transfer:
 	cd .. ;	scp newcpu/* 192.168.56.102:newcpu/ ; scp -r newcpu/newcpu/* 192.168.56.102:newcpu/newcpu/
 

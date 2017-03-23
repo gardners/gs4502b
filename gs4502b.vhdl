@@ -79,6 +79,7 @@ begin
     port map ( cpuclock => cpuclock,
                ioclock => ioclock,
                primary_core_boost => primary_core_boost,
+               entity_name => "gs4502b.mem_control",
 
                -- FastIO interface
                fastio_address => fastio_address,
@@ -112,6 +113,7 @@ begin
 
     core0: entity work.gs4502b_core
       port map ( coreid => 0,
+                 entity_name => "gs4502b.core0",
                  cpuclock => cpuclock,                 
                  reset => reset,
                  primary_core_boost => primary_core_boost,
@@ -131,6 +133,7 @@ begin
                  );
     core1: entity work.gs4502b_core
       port map ( coreid => 1,
+                 entity_name => "gs4502b.core1",
                  cpuclock => cpuclock,                 
                  reset => reset,
                  primary_core_boost => primary_core_boost,
@@ -150,6 +153,7 @@ begin
                  );
     core2: entity work.gs4502b_core
       port map ( coreid => 2,
+                 entity_name => "gs4502b.core2",
                  cpuclock => cpuclock,                 
                  reset => reset,
                  primary_core_boost => primary_core_boost,

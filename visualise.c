@@ -105,13 +105,15 @@ int vhdl_structure_discover(int depth,char *name,char *file,struct entity **e)
     }
     if (sscanf(line,"%*[ ]%[^ ] : in %[^:;\( \r\n];",name,class)==2)
       {
-	fprintf(o,"      ignored := visualise(\"%s\",\"%s\",%s);\n",
-		file,name,name);
+	if (strcmp(name,"entity_name"))
+	  fprintf(o,"      ignored := visualise(entity_name,\"%s\",%s);\n",
+		  name,name);
       }
     if (sscanf(line,"%*[ ]signal %[^ ] : %[^:;\( \r\n];",name,class)==2)
       {
-	fprintf(o,"      ignored := visualise(\"%s\",\"%s\",%s);\n",
-		file,name,name);
+	if (strcmp(name,"entity_name"))
+	  fprintf(o,"      ignored := visualise(entity_name,\"%s\",%s);\n",
+		  name,name);
       }
 
     

@@ -16,6 +16,7 @@ char *top=
 "use ieee.numeric_std.all;\n"
 "use Std.TextIO.all;\n"
 "use work.debugtools.all;\n"
+"use work.visualise.all;\n"
 " \n"
 "entity ram0 is\n"
 "port (\n"
@@ -26,6 +27,8 @@ char *top=
 "    a_din   : in  std_logic_vector(8 downto 0);\n"
 "    a_dout  : out std_logic_vector(8 downto 0);\n"
 "     \n"
+"    entity_name : in string;\n"
+"     \n"  
 "    -- Port B\n"
 "    b_clk   : in  std_logic;\n"
 "    b_wr    : in  std_logic;\n"
@@ -68,7 +71,20 @@ char *bottom=
 "    end if;\n"
 "end process;\n"
 " \n"
-"end rtl;\n";
+"  process (a_addr,b_addr,a_din,b_din) is\n"
+"    variable ignored : boolean;\n"
+"  begin\n"
+"      ignored := visualise(entity_name,\"a_clk\",a_clk);\n"
+"      ignored := visualise(entity_name,\"a_wr\",a_wr);\n"
+"      ignored := visualise(entity_name,\"a_addr\",a_addr);\n"
+"      ignored := visualise(entity_name,\"a_din\",a_din);\n"
+"      ignored := visualise(entity_name,\"b_clk\",b_clk);\n"
+"      ignored := visualise(entity_name,\"b_wr\",b_wr);\n"
+"      ignored := visualise(entity_name,\"b_addr\",b_addr);\n"
+"      ignored := visualise(entity_name,\"b_din\",b_din);\n"
+"  end process;\n"
+"\n"
+  "end rtl;\n";
 
 int main(int argc,char **argv)
 {

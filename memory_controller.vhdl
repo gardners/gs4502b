@@ -33,6 +33,8 @@ entity memory_controller is
     ioclock : in std_logic;
     primary_core_boost : in boolean;
 
+    entity_name : in string;
+
     -- Fastio interface
     fastio_address : out unsigned(19 downto 0) := (others => '0');
     fastio_rdata : in unsigned(7 downto 0);
@@ -156,16 +158,24 @@ architecture behavioural of memory_controller is
 
     return vout;
   end function;
+
+  constant ram0name : string :=  entity_name & ".ram0";
+  constant ram1name : string :=  entity_name & ".ram1";
+  constant ram2name : string :=  entity_name & ".ram2";
+  constant ram3name : string :=  entity_name & ".ram3";
   
 begin      
+
   
-  ram: entity work.ram0
+  ram0: entity work.ram0
     port map ( a_clk => cpuclock,
                a_wr => '0',
                a_addr => ram_interfaces(0).iaddr,
                a_din => (others => '0'),
                a_dout => irdata0,
 
+               entity_name => ram0name,
+               
                b_clk => cpuclock,
                b_wr => ram_interfaces(0).mwrite,
                b_addr => ram_interfaces(0).maddr,
@@ -179,6 +189,8 @@ begin
                a_addr => ram_interfaces(1).iaddr,
                a_din => (others => '0'),
                a_dout => irdata1,
+
+               entity_name => ram1name,
 
                b_clk => cpuclock,
                b_wr => ram_interfaces(1).mwrite,
@@ -194,6 +206,8 @@ begin
                a_din => (others => '0'),
                a_dout => irdata2,
 
+               entity_name => ram2name,
+
                b_clk => cpuclock,
                b_wr => ram_interfaces(2).mwrite,
                b_addr => ram_interfaces(2).maddr,
@@ -207,6 +221,8 @@ begin
                a_addr => ram_interfaces(3).iaddr,
                a_din => (others => '0'),
                a_dout => irdata3,
+
+               entity_name => ram3name,
 
                b_clk => cpuclock,
                b_wr => ram_interfaces(3).mwrite,

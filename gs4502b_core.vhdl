@@ -94,7 +94,9 @@ ENTITY gs4502b_core IS
     reset : in std_logic;
     
     primary_core_boost : in boolean;
-  
+
+    entity_name : in string;
+    
     monitor_PC : out unsigned(15 downto 0);
 
     fetch_port_read : in fetch_port_out;
