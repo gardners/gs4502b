@@ -23,7 +23,39 @@ struct entity {
 
 struct entity *model=NULL;
 
-int vhdl_structure_discover(int depth,char *file,struct entity **e)
+struct signal {
+  char *node;
+  char *name;
+  char value[1024];
+  int changed;
+};
+
+#define MAX_SIGNALS 65536
+int signal_count=0;
+struct signal signals[MAX_SIGNALS];
+
+int log_signal(char *node,char *signal,char *type,char *value)
+{
+  for(int i=0;i<signal_count;i++)
+    {
+      if (!strcmp(signals[i].node,node))
+	if (!strcmp(signals[i].name,signal))
+	  {
+	    if (!strcasecmp(value,signals[i].value))
+	      signals[i].changed=1;	    
+	    strcpy(signals[i].value,value);
+	    return 0;
+	  }
+    }
+  if (signal_count>=MAX_SIGNALS) return -1;
+  signals[signal_count].node=strdup(node);
+  signals[signal_count].name=strdup(signal);
+  signals[signal_count].changed=1;
+  strcpy(signals[signal_count++].value,value);
+  return 0;
+}
+
+int vhdl_structure_discover(int depth,char *name,char *file,struct entity **e)
 {
   char filename[1024];
   snprintf(filename,1024,"%s.vhdl",file);
@@ -32,6 +64,19 @@ int vhdl_structure_discover(int depth,char *file,struct entity **e)
     fprintf(stderr,"ERROR: Could not open '%s'\n",filename);
     return -1;
   }
+
+  for(int i=0;i<depth;i++) fprintf(stderr,"  ");
+  fprintf(stderr," '%s' is a '%s'\n",name,file);
+
+  struct entity *ee=calloc(sizeof(struct entity),1);
+  struct entity **eee=e;
+  ee->name=strdup(name);
+  ee->class=strdup(file);
+  while(*eee) {
+    eee=&(*eee)->next;
+  }
+  *eee=ee;
+
   
   char line[1024];
 
@@ -55,20 +100,8 @@ int vhdl_structure_discover(int depth,char *file,struct entity **e)
     char name[1024];
     char class[1024];
     if (sscanf(line,"%*[ ]%[^:]: entity work.%s",
-	       name,class)==2) {
-      for(int i=0;i<depth;i++) fprintf(stderr,"  ");
-      fprintf(stderr," '%s' is a '%s'\n",name,class);
-
-      struct entity *ee=calloc(sizeof(struct entity),1);
-      struct entity **eee=e;
-      ee->name=strdup(name);
-      ee->class=strdup(class);
-      while(*eee) {
-	eee=&(*eee)->next;
-      }
-      *eee=ee;
-      
-      vhdl_structure_discover(depth+1,class,&ee->children);
+	       name,class)==2) {      
+      vhdl_structure_discover(depth+1,name,class,&ee->children);
     }
     if (sscanf(line,"%*[ ]%[^ ] : in %[^:;\( \r\n];",name,class)==2)
       {
@@ -96,11 +129,34 @@ int vhdl_structure_discover(int depth,char *file,struct entity **e)
 int emit_entity(FILE *f,int depth,char *prefix,struct entity *e)
 {
   char node[1024];
-  snprintf(node,1024,"%s.%s",prefix,e->name);
 
-  
+  if (prefix[0])
+    snprintf(node,1024,"%s.%s",prefix,e->name);
+  else
+    snprintf(node,1024,"%s",e->name);
+  fprintf(stderr,"emit_entity('%s')\n",node);
+    
   for(int i=0;i<depth;i++) fprintf(f,"  ");
   fprintf(f,"<div class=entity id=\"%s\">\n",node);
+  for(int i=0;i<=depth;i++) fprintf(f,"  ");
+  fprintf(f,"<div class=entitytitle>%s</div>\n",node);
+
+  for(int i=0;i<=depth;i++) fprintf(f,"  ");
+  fprintf(f,"<div class=signallist>\n");
+ 
+  for(int i=0;i<signal_count;i++) {
+    if (!strcmp(signals[i].node,node)) {
+      for(int i=0;i<=depth;i++) fprintf(f,"  ");
+      fprintf(f,"<div class=signal%s id=\"%s.%s\">%s = %s</div>\n",
+	      signals[i].changed?"updated":"",
+	      signals[i].node,signals[i].name,
+	      signals[i].name,signals[i].value);
+    }
+  }
+
+  for(int i=0;i<=depth;i++) fprintf(f,"  ");
+  fprintf(f,"</div>\n");
+
   // Process children
   struct entity *c=e->children;
   if (c) {
@@ -123,7 +179,20 @@ int generate_frame(long long timestep)
   snprintf(filename,1024,"html/frame%d.html",frame_number);
   FILE *f=fopen(filename,"w");
   if (!f) return -1;
-  emit_entity(f,0,"gs4502b",model);
+
+  fprintf(f,"<html><head>\n");
+  fprintf(f,"  <link rel=\"stylesheet\" type=\"text/css\" href=\"frame.css\"></head>\n");
+  fprintf(f,"<body>\n");
+  emit_entity(f,0,"",model);
+  fprintf(f,"</body>\n</html>\n");
+  fclose(f);
+
+  for(int i=0;i<signal_count;i++)
+    fprintf(stderr,"signal #%d : '%s' '%s' '%s'\n",
+	    i,signals[i].node,signals[i].name,signals[i].value);
+
+  // Clear change flags on signals
+  for(int i=0;i<signal_count;i++) signals[i].changed=0;
   
   return 0;
 }
@@ -131,7 +200,7 @@ int generate_frame(long long timestep)
 int main(int argc,char **argv)
 {
   // Build model of the system
-  vhdl_structure_discover(0,"gs4502b",&model);
+  vhdl_structure_discover(0,"gs4502b","gs4502b",&model);
 
   fprintf(stderr,"Read model.\n");
   
@@ -152,6 +221,7 @@ int main(int argc,char **argv)
     if (r==5) {
       fprintf(stderr,"%lldns:%s:%s:%s:%s\n",
 	      timestamp,module,signal,type,value);
+      log_signal(module,signal,type,value);
       if (timestamp!=last_timestamp&&last_timestamp>-1) {
 	fprintf(stderr,"Time has advanced to %lldns\n",timestamp);
 	generate_frame(last_timestamp);

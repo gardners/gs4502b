@@ -1,0 +1,45 @@
+div {
+    border: thin;
+    border-color: black;
+    border-style: solid;
+    margin: 8;
+    padding: 8;
+    display: inline-block;
+}
+
+div.signallist {
+    border-style: none;
+    margin: 0 0 0 2;
+    padding: 0;
+    display: block;
+}
+
+div.entity {
+    border: thin;
+    border-color: black;
+    border-style: solid;
+    margin: 8;
+    padding: 0;
+}
+
+div.signal {
+    border-style: none;
+    margin: 2 2 2 0;
+    padding: 8;
+    background-color: #e0e0e0;
+    display: inline-block;
+}
+
+div.signalupdated {
+    border-style: solid;
+    margin: 2 2 2 0;
+    padding: 8;
+    background-color: #ffff60;
+}
+
+div.entitytitle {
+    margin: 0;
+    background-color: black;
+    color: white;
+    display: block;
+}
