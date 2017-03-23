@@ -11,9 +11,12 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 struct entity {
   char *name;
+  char *class;
   struct entity *children;
   struct entity *next;
 };
@@ -55,7 +58,17 @@ int vhdl_structure_discover(int depth,char *file,struct entity **e)
 	       name,class)==2) {
       for(int i=0;i<depth;i++) fprintf(stderr,"  ");
       fprintf(stderr," '%s' is a '%s'\n",name,class);
-      vhdl_structure_discover(depth+1,class,e);
+
+      struct entity *ee=calloc(sizeof(struct entity),1);
+      struct entity **eee=e;
+      ee->name=strdup(name);
+      ee->class=strdup(class);
+      while(*eee) {
+	eee=&(*eee)->next;
+      }
+      *eee=ee;
+      
+      vhdl_structure_discover(depth+1,class,&ee->children);
     }
     if (sscanf(line,"%*[ ]%[^ ] : in %[^:;\( \r\n];",name,class)==2)
       {
@@ -80,6 +93,41 @@ int vhdl_structure_discover(int depth,char *file,struct entity **e)
   return 0;
 }
 
+int emit_entity(FILE *f,int depth,char *prefix,struct entity *e)
+{
+  char node[1024];
+  snprintf(node,1024,"%s.%s",prefix,e->name);
+
+  
+  for(int i=0;i<depth;i++) fprintf(f,"  ");
+  fprintf(f,"<div class=entity id=\"%s\">\n",node);
+  // Process children
+  struct entity *c=e->children;
+  if (c) {
+    emit_entity(f,depth+1,node,c);
+  }
+  for(int i=0;i<depth;i++) fprintf(f,"  ");
+  fprintf(f,"</div>\n");
+
+  if (e->next) {
+    emit_entity(f,depth,prefix,e->next);
+  }
+  return 0;
+}
+
+int frame_number=0;
+
+int generate_frame(long long timestep)
+{
+  char filename[1024];
+  snprintf(filename,1024,"html/frame%d.html",frame_number);
+  FILE *f=fopen(filename,"w");
+  if (!f) return -1;
+  emit_entity(f,0,"gs4502b",model);
+  
+  return 0;
+}
+
 int main(int argc,char **argv)
 {
   // Build model of the system
@@ -93,6 +141,8 @@ int main(int argc,char **argv)
   // visualise.vhdl:75:5:@1625ns:(report note): VISUALISE:gs4502b:mem_ports_in(2):mem_port_in:false
   char line[1024],module[1024],signal[1024],type[1024],value[1024];
   long long timestamp;
+
+  long long last_timestamp=-1;
   line[0]=0; fgets(line,1024,stdin);
   while(line[0]) {
     int r=sscanf(line,
@@ -102,6 +152,11 @@ int main(int argc,char **argv)
     if (r==5) {
       fprintf(stderr,"%lldns:%s:%s:%s:%s\n",
 	      timestamp,module,signal,type,value);
+      if (timestamp!=last_timestamp&&last_timestamp>-1) {
+	fprintf(stderr,"Time has advanced to %lldns\n",timestamp);
+	generate_frame(last_timestamp);
+      }
+      last_timestamp=timestamp;
     }
     line[0]=0; fgets(line,1024,stdin);
   }
