@@ -38,7 +38,7 @@ entity gs4502b_instruction_prefetch is
   port (
     cpuclock : in std_logic;
     reset : in std_logic;
-    coreid : in integer range 0 to 2;
+    coreid : in integer;
     primary_core_boost : in boolean;
 
     current_cpu_personality : in cpu_personality;

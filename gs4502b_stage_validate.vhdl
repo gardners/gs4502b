@@ -81,7 +81,7 @@ use work.extra_instruction_equations.all;
 entity gs4502b_stage_validate is
   port (
     cpuclock : in std_logic;
-    coreid : in integer range 0 to 2;
+    coreid : in integer;
     
 -- Input: translated address of instruction in memory
     instruction_in : in instruction_information;

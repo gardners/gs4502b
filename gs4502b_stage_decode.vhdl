@@ -20,7 +20,7 @@ use work.alu.all;
 entity gs4502b_stage_decode is
   port (
     cpuclock : in std_logic;
-    coreid : in integer range 0 to 2;
+    coreid : in integer;
 
     current_cpu_personality : in cpu_personality;
 

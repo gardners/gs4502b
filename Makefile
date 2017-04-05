@@ -20,7 +20,7 @@ SIMULATIONFILES=	cpu_test.vhdl \
 			disassemble.vhdl \
 			visualise.vhdl
 
-GHDL=/usr/local/ghdl-0.34/bin/ghdl
+GHDL=/usr/local/bin/ghdl
 
 clean:
 	rm *.o *.cf cpu_test makeram

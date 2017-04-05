@@ -43,7 +43,7 @@ entity gs4502b_stage_execute is
     cpuclock : in std_logic;
     stall : in boolean;
     reset : in std_logic;
-    coreid : in integer range 0 to 2;
+    coreid : in integer;
 
     monitor_pc : out unsigned(15 downto 0);
 
@@ -546,6 +546,8 @@ begin
             reg_pch <= x"83";
             reg_pcl <= x"00";
             -- XXX No hypervisor on auxiliary cores
+          when others =>
+            -- No other cases
         end case;
 
         
