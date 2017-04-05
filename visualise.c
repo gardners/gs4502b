@@ -14,6 +14,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+int frame_number=0;
+
 struct entity {
   char *name;
   char *class;
@@ -137,11 +139,17 @@ int emit_entity(FILE *f,int depth,char *prefix,struct entity *e)
   else
     snprintf(node,1024,"%s",e->name);
   fprintf(stderr,"emit_entity('%s')\n",node);
+  fprintf(f,"<a name=\"%s\"></a>\n",node);
     
   for(int i=0;i<depth;i++) fprintf(f,"  ");
   fprintf(f,"<div class=entity id=\"%s\">\n",node);
   for(int i=0;i<=depth;i++) fprintf(f,"  ");
-  fprintf(f,"<div class=entitytitle>%s</div>\n",node);
+  fprintf(f,"<div class=entitytitle>%s ",node);
+    fprintf(f,"<div class=navitem><a href=\"frame%d.html#%s\">&lt;</a></div>"
+	    " <div class=navitem><a href=\"frame%d.html#%s\">&gt;</a></div>\n",
+	    frame_number?frame_number-1:0,node,frame_number+1,node);
+
+    fprintf(f,"</div>\n");
 
   for(int i=0;i<=depth;i++) fprintf(f,"  ");
   fprintf(f,"<div class=signallist>\n");
@@ -173,8 +181,6 @@ int emit_entity(FILE *f,int depth,char *prefix,struct entity *e)
   return 0;
 }
 
-int frame_number=0;
-
 int generate_frame(long long timestep)
 {
   char filename[1024];
@@ -187,9 +193,17 @@ int generate_frame(long long timestep)
   fprintf(f,"  <link rel=\"stylesheet\" type=\"text/css\" href=\"frame.css\"></head>\n");
   fprintf(f,"<body>\n");
 
+#if 0
   // Include navigation between frames
-  fprintf(f,"<div class=navbar><a href=frame%d.html>Previous frame</a> <a href=frame%d.html>Next frame</a></div>\n",
+  fprintf(f,"<div class=navbar><a href=\"frame%d.html\"+window.location.hash>Previous frame</a> <a href=\"frame%d.html\"+window.location.hash>Next frame</a></div>\n",
 	  frame_number?frame_number-1:0,frame_number+1);
+  fprintf(f,"<div class=navbarunder><a href=\"frame%d.html\"+window.location.hash>Previous frame</a> <a href=\"frame%d.html\"+window.location.hash>Next frame</a></div>\n",
+	  frame_number?frame_number-1:0,frame_number+1);
+#endif
+
+  fprintf(f,"<div class=navbar>%lld ns</div>\n",
+	  timestep);
+
   
   emit_entity(f,0,"",model);
   fprintf(f,"</body>\n</html>\n");

@@ -44,9 +44,38 @@ div.entitytitle {
     display: block;
 }
 
+div.navitem {
+    margin: 0;
+    background-color: #e0e0e0;
+    color: black;
+    display: inline-block;
+}
+
+a:link {
+    text-decoration: none;
+    color: black;
+}
+
+
+
 div.navbar {
     border-style: solid;
     margin: 2 2 2 0;
     padding: 8;
+    background-color: #d0ffd0;
+    position: fixed;
+    top: 0;
+    right: 32;
+    display: inline;
+    align: right;
+}
+
+div.navbarunder {
+    border-style: solid;
+    margin: 2 2 2 2;
+    padding: 8;
     background-color: #d0d0d0;    
+    width: 100%;
+    display: inline;
+    visibility: hidden;
 }
