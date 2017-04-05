@@ -43,3 +43,10 @@ div.entitytitle {
     color: white;
     display: block;
 }
+
+div.navbar {
+    border-style: solid;
+    margin: 2 2 2 0;
+    padding: 8;
+    background-color: #d0d0d0;    
+}

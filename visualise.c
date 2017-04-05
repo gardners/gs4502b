@@ -41,7 +41,7 @@ int log_signal(char *node,char *signal,char *type,char *value)
       if (!strcmp(signals[i].node,node))
 	if (!strcmp(signals[i].name,signal))
 	  {
-	    if (!strcasecmp(value,signals[i].value))
+	    if (strcasecmp(value,signals[i].value))
 	      signals[i].changed=1;	    
 	    strcpy(signals[i].value,value);
 	    return 0;
@@ -186,6 +186,11 @@ int generate_frame(long long timestep)
   fprintf(f,"<html><head>\n");
   fprintf(f,"  <link rel=\"stylesheet\" type=\"text/css\" href=\"frame.css\"></head>\n");
   fprintf(f,"<body>\n");
+
+  // Include navigation between frames
+  fprintf(f,"<div class=navbar><a href=frame%d.html>Previous frame</a> <a href=frame%d.html>Next frame</a></div>\n",
+	  frame_number?frame_number-1:0,frame_number+1);
+  
   emit_entity(f,0,"",model);
   fprintf(f,"</body>\n</html>\n");
   fclose(f);
