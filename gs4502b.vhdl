@@ -76,10 +76,11 @@ begin
   monitor_pc <= monitor_pcs(to_integer(monitor_core_id));
   
   mem_control: entity work.memory_controller
+    generic map ( entity_name => "gs4502b.mem_control" )
+
     port map ( cpuclock => cpuclock,
                ioclock => ioclock,
                primary_core_boost => primary_core_boost,
-               entity_name => "gs4502b.mem_control",
 
                -- FastIO interface
                fastio_address => fastio_address,
