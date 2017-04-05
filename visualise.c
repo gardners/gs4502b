@@ -179,6 +179,7 @@ int generate_frame(long long timestep)
 {
   char filename[1024];
   snprintf(filename,1024,"html/frame%d.html",frame_number);
+  fprintf(stderr,"Writing to %s\n",filename);
   FILE *f=fopen(filename,"w");
   if (!f) return -1;
 
@@ -195,6 +196,8 @@ int generate_frame(long long timestep)
 
   // Clear change flags on signals
   for(int i=0;i<signal_count;i++) signals[i].changed=0;
+
+  frame_number++;
   
   return 0;
 }
