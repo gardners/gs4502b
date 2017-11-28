@@ -37,8 +37,12 @@ use work.instructions.all;
 use work.alu.all;
 use work.extra_instruction_equations.all;
 use work.disassemble.all;
+use work.instruction_lengths.all;
 
 entity gs4502b_stage_execute is
+  generic (
+    entity_name : in string
+    );
   port (
     cpuclock : in std_logic;
     stall : in boolean;
@@ -118,8 +122,37 @@ begin
     variable renamed_out : instruction_resources;
     variable alu_res_int : alu_result;
     variable index_register : unsigned(7 downto 0);
+
+    variable ignored : boolean;
   begin
     if (rising_edge(cpuclock)) then
+
+      ignored := visualise(entity_name,"cpuclock",cpuclock);
+      ignored := visualise(entity_name,"stall",stall);
+      ignored := visualise(entity_name,"reset",reset);
+      ignored := visualise(entity_name,"coreid",coreid);
+      ignored := visualise(entity_name,"instruction_in",instruction_in);
+      ignored := visualise(entity_name,"instruction_in_extra_flags",instruction_in_extra_flags);
+      ignored := visualise(entity_name,"instruction_valid",instruction_valid);
+      ignored := visualise(entity_name,"instruction_address_is_as_expected",instruction_address_is_as_expected);
+      ignored := visualise(entity_name,"completed_transaction",completed_transaction);
+      ignored := visualise(entity_name,"personality",personality);
+      ignored := visualise(entity_name,"reg_pcl",reg_pcl);
+      ignored := visualise(entity_name,"reg_pch",reg_pch);
+      ignored := visualise(entity_name,"regs",regs);
+      ignored := visualise(entity_name,"reg_map_lo",reg_map_lo);
+      ignored := visualise(entity_name,"reg_map_hi",reg_map_hi);
+      ignored := visualise(entity_name,"reg_offset_lo",reg_offset_lo);
+      ignored := visualise(entity_name,"reg_offset_hi",reg_offset_hi);
+      ignored := visualise(entity_name,"reg_mb_lo",reg_mb_lo);
+      ignored := visualise(entity_name,"reg_mb_hi",reg_mb_hi);
+      ignored := visualise(entity_name,"port_ddr",port_ddr);
+      ignored := visualise(entity_name,"port_value",port_value);
+      ignored := visualise(entity_name,"expected_instruction_address",expected_instruction_address);
+      ignored := visualise(entity_name,"renamed_resources",renamed_resources);
+      ignored := visualise(entity_name,"res_names",res_names);
+      ignored := visualise(entity_name,"flushing_pipeline",flushing_pipeline);
+      ignored := visualise(entity_name,"flush_cycles",flush_cycles);
       
       -- Make copy of registers and register renaming info for mutation.
       regs_out := regs;

@@ -18,6 +18,9 @@ use work.address_translator.all;
 use work.alu.all;
 
 entity gs4502b_stage_decode is
+  generic (
+    entity_name : in string
+    );
   port (
     cpuclock : in std_logic;
     coreid : in integer;
@@ -92,8 +95,42 @@ begin
     variable next_line : unsigned(9 downto 0);
     variable instruction : instruction_information;
     variable branch_pc : unsigned(15 downto 0);
+    variable ignored : boolean;
   begin
     if (rising_edge(cpuclock)) then
+      
+      ignored := visualise(entity_name,"cpuclock",cpuclock);
+      ignored := visualise(entity_name,"coreid",coreid);
+      ignored := visualise(entity_name,"current_cpu_personality",current_cpu_personality);
+      ignored := visualise(entity_name,"instruction_in",instruction_in);
+      ignored := visualise(entity_name,"instruction_in_valid",instruction_in_valid);
+      ignored := visualise(entity_name,"branch8_pc",branch8_pc);
+      ignored := visualise(entity_name,"branch16_pc",branch16_pc);
+      ignored := visualise(entity_name,"branch8_zp_pc",branch8_zp_pc);
+      ignored := visualise(entity_name,"regs",regs);
+      ignored := visualise(entity_name,"address_redirecting",address_redirecting);
+      ignored := visualise(entity_name,"redirected_address",redirected_address);
+      ignored := visualise(entity_name,"prefetch_ready_to_accept_vector_request",prefetch_ready_to_accept_vector_request);
+      ignored := visualise(entity_name,"indirect_ready",indirect_ready);
+      ignored := visualise(entity_name,"stall",stall);
+      ignored := visualise(entity_name,"reg_mb_low",reg_mb_low);
+      ignored := visualise(entity_name,"reg_offset_low",reg_offset_low);
+      ignored := visualise(entity_name,"reg_map_low",reg_map_low);
+      ignored := visualise(entity_name,"reg_mb_high",reg_mb_high);
+      ignored := visualise(entity_name,"reg_map_high",reg_map_high);
+      ignored := visualise(entity_name,"reg_offset_high",reg_offset_high);
+      ignored := visualise(entity_name,"cpuport_value",cpuport_value);
+      ignored := visualise(entity_name,"cpuport_ddr",cpuport_ddr);
+      ignored := visualise(entity_name,"rom_at_8000",rom_at_8000);
+      ignored := visualise(entity_name,"rom_at_a000",rom_at_a000);
+      ignored := visualise(entity_name,"rom_at_c000",rom_at_c000);
+      ignored := visualise(entity_name,"rom_at_e000",rom_at_e000);
+      ignored := visualise(entity_name,"viciii_iomode",viciii_iomode);
+      ignored := visualise(entity_name,"stalled_instruction",stalled_instruction);
+      ignored := visualise(entity_name,"stall_buffer_occupied",stall_buffer_occupied);
+      ignored := visualise(entity_name,"vector_fetch_transaction_counter",vector_fetch_transaction_counter);
+      ignored := visualise(entity_name,"indirect_fast_hold",indirect_fast_hold);
+      ignored := visualise(entity_name,"indirect_fast_hold_asserted",indirect_fast_hold_asserted);
       
       if stall_buffer_occupied then
         instruction := stalled_instruction;

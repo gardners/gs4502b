@@ -8,12 +8,10 @@ use work.debugtools.all;
 use work.instruction_equations.all;
 use work.instructions.all;
 use work.extra_instruction_equations.all;
+use work.instruction_lengths.all;
 
 package alu is
 
-  subtype instruction_length is integer range 1 to 3;
-  type ilens4 is array (0 to 3) of instruction_length;
-  type bytes4 is array (0 to 3) of std_logic_vector(8 downto 0);
   
   type fetch_port_in is record
     valid : boolean;

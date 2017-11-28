@@ -77,12 +77,16 @@ use work.debugtools.all;
 use work.instructions.all;
 use work.alu.all;
 use work.extra_instruction_equations.all;
+use work.instruction_lengths.all;
 
 entity gs4502b_stage_validate is
+  generic (
+    entity_name : in string
+    );
   port (
     cpuclock : in std_logic;
     coreid : in integer;
-    
+
 -- Input: translated address of instruction in memory
     instruction_in : in instruction_information;
     instruction_in_valid : in boolean;
@@ -195,9 +199,55 @@ begin
     -- inputs to an indirect address computation
     variable hold_indirect_fetch : boolean := false;
     variable hold_indirect_regop : boolean := false;
+
+    variable ignored : boolean;
   begin
     if (rising_edge(cpuclock)) then
 
+ignored := visualise(entity_name,"cpuclock",cpuclock);
+      ignored := visualise(entity_name,"coreid",coreid);
+      ignored := visualise(entity_name,"instruction_in",instruction_in);
+      ignored := visualise(entity_name,"instruction_in_valid",instruction_in_valid);
+      ignored := visualise(entity_name,"resources_required_in",resources_required_in);
+      ignored := visualise(entity_name,"resources_modified_in",resources_modified_in);
+      ignored := visualise(entity_name,"stall",stall);
+      ignored := visualise(entity_name,"resources_freshly_locked_by_execute_stage",resources_freshly_locked_by_execute_stage);
+      ignored := visualise(entity_name,"resource_lock_transaction_id_in",resource_lock_transaction_id_in);
+      ignored := visualise(entity_name,"resource_lock_transaction_valid_in",resource_lock_transaction_valid_in);
+      ignored := visualise(entity_name,"current_cpu_personality",current_cpu_personality);
+      ignored := visualise(entity_name,"address_redirecting",address_redirecting);
+      ignored := visualise(entity_name,"redirected_address",redirected_address);
+      ignored := visualise(entity_name,"redirected_pch",redirected_pch);
+      ignored := visualise(entity_name,"completed_transaction",completed_transaction);
+      ignored := visualise(entity_name,"vector_fetch_transaction_id",vector_fetch_transaction_id);
+      ignored := visualise(entity_name,"vector_fetch_vector",vector_fetch_vector);
+      ignored := visualise(entity_name,"regs",regs);
+      ignored := visualise(entity_name,"resources_about_to_be_locked_by_execute_stage",resources_about_to_be_locked_by_execute_stage);
+      ignored := visualise(entity_name,"reg_a_name",reg_a_name);
+      ignored := visualise(entity_name,"reg_x_name",reg_x_name);
+      ignored := visualise(entity_name,"reg_b_name",reg_b_name);
+      ignored := visualise(entity_name,"reg_y_name",reg_y_name);
+      ignored := visualise(entity_name,"reg_z_name",reg_z_name);
+      ignored := visualise(entity_name,"reg_spl_name",reg_spl_name);
+      ignored := visualise(entity_name,"reg_sph_name",reg_sph_name);
+      ignored := visualise(entity_name,"flag_z_name",flag_z_name);
+      ignored := visualise(entity_name,"flag_c_name",flag_c_name);
+      ignored := visualise(entity_name,"flag_v_name",flag_v_name);
+      ignored := visualise(entity_name,"flag_n_name",flag_n_name);
+      ignored := visualise(entity_name,"last_instruction_expected_address",last_instruction_expected_address);
+      ignored := visualise(entity_name,"last_instruction_expected_pch",last_instruction_expected_pch);
+      ignored := visualise(entity_name,"resources_what_will_still_be_outstanding_next_cycle",resources_what_will_still_be_outstanding_next_cycle);
+      ignored := visualise(entity_name,"stall_buffer_occupied",stall_buffer_occupied);
+      ignored := visualise(entity_name,"stall_out_current",stall_out_current);
+      ignored := visualise(entity_name,"stalled_instruction",stalled_instruction);
+      ignored := visualise(entity_name,"stalled_resources_required",stalled_resources_required);
+      ignored := visualise(entity_name,"stalled_resources_modified",stalled_resources_modified);
+      ignored := visualise(entity_name,"indirect_ready_countdown",indirect_ready_countdown);
+      ignored := visualise(entity_name,"indirect_ready_instruction_countdown",indirect_ready_instruction_countdown);
+ignored := visualise(entity_name,"indirect_ready_transaction_id",indirect_ready_transaction_id);
+ignored := visualise(entity_name,"indirect_ready_transaction_pending",indirect_ready_transaction_pending);
+      ignored := visualise(entity_name,"next_data_fetch_transaction_id",next_data_fetch_transaction_id);
+      
       -- Watch for memory transactions coming in, so that we can commit and
       -- unlock registers and flags as required.
       -- XXX Don't modify resources that will be also modified by the execute

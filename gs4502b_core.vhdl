@@ -87,6 +87,7 @@ use work.instructions.all;
 use work.alu.all;
 use work.extra_instruction_equations.all;
 use work.visualise.all;
+use work.instruction_lengths.all;
 
 ENTITY gs4502b_core IS
   PORT (
@@ -187,6 +188,9 @@ architecture behavioural of gs4502b_core is
 begin  -- behavioural
   
   instruction_prefetcher: entity work.gs4502b_instruction_prefetch
+    generic map (
+      entity_name => entity_name & ".instruction_prefetch"
+      )
     port map (
       cpuclock => cpuclock,
       reset => reset,
@@ -224,6 +228,9 @@ begin  -- behavioural
   to_stop_ghdl_bug: block
   begin
   decode_stage: entity work.gs4502b_stage_decode
+    generic map (
+      entity_name => entity_name & ".decode"
+      )
     port map (
       cpuclock => cpuclock,
       coreid => coreid,
@@ -269,6 +276,9 @@ begin  -- behavioural
   also_to_stop_ghdl_bug: block
   begin
   validate_stage: entity work.gs4502b_stage_validate
+    generic map (
+      entity_name => entity_name & ".validate"
+      )
     port map (
       cpuclock => cpuclock,
       coreid => coreid,
@@ -314,6 +324,9 @@ begin  -- behavioural
   and_this_one_too: block
   begin
   execute_stage: entity work.gs4502b_stage_execute
+    generic map (
+      entity_name => entity_name & ".execute"
+    )
     port map (
       cpuclock => cpuclock,
       reset => reset,
@@ -374,36 +387,16 @@ begin  -- behavioural
       ignored := visualise(entity_name,"branch8_zp_pc",branch8_zp_pc);
       ignored := visualise(entity_name,"branch16_pc",branch16_pc);
       ignored := visualise(entity_name,"prefetch_ready_to_accept_vector_request",prefetch_ready_to_accept_vector_request);
-      ignored := visualise(entity_name,"stage_decode_instruction",stage_decode_instruction);
-      ignored := visualise(entity_name,"stage_decode_instruction_valid",stage_decode_instruction_valid);
-      ignored := visualise(entity_name,"stage_decode_cache_line_number",stage_decode_cache_line_number);
-      ignored := visualise(entity_name,"stage_decode_resources_required",stage_decode_resources_required);
-      ignored := visualise(entity_name,"stage_decode_resources_modified",stage_decode_resources_modified);
-      ignored := visualise(entity_name,"stage_decode_instruction_information",stage_decode_instruction_information);
       ignored := visualise(entity_name,"decode_stalling",decode_stalling);
       ignored := visualise(entity_name,"vector_fetch_address",vector_fetch_address);
       ignored := visualise(entity_name,"vector_fetch_transaction_id",vector_fetch_transaction_id);
       ignored := visualise(entity_name,"vector_fetch_out_transaction_id",vector_fetch_out_transaction_id);
       ignored := visualise(entity_name,"vector_fetch_out_bytes",vector_fetch_out_bytes);
-      ignored := visualise(entity_name,"validate_stalling",validate_stalling);
-      ignored := visualise(entity_name,"stage_validate_instruction",stage_validate_instruction);
-      ignored := visualise(entity_name,"stage_validate_extra_instruction_flags",stage_validate_extra_instruction_flags);
-      ignored := visualise(entity_name,"stage_validate_resources_required",stage_validate_resources_required);
-      ignored := visualise(entity_name,"stage_validate_resources_modified",stage_validate_resources_modified);
-      ignored := visualise(entity_name,"stage_validate_instruction_valid",stage_validate_instruction_valid);
-      ignored := visualise(entity_name,"stage_validate_indirect_ready",stage_validate_indirect_ready);
       ignored := visualise(entity_name,"instruction_address_is_as_expected",instruction_address_is_as_expected);
       ignored := visualise(entity_name,"cache_miss",cache_miss);
       ignored := visualise(entity_name,"cache_miss_address",cache_miss_address);
       ignored := visualise(entity_name,"cache_miss_pch",cache_miss_pch);
       ignored := visualise(entity_name,"execute_stalling",execute_stalling);
-      ignored := visualise(entity_name,"stage_execute_resources_locked",stage_execute_resources_locked);
-      ignored := visualise(entity_name,"stage_execute_transaction_id",stage_execute_transaction_id);
-      ignored := visualise(entity_name,"stage_execute_transaction_valid",stage_execute_transaction_valid);
-      ignored := visualise(entity_name,"stage_execute_cpu_personality",stage_execute_cpu_personality);
-      ignored := visualise(entity_name,"stage_execute_redirecting",stage_execute_redirecting);
-      ignored := visualise(entity_name,"stage_execute_redirected_address",stage_execute_redirected_address);
-      ignored := visualise(entity_name,"stage_execute_redirected_pch",stage_execute_redirected_pch);
       ignored := visualise(entity_name,"reg_export",reg_export);
       ignored := visualise(entity_name,"completed_transaction",completed_transaction);
       ignored := visualise(entity_name,"memory_stalling",memory_stalling);

@@ -33,8 +33,13 @@ use work.instruction_equations.all;
 use work.extra_instruction_equations.all;
 use work.instruction_lengths.all;
 use work.alu.all;
+use work.visualise.all;
 
 entity gs4502b_instruction_prefetch is
+  generic (
+    entity_name : in string
+    );
+
   port (
     cpuclock : in std_logic;
     reset : in std_logic;
@@ -85,9 +90,6 @@ architecture behavioural of gs4502b_instruction_prefetch is
   signal instruction_address : translated_address := (others => '0');
   signal instruction_pc : unsigned(15 downto 0) := x"8100";
 
-  -- 16 byte buffer for fetching instructions from memory
-  constant BYTE_BUFFER_WIDTH : integer := 16;
-  type ilens is array (0 to BYTE_BUFFER_WIDTH) of integer;
   signal ilen_buffer : ilens;
   signal byte_buffer : unsigned((8*BYTE_BUFFER_WIDTH)-1 downto 0);
   signal bytes_ready : integer range 0 to 16 := 0;
@@ -109,16 +111,6 @@ architecture behavioural of gs4502b_instruction_prefetch is
   
   -- Delayed signals to tell us which address and values of chip/fast RAM we are
   -- reading in a given cycle
-  type prefetch_byte is record
-    byte : std_logic_vector(8 downto 0);
-    ilen : length_of_instruction;
-  end record;
-  type prefetch_vector is array ( 0 to 3 ) of prefetch_byte;
-  type prefetch_buffer is record
-    v : prefetch_vector;
-    address : translated_address;
-    user_flags : std_logic_vector(7 downto 0);
-  end record;
   
   signal fetch_buffer_1 : prefetch_buffer;
   signal fetch_buffer_now : prefetch_buffer;
@@ -151,9 +143,44 @@ begin
 
     variable vector_fetch_address : translated_address;
     variable vector_fetch_transaction_id : unsigned(4 downto 0);
+
+    variable ignored : boolean;
   begin
     if rising_edge(cpuclock) then
 
+      ignored := visualise(entity_name,"current_cpu_personality",current_cpu_personality);
+      ignored := visualise(entity_name,"address_redirecting",address_redirecting);
+      ignored := visualise(entity_name,"redirected_address",redirected_address);
+      ignored := visualise(entity_name,"redirected_pch",redirected_pch);
+      ignored := visualise(entity_name,"regs",regs);
+      ignored := visualise(entity_name,"stall",stall);
+      ignored := visualise(entity_name,"vector_fetch_address_in",vector_fetch_address_in);
+      ignored := visualise(entity_name,"vector_fetch_transaction_id_in",vector_fetch_transaction_id_in);
+      ignored := visualise(entity_name,"fetch_port_read",fetch_port_read);
+      ignored := visualise(entity_name,"instruction_address",instruction_address);
+      ignored := visualise(entity_name,"instruction_pc",instruction_pc);
+      ignored := visualise(entity_name,"ilen_buffer",ilen_buffer);
+      ignored := visualise(entity_name,"byte_buffer",byte_buffer);
+      ignored := visualise(entity_name,"bytes_ready",bytes_ready);
+      ignored := visualise(entity_name,"buffer_address",buffer_address);
+      ignored := visualise(entity_name,"fetch_address",fetch_address);
+      ignored := visualise(entity_name,"burst_fetch",burst_fetch);
+      ignored := visualise(entity_name,"dispatched_bytes",dispatched_bytes);
+      ignored := visualise(entity_name,"desired_address",desired_address);
+      ignored := visualise(entity_name,"ifetch_transaction_counter",ifetch_transaction_counter);
+      ignored := visualise(entity_name,"ifetch_expected_transaction_counter",ifetch_expected_transaction_counter);
+      ignored := visualise(entity_name,"last_vector_fetch_transaction_id",last_vector_fetch_transaction_id);
+      ignored := visualise(entity_name,"vector_fetch_stall_buffer_occupied",vector_fetch_stall_buffer_occupied);
+      ignored := visualise(entity_name,"vector_fetch_stall_buffer_transaction_id",vector_fetch_stall_buffer_transaction_id);
+      ignored := visualise(entity_name,"vector_fetch_stall_buffer_address",vector_fetch_stall_buffer_address);
+      ignored := visualise(entity_name,"fetch_buffer_1",fetch_buffer_1);
+      ignored := visualise(entity_name,"fetch_buffer_now",fetch_buffer_now);
+      ignored := visualise(entity_name,"fetch_buffer_now_valid",fetch_buffer_now_valid);
+      ignored := visualise(entity_name,"opcode_high_bit",opcode_high_bit);
+      ignored := visualise(entity_name,"fetched_last_cycle",fetched_last_cycle);
+      ignored := visualise(entity_name,"end_of_trace",end_of_trace);
+      ignored := visualise(entity_name,"space_for_bytes",space_for_bytes);
+      
       -- Only mark fetch port in use when we push something new to it.
       fetch_port_used := false;
       

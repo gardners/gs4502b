@@ -6,11 +6,14 @@ use ieee.numeric_std.all;
 use work.debugtools.all;
 use work.instruction_equations.all;
 use work.instructions.all;
+use work.instruction_lengths.all;
 use work.extra_instruction_equations.all;
 use work.alu.all;
 
 package visualise is
 
+  function visualise(e : string; s : string; v : prefetch_buffer) return boolean;
+  function visualise(e : string; s : string; v : ilens) return boolean;
   function visualise(e : string; s : string; v : string) return boolean;
   function visualise(e : string; s : string; v : boolean) return boolean;
   function visualise(e : string; s : string; v : std_logic) return boolean;
@@ -33,6 +36,44 @@ end package;
 
 package body visualise is
 
+  function visualise(e : string; s : string; v : prefetch_buffer) return boolean is
+  begin
+    report "VISUALISE:" & e & ":" & s & ":prefetch_buffer:"
+      & "[" & to_hstring(v.v(0).byte) & "/" & integer'image(v.v(0).ilen) & ","
+            & to_hstring(v.v(1).byte) & "/" & integer'image(v.v(1).ilen) & ","
+            & to_hstring(v.v(2).byte) & "/" & integer'image(v.v(2).ilen) & ","
+            & to_hstring(v.v(3).byte) & "/" & integer'image(v.v(3).ilen)
+      & "] @ "
+      & to_hstring(v.address)
+      & ", flags=" & to_string(v.user_flags);
+                                      
+    return true;
+  end function;       
+
+  
+  function visualise(e : string; s : string; v : ilens) return boolean is
+  begin
+    report "VISUALISE:" & e & ":" & s & ":ilens:"
+      & integer'image(v(0)) & ","
+      & integer'image(v(1)) & ","
+      & integer'image(v(2)) & ","
+      & integer'image(v(3)) & ","
+      & integer'image(v(4)) & ","
+      & integer'image(v(5)) & ","
+      & integer'image(v(6)) & ","
+      & integer'image(v(7)) & ","
+      & integer'image(v(8)) & ","
+      & integer'image(v(9)) & ","
+      & integer'image(v(10)) & ","
+      & integer'image(v(11)) & ","
+      & integer'image(v(12)) & ","
+      & integer'image(v(13)) & ","
+      & integer'image(v(14)) & ","
+      & integer'image(v(15)) & ","
+      ;
+    return true;
+  end function;
+  
   function visualise(e : string; s : string; v : string) return boolean is
   begin
     report "VISUALISE:" & e & ":" & s & ":string:" & v;
