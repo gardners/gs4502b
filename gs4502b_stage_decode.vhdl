@@ -16,6 +16,8 @@ use work.instructions.all;
 use work.instruction_equations.all;
 use work.address_translator.all;
 use work.alu.all;
+use work.instruction_lengths.all;
+use work.visualise.all;
 
 entity gs4502b_stage_decode is
   generic (

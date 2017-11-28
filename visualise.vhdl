@@ -12,6 +12,7 @@ use work.alu.all;
 
 package visualise is
 
+  function visualise(e : string; s : string; v : resource_names) return boolean;
   function visualise(e : string; s : string; v : prefetch_buffer) return boolean;
   function visualise(e : string; s : string; v : ilens) return boolean;
   function visualise(e : string; s : string; v : string) return boolean;
@@ -36,6 +37,24 @@ end package;
 
 package body visualise is
 
+  function visualise(e : string; s : string; v : resource_names) return boolean is
+  begin
+    report "VISUALISE:" & e & ":" & s & ":resource_names:"
+      & "regs a=" & integer'image(v.a) & ","
+      & "x=" & integer'image(v.x) & ","
+      & "y=" & integer'image(v.y) & ","
+      & "z=" & integer'image(v.z) & ","
+      & "b=" & integer'image(v.b) & ","
+      & "spl=" & integer'image(v.spl) & ","
+      & "sph=" & integer'image(v.sph) & ", flags "
+      & "z=" & integer'image(v.flag_z) & ","
+      & "c=" & integer'image(v.flag_c) & ","
+      & "v=" & integer'image(v.flag_v) & ","
+      & "n=" & integer'image(v.flag_n);                                      
+    return true;
+  end function;       
+
+  
   function visualise(e : string; s : string; v : prefetch_buffer) return boolean is
   begin
     report "VISUALISE:" & e & ":" & s & ":prefetch_buffer:"

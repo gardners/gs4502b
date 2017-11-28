@@ -38,6 +38,7 @@ use work.alu.all;
 use work.extra_instruction_equations.all;
 use work.disassemble.all;
 use work.instruction_lengths.all;
+use work.visualise.all;
 
 entity gs4502b_stage_execute is
   generic (
