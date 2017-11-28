@@ -3,7 +3,10 @@ USE ieee.std_logic_1164.ALL;
 use ieee.numeric_std.all;
 use work.all;
 use work.debugtools.all;
-use work.alu.all;
+use work.types.all;
+use work.instruction_equations.all;
+use work.extra_instruction_equations.all;
+
 
 entity cpu_test is
   

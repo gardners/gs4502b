@@ -83,11 +83,10 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
-use work.instructions.all;
-use work.alu.all;
+use work.types.all;
 use work.extra_instruction_equations.all;
+use work.instruction_equations.all;
 use work.visualise.all;
-use work.instruction_lengths.all;
 
 ENTITY gs4502b_core IS
   PORT (

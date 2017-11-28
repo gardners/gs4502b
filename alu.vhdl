@@ -5,78 +5,11 @@ use Std.TextIO.all;
 use ieee.STD_LOGIC_1164.all;
 use ieee.numeric_std.all;
 use work.debugtools.all;
+use work.types.all;
 use work.instruction_equations.all;
-use work.instructions.all;
 use work.extra_instruction_equations.all;
-use work.instruction_lengths.all;
 
 package alu is
-
-  
-  type fetch_port_in is record
-    valid : boolean;
-    translated : translated_address;
-    user_flags : std_logic_vector(7 downto 0);
-  end record;
-  type fetch_port_out is record
-    -- Announce when we can accept more input.
-    ready : boolean;
-    -- 4 bytes of read value
-    bytes : bytes4;
-    -- Address of request
-    translated : translated_address;
-    -- User specified flags that were presented with the request
-    -- when submitted.
-    user_flags : std_logic_vector(7 downto 0);
-  end record;  
-  type mem_port_in is record
-    valid : boolean;
-  end record;
-  type mem_port_out is record
-    result : transaction_result;
-    -- Tell user if previous value has been accepted
-    acknowledged : boolean;
-  end record;
-
-  type ram_interface is record
-    iaddr : std_logic_vector(16 downto 0);
-    maddr : std_logic_vector(16 downto 0);
-    mwrite : std_logic;
-    mwdata : std_logic_vector(8 downto 0);
-  end record;  
-  
-  type alu_result is record
-    value : unsigned(7 downto 0);
-    c : boolean;
-    n : boolean;
-    z : boolean;
-    v : boolean;
-  end record;
-
-  type cpu_flags is record
-    c : boolean;
-    d : boolean;
-    i : boolean;
-    z : boolean;
-    e : boolean;
-    v : boolean;
-    n : boolean;
-  end record;
-  
-  type cpu_registers is record
-    flags : cpu_flags;
-    a : unsigned(7 downto 0);
-    a_dup1 : unsigned(7 downto 0);
-    a_dup2 : unsigned(7 downto 0);
-    a_dup3 : unsigned(7 downto 0);
-    b : unsigned(7 downto 0);
-    x : unsigned(7 downto 0);
-    y : unsigned(7 downto 0);
-    y_dup1 : unsigned(7 downto 0);
-    z : unsigned(7 downto 0);
-    spl : unsigned(7 downto 0);
-    sph : unsigned(7 downto 0);
-  end record;
   
   function to_string(flags : in cpu_flags) return string;
   

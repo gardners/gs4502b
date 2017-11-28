@@ -3,6 +3,7 @@ all:	cpu_test
 SIMULATIONFILES=	cpu_test.vhdl \
 			debugtools.vhdl \
 			alu.vhdl \
+			types.vhdl \
 			instructions.vhdl \
 			instruction_lengths.vhdl \
 			addressing_modes.vhdl \

@@ -2,45 +2,10 @@ library ieee;
 use Std.TextIO.all;
 use ieee.STD_LOGIC_1164.all;
 use ieee.numeric_std.all;
-use work.addressing_modes.all;
-use work.instruction_equations.all;
-use work.extra_instruction_equations.all;
+use work.types.all;
 
 package instructions is
 
-  -- Allow upto 7 memory transactions in flight at a time
-  subtype transaction_id is integer range 0 to 7;
-
-  subtype translated_address is unsigned(31 downto 0);
-
-  type resource_names is record
-    a : transaction_id;
-    b : transaction_id;
-    x : transaction_id;
-    y : transaction_id;
-    z : transaction_id;
-    spl : transaction_id;
-    sph : transaction_id;
-    flag_z : transaction_id;
-    flag_c : transaction_id;
-    flag_v : transaction_id;
-    flag_n : transaction_id;
-  end record;
-  
-  type instruction_resources is record
-    a : boolean;
-    b : boolean;
-    x : boolean;
-    y : boolean;
-    z : boolean;
-    spl : boolean;
-    sph : boolean;
-    flag_z : boolean;
-    flag_n : boolean;
-    flag_c : boolean;
-    flag_d : boolean;
-    flag_v : boolean;
-  end record;
   
   function "and" (a : instruction_resources; b : instruction_resources)
     return instruction_resources;
@@ -50,73 +15,9 @@ package instructions is
   
   function not_empty(a : instruction_resources) return boolean;
 
-  type instruction_bytes is record
-    opcode : unsigned(7 downto 0);
-    arg1 : unsigned(7 downto 0);
-    arg2 : unsigned(7 downto 0);
-  end record; 
-  
   function to_instruction_bytes(op : unsigned(7 downto 0); arg1 : unsigned(7 downto 0);
                                 arg2 : unsigned(7 downto 0)) return instruction_bytes;
   
-  type transaction_result is record
-    valid : boolean;
-    id : transaction_id;
-    value : unsigned(7 downto 0);
-    z : boolean;
-    v : boolean;
-    c : boolean;
-    n : boolean;    
-  end record;  
-
-  type cpu_personality is (
-    Hypervisor, CPU6502, CPU4502
-    );
-  
-  type instruction_information is record
-    -- Does this instruction load and/or store memory?
-    -- (both are set for a RMW instruction)
-
-    -- The bytes, CPU personality and address (PC and translated address)
-    -- uniquely identify the instruction
-    bytes : instruction_bytes;
-    cpu_personality : cpu_personality;
-    pc : unsigned(15 downto 0);
-    translated : translated_address;
-
-    -- Data computed from the opcode
-    addressing_mode : addressing_mode;
-    instruction_flags : instruction_flags;
-    instruction_extra_flags : extra_instruction_flags;
-
-    -- Address of argument
-    argument_address : unsigned(15 downto 0);
-    argument_translated : translated_address;
-
-    -- Transaction ID for any indirect vector that this instruction requires
-    -- (implied by addressing_mode.indirect)
-    vector_fetch_transaction : unsigned(4 downto 0);
-    
-    -- Once we know both the opcode and the arguments, we can work out if the
-    -- instruction can modify the memory map. This means looking for MAP
-    -- instruction, as well as writes to $0000, $0001 (C64 ROM banking) or $D030
-    -- (C65 ROM banking).  We also throw TAB into this, as it changes the
-    -- behaviour of ZP addressing mode, and so we also need to flush the
-    -- pipeline.
-    modifies_cpu_personality : boolean;
-    
-    -- Address and PC information following instruction    
-    pc_expected : unsigned(15 downto 0);
-    pc_mispredict : unsigned(15 downto 0);
-
-    expected_translated : translated_address;
-    mispredict_translated : translated_address;
-
-    -- Do we expect this branch to be taken?
-    branch_predict : boolean;
-    
-  end record;
-
   function to_std_logic_vector(c : cpu_personality) return std_logic_vector;
   function to_cpu_personality(v : std_logic_vector(1 downto 0)) return cpu_personality;
 

@@ -25,19 +25,14 @@
 -- an instruction following another instruction has the address expected by
 -- that instruction.
 
-
-use WORK.ALL;
-
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
-use work.instructions.all;
-use work.alu.all;
+use work.instruction_equations.all;
 use work.extra_instruction_equations.all;
-use work.disassemble.all;
-use work.instruction_lengths.all;
+use work.types.all;
 use work.visualise.all;
 
 entity gs4502b_stage_execute is
