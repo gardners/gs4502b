@@ -246,6 +246,7 @@ int main()
 	  "use Std.TextIO.all;\n"
 	  "use ieee.STD_LOGIC_1164.all;\n"
 	  "use ieee.numeric_std.all;\n"
+	  "use work.types.all;\n"
 	  "\n"
 	  "package instruction_equations is\n"
 	  "\n"
