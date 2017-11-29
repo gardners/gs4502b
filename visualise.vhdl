@@ -27,7 +27,7 @@ package visualise is
   function visualise(e : string; s : string; v : instruction_resources) return boolean;
   function visualise(e : string; s : string; v : bytes4) return boolean;
   function visualise(e : string; s : string; v : extra_instruction_flags) return boolean;
-  function visualise(e : string; s : string; v : transaction_id) return boolean;
+  function visualise(e : string; s : string; v : integer) return boolean;
   function visualise(e : string; s : string; v : cpu_personality) return boolean;
   function visualise(e : string; s : string; v : cpu_registers) return boolean;
   function visualise(e : string; s : string; v : transaction_result) return boolean;
@@ -251,13 +251,12 @@ package body visualise is
       & "*cpu_registers*";
     return true;
   end function;
-  
-  function visualise(e : string; s : string; v : transaction_id) return boolean is
+
+  function visualise(e : string; s : string; v : integer) return boolean is
   begin
     report "VISUALISE:" & e & ":" & s & ":transaction_id:"
       & integer'image(v);
     return true;
   end function;
-
   
 end package body;
