@@ -2,6 +2,7 @@ library ieee;
 use Std.TextIO.all;
 use ieee.STD_LOGIC_1164.all;
 use ieee.numeric_std.all;
+use work.instruction_equations.all;
 use work.types.all;
 
 package instructions is
