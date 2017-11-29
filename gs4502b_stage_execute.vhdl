@@ -33,6 +33,7 @@ use work.debugtools.all;
 use work.instruction_equations.all;
 use work.extra_instruction_equations.all;
 use work.types.all;
+use work.instruction_types.all;
 use work.visualise.all;
 
 entity gs4502b_stage_execute is

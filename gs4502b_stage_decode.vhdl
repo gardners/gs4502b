@@ -13,6 +13,7 @@ use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
 use work.types.all;
+use work.instruction_types.all;
 use work.visualise.all;
 
 entity gs4502b_stage_decode is
