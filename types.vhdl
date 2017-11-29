@@ -20,6 +20,7 @@ package types is
   end record; 
 
   subtype translated_address is unsigned(31 downto 0);
+  subtype opcode_type is std_logic_vector(8 downto 0);
 
   type addressing_mode is record
     a : boolean;
@@ -40,13 +41,13 @@ package types is
   
   subtype length_of_instruction is integer range 1 to 3;
   type ilens4 is array (0 to 3) of length_of_instruction;
-  type bytes4 is array (0 to 3) of std_logic_vector(8 downto 0);  
+  type bytes4 is array (0 to 3) of opcode_type;
 
   -- 16 byte buffer for fetching instructions from memory
   constant BYTE_BUFFER_WIDTH : integer := 16;
   type ilens is array (0 to BYTE_BUFFER_WIDTH) of integer;
   type prefetch_byte is record
-    byte : std_logic_vector(8 downto 0);
+    byte : opcode_type;
     ilen : length_of_instruction;
   end record;
   type prefetch_vector is array ( 0 to 3 ) of prefetch_byte;
