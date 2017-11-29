@@ -31,6 +31,7 @@ clean:
 	Ophis/bin/ophis -4 $<
 
 cpu_test:	$(SIMULATIONFILES) Makefile
+	$(GHDL) -a debugtools.vhdl types.vhdl instruction_equations.vhdl extra_instruction_equations.vhdl instruction_types.vhdl
 	$(GHDL) -i $(SIMULATIONFILES)
 	$(GHDL) -m cpu_test
 

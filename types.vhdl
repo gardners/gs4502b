@@ -6,8 +6,10 @@ use work.debugtools.all;
 
 package types is
 
-  subtype translated_address is unsigned(31 downto 0);
-
+  type something_useless is record
+    an : integer;
+  end record;
+  
   -- Allow upto 7 memory transactions in flight at a time
   subtype transaction_id is integer range 0 to 7;
 
@@ -16,7 +18,9 @@ package types is
     arg1 : unsigned(7 downto 0);
     arg2 : unsigned(7 downto 0);
   end record; 
-  
+
+  subtype translated_address is unsigned(31 downto 0);
+
   type addressing_mode is record
     a : boolean;
     imm8 : boolean;

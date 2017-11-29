@@ -87,7 +87,6 @@ use work.extra_instruction_equations.all;
 use work.instruction_equations.all;
 use work.types.all;
 use work.types.translated_address;
-
 use work.instruction_types.all;
 use work.instruction_types.resource_names;
 use work.instruction_types.prefetch_buffer;
