@@ -126,18 +126,18 @@ begin
 
     -- XXX We should just be able to use the definition from visualise.vhdl,
     -- but GHDL doesn't recognise that as the necessary type.
-    function visualise(e : string; s : string; v : prefetch_buffer) return boolean is
-    begin
-      report "VISUALISE:" & e & ":" & s & ":prefetch_buffer:"
-        & "[" & to_hstring(v.v(0).byte) & "/" & integer'image(v.v(0).ilen) & ","
-        & to_hstring(v.v(1).byte) & "/" & integer'image(v.v(1).ilen) & ","
-        & to_hstring(v.v(2).byte) & "/" & integer'image(v.v(2).ilen) & ","
-        & to_hstring(v.v(3).byte) & "/" & integer'image(v.v(3).ilen)
-        & "] @ "
-        & to_hstring(v.address)
-        & ", flags=" & to_string(v.user_flags);
-      return true;
-    end function;       
+--    function visualise(e : string; s : string; v : prefetch_buffer) return boolean is
+--    begin
+--      report "VISUALISE:" & e & ":" & s & ":prefetch_buffer:"
+--        & "[" & to_hstring(v.v(0).byte) & "/" & integer'image(v.v(0).ilen) & ","
+--        & to_hstring(v.v(1).byte) & "/" & integer'image(v.v(1).ilen) & ","
+--        & to_hstring(v.v(2).byte) & "/" & integer'image(v.v(2).ilen) & ","
+--        & to_hstring(v.v(3).byte) & "/" & integer'image(v.v(3).ilen)
+--        & "] @ "
+--        & to_hstring(v.address)
+--        & ", flags=" & to_string(v.user_flags);
+--      return true;
+--    end function;       
 
     
     variable instruction : instruction_information;
