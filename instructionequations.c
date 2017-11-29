@@ -257,12 +257,12 @@ int main()
   fprintf(f,
           "  end record;\n"
 	  "\n"
-	  "  function get_instruction_flags(opcode : std_logic_vector(8 downto 0)) return instruction_flags;\n"
+	  "  function get_instruction_flags(opcode : opcode_type) return instruction_flags;\n"
 	  "\n"
 	  "end package;\n"
 	  "\n"
 	  "package body instruction_equations is\n"
-	  "  function get_instruction_flags(opcode : std_logic_vector(8 downto 0)) return instruction_flags is\n"
+	  "  function get_instruction_flags(opcode : opcode_type) return instruction_flags is\n"
 	  "    variable mode : instruction_flags := (others => false);\n"
 	  "  begin\n"
 	  );

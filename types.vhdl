@@ -22,23 +22,6 @@ package types is
   subtype translated_address is unsigned(31 downto 0);
   subtype opcode_type is std_logic_vector(8 downto 0);
 
-  type addressing_mode is record
-    a : boolean;
-    imm8 : boolean;
-    rel8 : boolean;
-    rel16 : boolean;
-    indirect : boolean;
-    prex : boolean;
-    presp : boolean;
-    postx : boolean;
-    posty : boolean;
-    postz : boolean;
-    addr8 : boolean;
-    addr16 : boolean;
-    imm16 : boolean;
-    rel8byte3 : boolean;
-  end record;
-  
   subtype length_of_instruction is integer range 1 to 3;
   type ilens4 is array (0 to 3) of length_of_instruction;
   type bytes4 is array (0 to 3) of opcode_type;

@@ -9,6 +9,8 @@ use work.instructions.all;
 use work.alu.all;
 use work.extra_instruction_equations.all;
 use work.addressing_modes.all;
+use work.types.all;
+use work.instruction_types.all;
 
 package disassemble is
 

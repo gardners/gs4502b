@@ -6,6 +6,7 @@ use work.debugtools.all;
 use work.types.all;
 use work.types.resource_names;
 use work.instruction_equations.all;
+use work.addressing_modes.all;
 use work.extra_instruction_equations.all;
 
 package instruction_types is

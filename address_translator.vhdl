@@ -5,6 +5,8 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
+use work.types.all;
+use work.instruction_types.all;
 use work.instructions.all;
 
 package address_translator is

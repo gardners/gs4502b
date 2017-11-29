@@ -27,6 +27,8 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.numeric_std.all;
 use Std.TextIO.all;
 use work.debugtools.all;
+use work.addressing_modes.all;
+use work.instruction_equations.all;
 use work.extra_instruction_equations.all;
 use work.instruction_lengths.all;
 use work.types.all;
